@@ -25,7 +25,7 @@ import {
   add,
   search
 } from 'ionicons/icons';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 
 interface IonicLayoutProps {
   children: ReactNode;
@@ -82,19 +82,20 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
           <IonList>
             {menuItems.map(({ icon, label, path }) => (
               <IonMenuToggle key={path} autoHide={false}>
-                <IonItem 
-                  routerLink={path} 
-                  className={location.pathname === path ? 'bg-primary/20' : ''}
-                >
-                  <IonIcon 
-                    icon={icon} 
-                    slot="start" 
-                    className={location.pathname === path ? 'text-primary' : 'text-text-secondary'} 
-                  />
-                  <IonLabel className={location.pathname === path ? 'text-primary font-medium' : 'text-text-secondary'}>
-                    {label}
-                  </IonLabel>
-                </IonItem>
+                <Link to={path} style={{ textDecoration: 'none' }}>
+                  <IonItem 
+                    className={location.pathname === path ? 'bg-primary/20' : ''}
+                  >
+                    <IonIcon 
+                      icon={icon} 
+                      slot="start" 
+                      className={location.pathname === path ? 'text-primary' : 'text-text-secondary'} 
+                    />
+                    <IonLabel className={location.pathname === path ? 'text-primary font-medium' : 'text-text-secondary'}>
+                      {label}
+                    </IonLabel>
+                  </IonItem>
+                </Link>
               </IonMenuToggle>
             ))}
           </IonList>

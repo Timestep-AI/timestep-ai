@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import { Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,16 +22,18 @@ const App = () => (
       <IonApp>
         <Toaster />
         <Sonner />
-        <IonReactRouter>
+        <BrowserRouter>
           <IonRouterOutlet>
-            <Route path="/agents" element={<Agents />} />
-            <Route path="/chats" element={<Chats />} />
-            <Route path="/models" element={<Models />} />
-            <Route path="/tools" element={<Tools />} />
-            <Route path="/traces" element={<Traces />} />
-            <Route path="/" element={<Agents />} />
+            <Routes>
+              <Route path="/agents" element={<Agents />} />
+              <Route path="/chats" element={<Chats />} />
+              <Route path="/models" element={<Models />} />
+              <Route path="/tools" element={<Tools />} />
+              <Route path="/traces" element={<Traces />} />
+              <Route path="/" element={<Agents />} />
+            </Routes>
           </IonRouterOutlet>
-        </IonReactRouter>
+        </BrowserRouter>
       </IonApp>
     </TooltipProvider>
   </QueryClientProvider>
