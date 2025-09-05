@@ -1,5 +1,3 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useLocation } from 'react-router-dom';
 
 const getPageTitle = (pathname: string) => {
@@ -36,11 +34,6 @@ export const Header = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow">
-            <Plus className="w-4 h-4 mr-2" />
-            CREATE
-          </Button>
-
           <div className="text-sm text-text-tertiary">
             v0.2.3
           </div>
