@@ -187,13 +187,25 @@
     --color: hsl(var(--foreground));
   }
   
+  ion-popover .popover-content {
+    --background: hsl(var(--surface));
+    border: none !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  }
+  
   ion-popover ion-list {
     --background: hsl(var(--surface));
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
   
   ion-popover ion-item {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
+    --border-color: transparent;
+    --inner-border-width: 0;
+    margin: 0 !important;
   }
   
   ion-popover ion-item:hover {
