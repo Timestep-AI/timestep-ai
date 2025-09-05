@@ -6,9 +6,12 @@ import {
   Wrench, 
   Activity,
   LogOut,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
+import { useState } from 'react';
 
 const navItems = [
   { icon: Users, label: 'Agents', path: '/agents' },
@@ -25,6 +28,7 @@ const accountItems = [
 
 export const Sidebar = () => {
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const isActive = (path: string) => {
     if (path === '/agents') {
@@ -34,29 +38,50 @@ export const Sidebar = () => {
   };
 
   return (
-    <div className="bg-background border-r border-border w-64 hidden md:block">
+    <div className={cn(
+      "bg-background border-r border-border transition-all duration-300 hidden md:block relative",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       <div className="flex flex-col h-screen">
+        {/* Collapse Toggle */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-6 z-10 w-6 h-6 bg-surface border border-border rounded-full flex items-center justify-center hover:bg-surface-elevated transition-colors"
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-3 h-3 text-text-secondary" />
+          ) : (
+            <ChevronLeft className="w-3 h-3 text-text-secondary" />
+          )}
+        </button>
+
         {/* Main Navigation */}
         <nav className="flex-1 p-4">
           <div className="mb-6">
-            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
-              ABSTRACTIONS
-            </p>
+            {!isCollapsed && (
+              <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
+                ABSTRACTIONS
+              </p>
+            )}
             <ul className="space-y-1">
               {navItems.map(({ icon: Icon, label, path }) => (
                 <li key={path}>
                   <Link
                     to={path}
+                    title={isCollapsed ? label : undefined}
                     className={cn(
                       'flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm',
                       'hover:bg-surface-elevated group',
                       isActive(path)
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-text-secondary hover:text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary',
+                      isCollapsed && 'justify-center'
                     )}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="font-medium">{label}</span>
+                    {!isCollapsed && (
+                      <span className="font-medium">{label}</span>
+                    )}
                   </Link>
                 </li>
               ))}
@@ -66,24 +91,30 @@ export const Sidebar = () => {
 
         {/* Account Section */}
         <div className="p-4 border-t border-border">
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
-            ACCOUNT
-          </p>
+          {!isCollapsed && (
+            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
+              ACCOUNT
+            </p>
+          )}
           <ul className="space-y-1">
             {accountItems.map(({ icon: Icon, label, path }) => (
               <li key={path}>
                 <Link
                   to={path}
+                  title={isCollapsed ? label : undefined}
                   className={cn(
                     'flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm',
                     'hover:bg-surface-elevated group',
                     location.pathname === path
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-text-secondary hover:text-text-primary'
+                      : 'text-text-secondary hover:text-text-primary',
+                    isCollapsed && 'justify-center'
                   )}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-medium">{label}</span>
+                  {!isCollapsed && (
+                    <span className="font-medium">{label}</span>
+                  )}
                 </Link>
               </li>
             ))}
