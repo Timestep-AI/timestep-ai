@@ -41,8 +41,8 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
 
   return (
     <IonCard className="bg-card border border-border rounded-xl hover:bg-surface-elevated transition-all duration-200 group">
-      <IonCardContent>
-        <IonItem lines="none" className="--padding-start: 0 --inner-padding-end: 0">
+      <IonCardContent className="p-4">
+        <IonItem lines="none" className="--padding-start: 0 --inner-padding-end: 0 bg-transparent">
           <IonAvatar slot="start" className="w-10 h-10">
             <div className="w-full h-full bg-gradient-primary rounded-full flex items-center justify-center">
               <IonIcon icon={person} className="text-white text-lg" />
@@ -55,7 +55,7 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
                 {agent.name}
               </h3>
               {agent.status === 'handoff' && (
-                <IonChip color="medium" className="text-xs">
+                <IonChip color="medium" className="text-xs bg-secondary text-secondary-foreground">
                   Handoff
                 </IonChip>
               )}
@@ -77,12 +77,12 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
           
           <div slot="end" className="flex items-center space-x-2">
             {agent.model ? (
-              <IonChip color="primary" className="bg-info/10 text-info">
-                <IonIcon icon={desktop} />
+              <IonChip className="bg-info/10 text-info border-info/20">
+                <IonIcon icon={desktop} className="mr-1" />
                 <IonLabel>{agent.model}</IonLabel>
               </IonChip>
             ) : (
-              <IonChip color="medium" outline>
+              <IonChip color="medium" outline className="text-text-tertiary">
                 <IonLabel>No Model</IonLabel>
               </IonChip>
             )}
@@ -91,7 +91,7 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
               fill="clear" 
               size="small"
               id={`trigger-${agent.id}`}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-text-secondary"
             >
               <IonIcon icon={ellipsisHorizontal} />
             </IonButton>

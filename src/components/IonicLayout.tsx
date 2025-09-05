@@ -26,6 +26,7 @@ import {
   search
 } from 'ionicons/icons';
 import { useLocation, Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface IonicLayoutProps {
   children: ReactNode;
@@ -79,12 +80,16 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
             </div>
           </div>
           
-          <IonList>
+          <IonList className="bg-transparent">
             {menuItems.map(({ icon, label, path }) => (
               <IonMenuToggle key={path} autoHide={false}>
                 <Link to={path} style={{ textDecoration: 'none' }}>
                   <IonItem 
-                    className={location.pathname === path ? 'bg-primary/20' : ''}
+                    className={cn(
+                      "bg-transparent border-none",
+                      location.pathname === path ? 'bg-primary/20' : ''
+                    )}
+                    lines="none"
                   >
                     <IonIcon 
                       icon={icon} 
@@ -119,13 +124,13 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
             </IonTitle>
             <IonButtons slot="end">
               <IonSearchbar
-                placeholder={`Search ${pageTitle.toLowerCase()}...`}
-                className="w-80 max-w-sm"
+                placeholder="Search dashboard..."
+                className="w-80 max-w-sm bg-background"
                 showClearButton="focus"
               />
               <IonButton className="bg-gradient-primary text-white ml-2">
                 <IonIcon icon={add} slot="start" />
-                Create
+                CREATE
               </IonButton>
             </IonButtons>
           </IonToolbar>

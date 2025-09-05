@@ -135,8 +135,8 @@
     @apply bg-background text-foreground;
   }
   
-  /* Apply light theme by default instead of dark */
+  /* Apply dark theme by default */
   html {
-    /* Remove the dark class to use light theme */
+    @apply dark;
   }
 }
