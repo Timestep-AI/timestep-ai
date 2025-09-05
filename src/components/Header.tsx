@@ -26,14 +26,16 @@ export const Header = () => {
     <header className="bg-surface border-b border-border px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {/* Empty space for left side */}
+        </div>
+        
+        <div className="flex items-center space-x-4">
           <div>
             <h1 className="text-lg font-bold text-text-primary">
               Timestep AI
             </h1>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
+          
           <div className="text-sm text-text-tertiary">
             v0.2.3
           </div>
