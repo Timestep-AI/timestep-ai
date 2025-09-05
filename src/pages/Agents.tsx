@@ -1,14 +1,8 @@
 import { useState } from 'react';
-import { IonicLayout } from '@/components/IonicLayout';
-import { IonicAgentCard } from '@/components/IonicAgentCard';
-import { 
-  IonButton, 
-  IonIcon, 
-  IonFab, 
-  IonFabButton,
-  IonButtons
-} from '@ionic/react';
-import { add, trash, download } from 'ionicons/icons';
+import { ModernLayout } from '@/components/ModernLayout';
+import { ModernAgentCard } from '@/components/ModernAgentCard';
+import { Button } from '@/components/ui/button';
+import { Plus, Download, Trash2 } from 'lucide-react';
 
 // Mock data
 const mockAgents = [
@@ -80,30 +74,31 @@ export const Agents = () => {
   };
 
   return (
-    <IonicLayout title="Agents">
+    <ModernLayout>
       <div className="space-y-6">
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
-          <IonButtons>
-            <IonButton 
+          <div className="flex items-center space-x-3">
+            <Button 
               onClick={handleCreateDefaults}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <IonIcon icon={download} slot="start" />
+              <Download className="w-4 h-4 mr-2" />
               CREATE DEFAULTS
-            </IonButton>
+            </Button>
             
-            <IonButton 
-              color="danger"
+            <Button 
+              variant="destructive"
               onClick={handleDeleteAll}
               disabled={agents.length === 0}
+              className="bg-red-600 hover:bg-red-700"
             >
-              <IonIcon icon={trash} slot="start" />
+              <Trash2 className="w-4 h-4 mr-2" />
               DELETE ALL
-            </IonButton>
-          </IonButtons>
+            </Button>
+          </div>
           
-          <div className="text-sm text-text-secondary">
+          <div className="text-sm text-gray-500">
             {agents.length} agent{agents.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -112,26 +107,26 @@ export const Agents = () => {
         <div className="space-y-3">
           {agents.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-                <IonIcon icon={add} className="text-4xl text-text-tertiary" />
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Plus className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No agents yet
               </h3>
-              <p className="text-text-secondary mb-4">
+              <p className="text-gray-600 mb-4">
                 Create your first agent to get started with AI workflows.
               </p>
-              <IonButton 
+              <Button 
                 onClick={handleCreateDefaults}
-                className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <IonIcon icon={add} slot="start" />
+                <Plus className="w-4 h-4 mr-2" />
                 Create Agent
-              </IonButton>
+              </Button>
             </div>
           ) : (
             agents.map((agent) => (
-              <IonicAgentCard
+              <ModernAgentCard
                 key={agent.id}
                 agent={agent}
                 onEdit={handleEditAgent}
@@ -143,12 +138,10 @@ export const Agents = () => {
       </div>
 
       {/* Floating Action Button */}
-      <IonFab vertical="bottom" horizontal="end" slot="fixed">
-        <IonFabButton className="bg-gradient-primary">
-          <IonIcon icon={add} className="text-white" />
-        </IonFabButton>
-      </IonFab>
-    </IonicLayout>
+      <button className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:scale-110">
+        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+      </button>
+    </ModernLayout>
   );
 };
 
