@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { IonicLayout } from '@/components/IonicLayout';
+import { Layout } from '@/components/Layout';
 import { IonicAgentCard } from '@/components/IonicAgentCard';
 import { 
   IonButton, 
@@ -104,7 +104,7 @@ export const Agents = () => {
   };
 
   return (
-    <IonicLayout title="Agents">
+    <Layout>
       <IonLoading isOpen={loading} message="Loading agents..." />
       <IonLoading isOpen={operationLoading} message="Please wait..." />
       
@@ -202,7 +202,7 @@ export const Agents = () => {
         position="bottom"
         className="custom-toast"
       />
-    </IonicLayout>
+    </Layout>
   );
 };
 

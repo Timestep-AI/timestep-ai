@@ -1,4 +1,4 @@
-import { IonicLayout } from '@/components/IonicLayout';
+import { Layout } from '@/components/Layout';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,12 +16,12 @@ const Logout = () => {
   }, [navigate]);
 
   return (
-    <IonicLayout title="Logout">
+    <Layout>
       <div className="p-6 text-center">
         <h2 className="text-xl font-semibold text-text-primary mb-4">Logging out...</h2>
         <p className="text-text-secondary">You will be redirected shortly.</p>
       </div>
-    </IonicLayout>
+    </Layout>
   );
 };
 
