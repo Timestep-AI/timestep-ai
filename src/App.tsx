@@ -9,6 +9,8 @@ import Chats from "./pages/Chats";
 import Models from "./pages/Models";
 import Tools from "./pages/Tools";
 import Traces from "./pages/Traces";
+import Settings from "./pages/Settings";
+import Logout from "./pages/Logout";
 
 setupIonicReact({
   mode: 'md' // Use Material Design mode for consistent look
@@ -30,6 +32,8 @@ const App = () => (
               <Route path="/models" element={<Models />} />
               <Route path="/tools" element={<Tools />} />
               <Route path="/traces" element={<Traces />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/logout" element={<Logout />} />
               <Route path="/" element={<Agents />} />
             </Routes>
           </IonRouterOutlet>

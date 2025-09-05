@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 const getPageTitle = (pathname: string) => {
   switch (pathname) {
     case '/':
+    case '/agents':
       return 'Agents';
     case '/chats':
       return 'Chats';
@@ -25,30 +26,43 @@ export const Header = () => {
   const pageTitle = getPageTitle(location.pathname);
 
   return (
-    <header className="bg-surface border-b border-border px-6 py-4">
+    <header className="bg-surface border-b border-border px-6 py-3">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary mb-1">
-            {pageTitle}
-          </h1>
-          <p className="text-text-secondary">
-            Create and manage AI agents for your multi-agent workflows.
-          </p>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">T</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-text-primary">
+                Timestep AI
+              </h1>
+            </div>
+          </div>
+          {pageTitle !== 'Dashboard' && (
+            <div className="text-text-secondary">
+              Create and manage AI agents for your multi-agent workflows.
+            </div>
+          )}
         </div>
         
         <div className="flex items-center space-x-4">
-          <div className="relative">
+          <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-tertiary" />
             <Input
-              placeholder={`Search ${pageTitle.toLowerCase()}...`}
+              placeholder="Search dashboard..."
               className="pl-10 w-80 bg-background border-border"
             />
           </div>
           
           <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow">
             <Plus className="w-4 h-4 mr-2" />
-            Create
+            CREATE
           </Button>
+
+          <div className="text-sm text-text-tertiary">
+            v0.2.3
+          </div>
         </div>
       </div>
     </header>
