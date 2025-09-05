@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IonicLayout } from '@/components/IonicLayout';
 import { IonicAgentCard } from '@/components/IonicAgentCard';
 import { 
@@ -7,81 +7,107 @@ import {
   IonFab, 
   IonFabButton,
   IonButtons,
-  IonSearchbar
+  IonSearchbar,
+  IonLoading,
+  IonToast
 } from '@ionic/react';
 import { add, trash, download } from 'ionicons/icons';
-
-// Mock data
-const mockAgents = [
-  {
-    id: '1',
-    name: 'Personal Assistant',
-    description: 'A versatile AI assistant for personal productivity and task management.',
-    createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'active' as const,
-  },
-  {
-    id: '2',
-    name: 'Administrative Assistant',
-    description: 'Handles administrative tasks and office management duties.',
-    createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff' as const,
-  },
-  {
-    id: '3',
-    name: 'Communications Coordinator',
-    description: 'Manages internal and external communications across teams.',
-    createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff' as const,
-    model: 'meta/llama-3.2-11b-vision-instruct',
-  },
-  {
-    id: '4',
-    name: 'Project Coordinator',
-    description: 'Oversees project timelines, resources, and team coordination.',
-    createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff' as const,
-  },
-  {
-    id: '5',
-    name: 'Research Specialist',
-    description: 'Conducts thorough research and analysis on various topics.',
-    createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff' as const,
-  },
-  {
-    id: '6',
-    name: 'Scheduling Coordinator',
-    description: 'Manages calendars, appointments, and scheduling conflicts.',
-    createdAt: '8/31/2025, 3:06:27 PM',
-    status: 'handoff' as const,
-  },
-];
+import { Agent } from '@/types/agent';
+import { agentsService } from '@/services/agentsService';
 
 export const Agents = () => {
-  const [agents, setAgents] = useState(mockAgents);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [operationLoading, setOperationLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [showToast, setShowToast] = useState(false);
 
-  const handleCreateDefaults = () => {
-    // In a real app, this would create default agents
-    console.log('Creating default agents...');
+  // Load agents on component mount
+  useEffect(() => {
+    loadAgents();
+  }, []);
+
+  const loadAgents = async () => {
+    try {
+      setLoading(true);
+      const agentsList = await agentsService.getAll();
+      setAgents(agentsList);
+    } catch (error) {
+      console.error('Failed to load agents:', error);
+      showToastMessage('Failed to load agents');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteAll = () => {
-    // In a real app, this would show a confirmation dialog
-    setAgents([]);
+  const handleCreateDefaults = async () => {
+    try {
+      setOperationLoading(true);
+      const defaultAgents = await agentsService.createDefaults();
+      setAgents(defaultAgents);
+      showToastMessage(`Created ${defaultAgents.length} default agents`);
+    } catch (error) {
+      console.error('Failed to create default agents:', error);
+      showToastMessage('Failed to create default agents');
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
-  const handleEditAgent = (agent: any) => {
+  const handleDeleteAll = async () => {
+    try {
+      setOperationLoading(true);
+      await agentsService.deleteAll();
+      setAgents([]);
+      showToastMessage('All agents deleted');
+    } catch (error) {
+      console.error('Failed to delete all agents:', error);
+      showToastMessage('Failed to delete all agents');
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleEditAgent = async (agent: Agent) => {
     console.log('Editing agent:', agent);
-    // In a real app, this would open an edit modal
+    // TODO: Implement edit modal/form
+    showToastMessage(`Edit functionality coming soon for ${agent.name}`);
   };
 
-  const handleDeleteAgent = (agent: any) => {
-    setAgents(prev => prev.filter(a => a.id !== agent.id));
+  const handleDeleteAgent = async (agent: Agent) => {
+    try {
+      setOperationLoading(true);
+      const success = await agentsService.delete(agent.id);
+      if (success) {
+        setAgents(prevAgents => prevAgents.filter(a => a.id !== agent.id));
+        showToastMessage(`Deleted ${agent.name}`);
+      } else {
+        showToastMessage('Failed to delete agent');
+      }
+    } catch (error) {
+      console.error('Failed to delete agent:', error);
+      showToastMessage('Failed to delete agent');
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleCreateAgent = async () => {
+    console.log('Creating new agent...');
+    // TODO: Implement create modal/form
+    showToastMessage('Create functionality coming soon');
+  };
+
+  const showToastMessage = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
   };
 
   return (
     <IonicLayout title="Agents">
+      <IonLoading isOpen={loading} message="Loading agents..." />
+      <IonLoading isOpen={operationLoading} message="Please wait..." />
+      
       <div className="space-y-4">
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
@@ -90,6 +116,7 @@ export const Agents = () => {
               onClick={handleCreateDefaults}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
               size="small"
+              disabled={operationLoading}
             >
               <IonIcon icon={download} slot="start" />
               CREATE DEFAULTS
@@ -98,7 +125,7 @@ export const Agents = () => {
             <IonButton 
               color="danger"
               onClick={handleDeleteAll}
-              disabled={agents.length === 0}
+              disabled={agents.length === 0 || operationLoading}
               size="small"
             >
               <IonIcon icon={trash} slot="start" />
@@ -136,9 +163,10 @@ export const Agents = () => {
               <IonButton 
                 onClick={handleCreateDefaults}
                 className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow"
+                disabled={operationLoading}
               >
                 <IonIcon icon={add} slot="start" />
-                Create Agent
+                Create Defaults
               </IonButton>
             </div>
           ) : (
@@ -156,10 +184,24 @@ export const Agents = () => {
 
       {/* Floating Action Button */}
       <IonFab vertical="bottom" horizontal="end" slot="fixed">
-        <IonFabButton className="bg-gradient-primary">
+        <IonFabButton 
+          className="bg-gradient-primary"
+          onClick={handleCreateAgent}
+          disabled={operationLoading}
+        >
           <IonIcon icon={add} className="text-white" />
         </IonFabButton>
       </IonFab>
+
+      {/* Toast for notifications */}
+      <IonToast
+        isOpen={showToast}
+        onDidDismiss={() => setShowToast(false)}
+        message={toastMessage}
+        duration={3000}
+        position="bottom"
+        className="custom-toast"
+      />
     </IonicLayout>
   );
 };

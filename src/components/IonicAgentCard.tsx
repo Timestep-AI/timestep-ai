@@ -20,14 +20,7 @@ import {
 } from 'ionicons/icons';
 import { useState } from 'react';
 
-interface Agent {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: string;
-  model?: string;
-  status: 'active' | 'inactive' | 'handoff';
-}
+import { Agent } from '@/types/agent';
 
 interface IonicAgentCardProps {
   agent: Agent;
