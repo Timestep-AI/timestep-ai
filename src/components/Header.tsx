@@ -29,15 +29,10 @@ export const Header = () => {
     <header className="bg-surface border-b border-border px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">T</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-text-primary">
-                Timestep AI
-              </h1>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold text-text-primary">
+              Timestep AI
+            </h1>
           </div>
         </div>
         
