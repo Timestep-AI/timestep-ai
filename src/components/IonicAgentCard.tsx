@@ -100,15 +100,26 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
           trigger={`trigger-${agent.id}`} 
           isOpen={isPopoverOpen}
           onDidDismiss={() => setIsPopoverOpen(false)}
+          className="dark-popover"
         >
-          <IonList>
-            <IonItem button onClick={() => onEdit?.(agent)}>
-              <IonIcon icon={pencil} slot="start" />
-              <IonLabel>Edit Agent</IonLabel>
+          <IonList style={{ '--background': 'hsl(var(--surface))', '--color': 'hsl(var(--foreground))' }}>
+            <IonItem 
+              button 
+              onClick={() => onEdit?.(agent)}
+              style={{ '--background': 'hsl(var(--surface))', '--color': 'hsl(var(--foreground))' }}
+              className="hover:bg-surface-elevated"
+            >
+              <IonIcon icon={pencil} slot="start" className="text-text-secondary" />
+              <IonLabel className="text-text-primary">Edit Agent</IonLabel>
             </IonItem>
-            <IonItem button onClick={() => onDelete?.(agent)} className="text-destructive">
-              <IonIcon icon={trash} slot="start" />
-              <IonLabel>Delete Agent</IonLabel>
+            <IonItem 
+              button 
+              onClick={() => onDelete?.(agent)} 
+              style={{ '--background': 'hsl(var(--surface))', '--color': 'hsl(var(--destructive))' }}
+              className="hover:bg-destructive/10"
+            >
+              <IonIcon icon={trash} slot="start" className="text-destructive" />
+              <IonLabel className="text-destructive">Delete Agent</IonLabel>
             </IonItem>
           </IonList>
         </IonPopover>

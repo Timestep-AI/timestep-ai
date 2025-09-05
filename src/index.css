@@ -163,6 +163,43 @@
     --color: hsl(var(--foreground));
   }
   
+  /* Dark theme for Ionic popovers */
+  .dark-popover {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+  }
+  
+  .dark-popover ion-backdrop {
+    --background: rgba(0, 0, 0, 0.4);
+  }
+  
+  .dark-popover .popover-content {
+    --background: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+  }
+  
+  /* Force dark styling for all Ionic popovers */
+  ion-popover {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+  }
+  
+  ion-popover ion-list {
+    --background: hsl(var(--surface));
+  }
+  
+  ion-popover ion-item {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+  }
+  
+  ion-popover ion-item:hover {
+    --background: hsl(var(--surface-elevated));
+  }
+  
   /* Responsive utilities */
   .pl-13 {
     @apply pl-12;
