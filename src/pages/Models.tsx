@@ -1,11 +1,13 @@
-import { Layout } from '@/components/Layout';
+import { IonicLayout } from '@/components/IonicLayout';
+import { IonIcon } from '@ionic/react';
+import { desktop } from 'ionicons/icons';
 
 export const Models = () => {
   return (
-    <Layout>
+    <IonicLayout title="Models">
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl">🧠</span>
+          <IonIcon icon={desktop} className="text-4xl text-text-tertiary" />
         </div>
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           Models Coming Soon
@@ -14,7 +16,7 @@ export const Models = () => {
           AI model management features will be available in the next update.
         </p>
       </div>
-    </Layout>
+    </IonicLayout>
   );
 };
 

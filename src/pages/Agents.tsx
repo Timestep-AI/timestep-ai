@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import { Layout } from '@/components/Layout';
-import { AgentCard } from '@/components/AgentCard';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Download } from 'lucide-react';
+import { IonicLayout } from '@/components/IonicLayout';
+import { IonicAgentCard } from '@/components/IonicAgentCard';
+import { 
+  IonButton, 
+  IonIcon, 
+  IonFab, 
+  IonFabButton,
+  IonButtons
+} from '@ionic/react';
+import { add, trash, download } from 'ionicons/icons';
 
 // Mock data
 const mockAgents = [
@@ -74,28 +80,28 @@ export const Agents = () => {
   };
 
   return (
-    <Layout>
+    <IonicLayout title="Agents">
       <div className="space-y-6">
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button 
+          <IonButtons>
+            <IonButton 
               onClick={handleCreateDefaults}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <IonIcon icon={download} slot="start" />
               CREATE DEFAULTS
-            </Button>
+            </IonButton>
             
-            <Button 
-              variant="destructive"
+            <IonButton 
+              color="danger"
               onClick={handleDeleteAll}
               disabled={agents.length === 0}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <IonIcon icon={trash} slot="start" />
               DELETE ALL
-            </Button>
-          </div>
+            </IonButton>
+          </IonButtons>
           
           <div className="text-sm text-text-secondary">
             {agents.length} agent{agents.length !== 1 ? 's' : ''}
@@ -107,7 +113,7 @@ export const Agents = () => {
           {agents.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-text-tertiary" />
+                <IonIcon icon={add} className="text-4xl text-text-tertiary" />
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">
                 No agents yet
@@ -115,17 +121,17 @@ export const Agents = () => {
               <p className="text-text-secondary mb-4">
                 Create your first agent to get started with AI workflows.
               </p>
-              <Button 
+              <IonButton 
                 onClick={handleCreateDefaults}
                 className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <IonIcon icon={add} slot="start" />
                 Create Agent
-              </Button>
+              </IonButton>
             </div>
           ) : (
             agents.map((agent) => (
-              <AgentCard
+              <IonicAgentCard
                 key={agent.id}
                 agent={agent}
                 onEdit={handleEditAgent}
@@ -137,10 +143,12 @@ export const Agents = () => {
       </div>
 
       {/* Floating Action Button */}
-      <button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-primary rounded-full shadow-elevated hover:shadow-glow transition-all duration-300 flex items-center justify-center group hover:scale-110">
-        <Plus className="w-6 h-6 text-primary-foreground group-hover:rotate-90 transition-transform duration-300" />
-      </button>
-    </Layout>
+      <IonFab vertical="bottom" horizontal="end" slot="fixed">
+        <IonFabButton className="bg-gradient-primary">
+          <IonIcon icon={add} className="text-white" />
+        </IonFabButton>
+      </IonFab>
+    </IonicLayout>
   );
 };
 
