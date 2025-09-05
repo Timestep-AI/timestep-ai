@@ -1,17 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { IonicAgentCard } from '@/components/IonicAgentCard';
-import { 
-  IonButton, 
-  IonIcon, 
-  IonFab, 
-  IonFabButton,
-  IonButtons,
-  IonSearchbar,
-  IonLoading,
-  IonToast
-} from '@ionic/react';
-import { add, trash, download } from 'ionicons/icons';
+import { AgentCard } from '@/components/AgentCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Trash2, Download, Search } from 'lucide-react';
 import { Agent } from '@/types/agent';
 import { agentsService } from '@/services/agentsService';
 
@@ -105,32 +97,35 @@ export const Agents = () => {
 
   return (
     <Layout>
-      <IonLoading isOpen={loading} message="Loading agents..." />
-      <IonLoading isOpen={operationLoading} message="Please wait..." />
+      {operationLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card p-6 rounded-lg">
+            <p className="text-text-primary">Please wait...</p>
+          </div>
+        </div>
+      )}
       
       <div className="space-y-4">
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-            <IonButton 
+            <Button 
               onClick={handleCreateDefaults}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              size="small"
               disabled={operationLoading}
             >
-              <IonIcon icon={download} slot="start" />
+              <Download className="w-4 h-4 mr-2" />
               CREATE DEFAULTS
-            </IonButton>
+            </Button>
             
-            <IonButton 
-              color="danger"
+            <Button 
+              variant="destructive"
               onClick={handleDeleteAll}
               disabled={agents.length === 0 || operationLoading}
-              size="small"
             >
-              <IonIcon icon={trash} slot="start" />
+              <Trash2 className="w-4 h-4 mr-2" />
               DELETE ALL
-            </IonButton>
+            </Button>
           </div>
           
           <div className="text-sm text-text-secondary">
@@ -140,11 +135,13 @@ export const Agents = () => {
 
         {/* Mobile Search Bar */}
         <div className="md:hidden">
-          <IonSearchbar
-            placeholder="Search agents..."
-            style={{ '--background': 'hsl(var(--background))', '--color': 'hsl(var(--foreground))' }}
-            showClearButton="focus"
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+            <Input
+              placeholder="Search agents..."
+              className="pl-10 bg-background border-border"
+            />
+          </div>
         </div>
 
         {/* Agents List */}
@@ -152,7 +149,7 @@ export const Agents = () => {
           {agents.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-                <IonIcon icon={add} className="text-4xl text-text-tertiary" />
+                <Plus className="w-8 h-8 text-text-tertiary" />
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">
                 No agents yet
@@ -160,18 +157,18 @@ export const Agents = () => {
               <p className="text-text-secondary mb-4 px-4">
                 Create your first agent to get started with AI workflows.
               </p>
-              <IonButton 
+              <Button 
                 onClick={handleCreateDefaults}
                 className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow"
                 disabled={operationLoading}
               >
-                <IonIcon icon={add} slot="start" />
+                <Plus className="w-4 h-4 mr-2" />
                 Create Defaults
-              </IonButton>
+              </Button>
             </div>
           ) : (
             agents.map((agent) => (
-              <IonicAgentCard
+              <AgentCard
                 key={agent.id}
                 agent={agent}
                 onEdit={handleEditAgent}
@@ -183,25 +180,20 @@ export const Agents = () => {
       </div>
 
       {/* Floating Action Button */}
-      <IonFab vertical="bottom" horizontal="end" slot="fixed">
-        <IonFabButton 
-          className="bg-gradient-primary"
-          onClick={handleCreateAgent}
-          disabled={operationLoading}
-        >
-          <IonIcon icon={add} className="text-white" />
-        </IonFabButton>
-      </IonFab>
+      <button
+        className="fixed bottom-20 md:bottom-6 right-6 w-14 h-14 bg-gradient-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity z-40"
+        onClick={handleCreateAgent}
+        disabled={operationLoading}
+      >
+        <Plus className="w-6 h-6 text-white" />
+      </button>
 
-      {/* Toast for notifications */}
-      <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
-        duration={3000}
-        position="bottom"
-        className="custom-toast"
-      />
+      {/* Toast notification */}
+      {showToast && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-50">
+          <p className="text-text-primary">{toastMessage}</p>
+        </div>
+      )}
     </Layout>
   );
 };
