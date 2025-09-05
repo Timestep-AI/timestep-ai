@@ -65,7 +65,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
   return (
     <>
       <IonMenu contentId="main-content" type="overlay">
-        <IonContent className="bg-surface">
+        <IonContent className="bg-surface" style={{ '--background': 'hsl(var(--surface))' }}>
           <div className="p-4 border-b border-border">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
@@ -80,7 +80,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
             </div>
           </div>
           
-          <IonList className="bg-transparent">
+          <IonList className="bg-transparent" style={{ '--background': 'transparent' }}>
             {menuItems.map(({ icon, label, path }) => (
               <IonMenuToggle key={path} autoHide={false}>
                 <Link to={path} style={{ textDecoration: 'none' }}>
@@ -90,6 +90,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
                       location.pathname === path ? 'bg-primary/20' : ''
                     )}
                     lines="none"
+                    style={{ '--background': location.pathname === path ? 'hsl(var(--primary) / 0.2)' : 'transparent' }}
                   >
                     <IonIcon 
                       icon={icon} 
@@ -115,7 +116,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
 
       <IonPage id="main-content">
         <IonHeader className="bg-surface border-b border-border">
-          <IonToolbar className="bg-surface">
+          <IonToolbar className="bg-surface" style={{ '--background': 'hsl(var(--surface))' }}>
             <IonButtons slot="start">
               <IonMenuButton className="text-text-primary" />
             </IonButtons>
@@ -125,7 +126,8 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
             <IonButtons slot="end">
               <IonSearchbar
                 placeholder="Search dashboard..."
-                className="w-80 max-w-sm bg-background"
+                className="w-80 max-w-sm"
+                style={{ '--background': 'hsl(var(--background))', '--color': 'hsl(var(--foreground))' }}
                 showClearButton="focus"
               />
               <IonButton className="bg-gradient-primary text-white ml-2">
@@ -136,7 +138,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
           </IonToolbar>
         </IonHeader>
         
-        <IonContent className="bg-background">
+        <IonContent className="bg-background" style={{ '--background': 'hsl(var(--background))' }}>
           <div className="p-6">
             <div className="mb-4">
               <p className="text-text-secondary">

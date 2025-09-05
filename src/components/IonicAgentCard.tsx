@@ -40,9 +40,16 @@ export const IonicAgentCard = ({ agent, onEdit, onDelete }: IonicAgentCardProps)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   return (
-    <IonCard className="bg-card border border-border rounded-xl hover:bg-surface-elevated transition-all duration-200 group">
-      <IonCardContent className="p-4">
-        <IonItem lines="none" className="--padding-start: 0 --inner-padding-end: 0 bg-transparent">
+    <IonCard 
+      className="bg-card border border-border rounded-xl hover:bg-surface-elevated transition-all duration-200 group"
+      style={{ '--background': 'hsl(var(--card))', '--color': 'hsl(var(--card-foreground))' }}
+    >
+      <IonCardContent className="p-4" style={{ '--background': 'hsl(var(--card))' }}>
+        <IonItem 
+          lines="none" 
+          className="--padding-start: 0 --inner-padding-end: 0 bg-transparent"
+          style={{ '--background': 'transparent', '--color': 'hsl(var(--card-foreground))' }}
+        >
           <IonAvatar slot="start" className="w-10 h-10">
             <div className="w-full h-full bg-gradient-primary rounded-full flex items-center justify-center">
               <IonIcon icon={person} className="text-white text-lg" />

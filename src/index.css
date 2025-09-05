@@ -132,11 +132,39 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground dark;
   }
   
   /* Apply dark theme by default */
   html {
     @apply dark;
+  }
+  
+  /* Ensure Ionic components use dark theme */
+  ion-app {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Dark theme for Ionic cards */
+  ion-card {
+    --background: hsl(var(--card));
+    --color: hsl(var(--card-foreground));
+  }
+  
+  /* Dark theme for Ionic items */
+  ion-item {
+    --background: transparent;
+    --color: hsl(var(--foreground));
+  }
+  
+  /* Dark theme for Ionic toolbar */
+  ion-toolbar {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+  }
+  
+  /* Dark theme for Ionic menu */
+  ion-menu ion-content {
+    --background: hsl(var(--surface));
   }
 }
