@@ -6,12 +6,13 @@ import {
   Wrench, 
   Activity,
   LogOut,
-  Settings,
-  ChevronLeft,
-  ChevronRight
+  Settings
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
-import { useState } from 'react';
+
+interface SidebarProps {
+  isCollapsed: boolean;
+}
 
 const navItems = [
   { icon: Users, label: 'Agents', path: '/agents' },
@@ -26,9 +27,8 @@ const accountItems = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
-export const Sidebar = () => {
+export const Sidebar = ({ isCollapsed }: SidebarProps) => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const isActive = (path: string) => {
     if (path === '/agents') {
@@ -39,22 +39,10 @@ export const Sidebar = () => {
 
   return (
     <div className={cn(
-      "bg-background border-r border-border transition-all duration-300 hidden md:block relative",
+      "bg-background border-r border-border transition-all duration-300 hidden md:block",
       isCollapsed ? "w-16" : "w-64"
     )}>
       <div className="flex flex-col h-screen">
-        {/* Collapse Toggle */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-6 z-10 w-6 h-6 bg-surface border border-border rounded-full flex items-center justify-center hover:bg-surface-elevated transition-colors"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-3 h-3 text-text-secondary" />
-          ) : (
-            <ChevronLeft className="w-3 h-3 text-text-secondary" />
-          )}
-        </button>
-
         {/* Main Navigation */}
         <nav className="flex-1 p-4">
           <div className="mb-6">
