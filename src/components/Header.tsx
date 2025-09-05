@@ -39,11 +39,6 @@ export const Header = () => {
               </h1>
             </div>
           </div>
-          {pageTitle !== 'Dashboard' && (
-            <div className="text-text-secondary">
-              Create and manage AI agents for your multi-agent workflows.
-            </div>
-          )}
         </div>
         
         <div className="flex items-center space-x-4">
