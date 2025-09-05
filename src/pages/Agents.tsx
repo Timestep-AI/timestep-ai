@@ -6,7 +6,8 @@ import {
   IonIcon, 
   IonFab, 
   IonFabButton,
-  IonButtons
+  IonButtons,
+  IonSearchbar
 } from '@ionic/react';
 import { add, trash, download } from 'ionicons/icons';
 
@@ -81,13 +82,14 @@ export const Agents = () => {
 
   return (
     <IonicLayout title="Agents">
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Action Buttons */}
-        <div className="flex items-center justify-between">
-          <IonButtons>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
             <IonButton 
               onClick={handleCreateDefaults}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              size="small"
             >
               <IonIcon icon={download} slot="start" />
               CREATE DEFAULTS
@@ -97,15 +99,25 @@ export const Agents = () => {
               color="danger"
               onClick={handleDeleteAll}
               disabled={agents.length === 0}
+              size="small"
             >
               <IonIcon icon={trash} slot="start" />
               DELETE ALL
             </IonButton>
-          </IonButtons>
+          </div>
           
           <div className="text-sm text-text-secondary">
             {agents.length} agent{agents.length !== 1 ? 's' : ''}
           </div>
+        </div>
+
+        {/* Mobile Search Bar */}
+        <div className="md:hidden">
+          <IonSearchbar
+            placeholder="Search agents..."
+            style={{ '--background': 'hsl(var(--background))', '--color': 'hsl(var(--foreground))' }}
+            showClearButton="focus"
+          />
         </div>
 
         {/* Agents List */}
@@ -118,7 +130,7 @@ export const Agents = () => {
               <h3 className="text-lg font-semibold text-text-primary mb-2">
                 No agents yet
               </h3>
-              <p className="text-text-secondary mb-4">
+              <p className="text-text-secondary mb-4 px-4">
                 Create your first agent to get started with AI workflows.
               </p>
               <IonButton 

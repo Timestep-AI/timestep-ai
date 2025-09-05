@@ -123,7 +123,7 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
             <IonTitle className="text-text-primary font-bold">
               {pageTitle}
             </IonTitle>
-            <IonButtons slot="end">
+            <IonButtons slot="end" className="hidden md:flex">
               <IonSearchbar
                 placeholder="Search dashboard..."
                 className="w-80 max-w-sm"
@@ -132,16 +132,17 @@ export const IonicLayout = ({ children }: IonicLayoutProps) => {
               />
               <IonButton className="bg-gradient-primary text-white ml-2">
                 <IonIcon icon={add} slot="start" />
-                CREATE
+                <span className="hidden sm:inline">CREATE</span>
+                <IonIcon icon={add} className="sm:hidden" />
               </IonButton>
             </IonButtons>
           </IonToolbar>
         </IonHeader>
         
         <IonContent className="bg-background" style={{ '--background': 'hsl(var(--background))' }}>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <div className="mb-4">
-              <p className="text-text-secondary">
+              <p className="text-text-secondary text-sm">
                 Create and manage AI agents for your multi-agent workflows.
               </p>
             </div>

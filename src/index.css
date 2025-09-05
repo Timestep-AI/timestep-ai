@@ -163,8 +163,14 @@
     --color: hsl(var(--foreground));
   }
   
-  /* Dark theme for Ionic menu */
-  ion-menu ion-content {
-    --background: hsl(var(--surface));
+  /* Responsive utilities */
+  .pl-13 {
+    @apply pl-12;
+  }
+  
+  @media (max-width: 640px) {
+    .pl-13 {
+      @apply pl-0;
+    }
   }
 }
