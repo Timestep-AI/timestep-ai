@@ -1,5 +1,4 @@
-import { Search, Plus } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'react-router-dom';
 
@@ -37,14 +36,6 @@ export const Header = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-tertiary" />
-            <Input
-              placeholder="Search dashboard..."
-              className="pl-10 w-80 bg-background border-border"
-            />
-          </div>
-          
           <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow">
             <Plus className="w-4 h-4 mr-2" />
             CREATE
