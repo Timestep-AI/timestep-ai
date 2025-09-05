@@ -39,12 +39,12 @@ export const Sidebar = ({ isCollapsed }: SidebarProps) => {
 
   return (
     <div className={cn(
-      "bg-background border-r border-border transition-all duration-300 hidden md:block",
+      "bg-background border-r border-border transition-all duration-300 hidden md:block fixed left-0 top-0 h-full z-50",
       isCollapsed ? "w-16" : "w-64"
     )}>
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-full">
         {/* Main Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 pt-16">
           <div className="mb-6">
             {!isCollapsed && (
               <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
@@ -78,7 +78,7 @@ export const Sidebar = ({ isCollapsed }: SidebarProps) => {
         </nav>
 
         {/* Account Section */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border pb-20">
           {!isCollapsed && (
             <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
               ACCOUNT
