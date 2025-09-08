@@ -108,8 +108,8 @@ export const Agents = () => {
       
       <div className="space-y-4">
         {/* Action Buttons */}
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
             <CreateDefaultsButton 
               onClick={handleCreateDefaults}
               disabled={operationLoading}
@@ -126,7 +126,7 @@ export const Agents = () => {
             </Button>
           </div>
           
-          <div className="text-xs text-text-secondary text-center sm:text-right mt-1 sm:mt-0">
+          <div className="text-xs text-text-secondary text-center sm:text-right">
             {agents.length} agent{agents.length !== 1 ? 's' : ''}
           </div>
         </div>
