@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { useLocation, useParams, Link } from 'react-router-dom';
+import { Menu, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -7,27 +7,33 @@ interface HeaderProps {
   sidebarCollapsed: boolean;
 }
 
-const getPageTitle = (pathname: string) => {
-  switch (pathname) {
-    case '/':
-    case '/agents':
-      return 'Agents';
-    case '/chats':
-      return 'Chats';
-    case '/models':
-      return 'Models';
-    case '/tools':
-      return 'Tools';
-    case '/traces':
-      return 'Traces';
-    default:
-      return 'Dashboard';
+const getBreadcrumbs = (pathname: string, params?: any) => {
+  const breadcrumbs = [];
+  
+  if (pathname === '/' || pathname === '/agents') {
+    breadcrumbs.push({ text: 'Agents', href: '/agents' });
+  } else if (pathname.startsWith('/agents/') && params?.id) {
+    breadcrumbs.push({ text: 'Agents', href: '/agents' });
+    breadcrumbs.push({ text: 'Agent', href: `/agents/${params.id}` });
+  } else if (pathname === '/chats') {
+    breadcrumbs.push({ text: 'Chats', href: '/chats' });
+  } else if (pathname === '/models') {
+    breadcrumbs.push({ text: 'Models', href: '/models' });
+  } else if (pathname === '/tools') {
+    breadcrumbs.push({ text: 'Tools', href: '/tools' });
+  } else if (pathname === '/traces') {
+    breadcrumbs.push({ text: 'Traces', href: '/traces' });
+  } else {
+    breadcrumbs.push({ text: 'Dashboard', href: '/' });
   }
+  
+  return breadcrumbs;
 };
 
 export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
   const location = useLocation();
-  const pageTitle = getPageTitle(location.pathname);
+  const params = useParams();
+  const breadcrumbs = getBreadcrumbs(location.pathname, params);
 
   return (
     <header className="bg-surface border-b border-border px-6 py-3">
@@ -41,6 +47,27 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
           >
             <Menu className="w-4 h-4" />
           </Button>
+          
+          {/* Breadcrumbs */}
+          <nav className="flex items-center space-x-1 text-sm">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.href} className="flex items-center">
+                {index > 0 && (
+                  <ChevronRight className="w-4 h-4 text-text-tertiary mx-1" />
+                )}
+                {index === breadcrumbs.length - 1 ? (
+                  <span className="text-text-primary font-medium">{crumb.text}</span>
+                ) : (
+                  <Link 
+                    to={crumb.href} 
+                    className="text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    {crumb.text}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </nav>
         </div>
         
         <div className="flex items-center space-x-4">

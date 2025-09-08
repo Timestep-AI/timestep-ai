@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Agents from "./pages/Agents";
+import Agent from "./pages/Agent";
 import Chats from "./pages/Chats";
 import Models from "./pages/Models";
 import Tools from "./pages/Tools";
@@ -22,6 +23,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/agents" element={<Agents />} />
+            <Route path="/agents/:id" element={<Agent />} />
             <Route path="/chats" element={<Chats />} />
             <Route path="/models" element={<Models />} />
             <Route path="/tools" element={<Tools />} />

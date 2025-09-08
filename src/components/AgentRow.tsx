@@ -1,4 +1,5 @@
 import { MoreHorizontal, User, Calendar, Cpu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,8 +25,21 @@ interface AgentRowProps {
 }
 
 export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
+  const navigate = useNavigate();
+
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on the dropdown menu
+    if ((e.target as HTMLElement).closest('[data-dropdown-trigger]')) {
+      return;
+    }
+    navigate(`/agents/${agent.id}`);
+  };
+
   return (
-    <div className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group">
+    <div 
+      className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group cursor-pointer"
+      onClick={handleRowClick}
+    >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0 mb-3 sm:mb-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
@@ -77,6 +91,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
                 variant="ghost"
                 size="sm"
                 className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                data-dropdown-trigger
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
