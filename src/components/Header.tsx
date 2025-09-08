@@ -19,7 +19,12 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     breadcrumbs.push({ text: 'Chats', href: '/chats' });
   } else if (pathname.startsWith('/chats/') && params?.id) {
     breadcrumbs.push({ text: 'Chats', href: '/chats' });
-    breadcrumbs.push({ text: 'Chat', href: `/chats/${params.id}` });
+    if (pathname.includes('/messages/')) {
+      breadcrumbs.push({ text: 'Chat', href: `/chats/${params.id}` });
+      breadcrumbs.push({ text: 'Message', href: pathname });
+    } else {
+      breadcrumbs.push({ text: 'Chat', href: `/chats/${params.id}` });
+    }
   } else if (pathname === '/models') {
     breadcrumbs.push({ text: 'Models', href: '/models' });
   } else if (pathname === '/tools') {

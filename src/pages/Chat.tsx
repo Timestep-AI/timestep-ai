@@ -5,31 +5,40 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageCircle, Calendar, Users, Hash, Edit, Trash2 } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
+import { Message } from '@/types/message';
 import { chatsService } from '@/services/chatsService';
+import { messagesService } from '@/services/messagesService';
+import { MessageRow } from '@/components/MessageRow';
 
 export const Chat = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [chat, setChat] = useState<ChatType | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadChat = async () => {
+    const loadChatAndMessages = async () => {
       if (!id) return;
       
       try {
         setLoading(true);
-        const chats = await chatsService.getAll();
+        const [chats, chatMessages] = await Promise.all([
+          chatsService.getAll(),
+          messagesService.getByChatId(id)
+        ]);
+        
         const foundChat = chats.find(c => c.id === id);
         setChat(foundChat || null);
+        setMessages(chatMessages);
       } catch (error) {
-        console.error('Error loading chat:', error);
+        console.error('Error loading chat and messages:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadChat();
+    loadChatAndMessages();
   }, [id]);
 
   const handleEdit = () => {
@@ -45,6 +54,21 @@ export const Chat = () => {
       navigate('/chats');
     } catch (error) {
       console.error('Error deleting chat:', error);
+    }
+  };
+
+  const handleEditMessage = (message: Message) => {
+    // TODO: Implement edit message functionality
+    console.log('Edit message:', message);
+  };
+
+  const handleDeleteMessage = async (message: Message) => {
+    try {
+      await messagesService.delete(message.id);
+      const updatedMessages = await messagesService.getByChatId(id!);
+      setMessages(updatedMessages);
+    } catch (error) {
+      console.error('Error deleting message:', error);
     }
   };
 
@@ -111,9 +135,9 @@ export const Chat = () => {
           </div>
         </div>
 
-        {/* Chat Details */}
+        {/* Chat Overview */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-start space-x-4 mb-6">
+          <div className="flex items-start space-x-4 mb-4">
             <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center flex-shrink-0">
               <MessageCircle className="w-8 h-8 text-primary-foreground" />
             </div>
@@ -126,12 +150,6 @@ export const Chat = () => {
                 {getStatusBadge()}
               </div>
               
-              {chat.lastMessage && (
-                <p className="text-text-secondary mb-4">
-                  {chat.lastMessage}
-                </p>
-              )}
-              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-2 text-sm text-text-tertiary">
                   <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -139,49 +157,49 @@ export const Chat = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span>Updated: {chat.updatedAt}</span>
+                  <Hash className="w-4 h-4 flex-shrink-0" />
+                  <span>{messages.length} messages</span>
                 </div>
                 
-                <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-                  <Hash className="w-4 h-4 flex-shrink-0" />
-                  <span>{chat.messageCount} messages</span>
-                </div>
+                {chat.participants && chat.participants.length > 0 && (
+                  <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    <span>{chat.participants.length} participants</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Messages */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-text-primary">Messages</h2>
           
-          {/* Participants */}
-          {chat.participants && chat.participants.length > 0 && (
-            <div className="border-t border-border pt-6 mb-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Participants ({chat.participants.length})
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {chat.participants.map((participant, index) => (
-                  <Badge key={index} variant="outline" className="text-text-primary">
-                    {participant}
-                  </Badge>
-                ))}
+          {messages.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="text-4xl text-text-tertiary" />
               </div>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">
+                No messages found
+              </h3>
+              <p className="text-text-secondary">
+                This chat doesn't have any messages yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((message) => (
+                <MessageRow
+                  key={message.id}
+                  message={message}
+                  onEdit={handleEditMessage}
+                  onDelete={handleDeleteMessage}
+                />
+              ))}
             </div>
           )}
-          
-          {/* Additional Details */}
-          <div className="border-t border-border pt-6">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-text-secondary">ID</label>
-                <p className="text-text-primary font-mono text-sm break-all">{chat.id}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-secondary">Status</label>
-                <p className="text-text-primary capitalize">{chat.status}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </Layout>
