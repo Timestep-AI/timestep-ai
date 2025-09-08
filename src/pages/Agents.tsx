@@ -160,11 +160,11 @@ export const Agents = () => {
               </p>
               <Button 
                 onClick={handleCreateDefaults}
-                className="bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-glow"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
                 disabled={operationLoading}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Defaults
+                <Download className="w-4 h-4 mr-2" />
+                CREATE DEFAULTS
               </Button>
             </div>
           ) : (
