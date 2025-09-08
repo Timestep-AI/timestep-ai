@@ -26,8 +26,8 @@ interface AgentCardProps {
 export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
   return (
     <div className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0 mb-3 sm:mb-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
             <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
           </div>
@@ -59,11 +59,11 @@ export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-end sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 flex-shrink-0">
+        <div className="flex items-center justify-between sm:flex-col sm:items-end space-x-2 sm:space-x-0 sm:space-y-1 flex-shrink-0">
           {agent.model ? (
             <Badge className="bg-info/10 text-info border-info/20 text-xs">
               <Cpu className="w-3 h-3 mr-1" />
-              <span className="truncate max-w-[80px] sm:max-w-none">{agent.model}</span>
+              <span className="truncate max-w-[120px] sm:max-w-none">{agent.model}</span>
             </Badge>
           ) : (
             <Badge variant="outline" className="text-text-tertiary text-xs">
@@ -76,7 +76,7 @@ export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
