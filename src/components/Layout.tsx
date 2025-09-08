@@ -13,7 +13,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex">
+      <div className="flex h-screen">
         <div className={cn(
           "transition-all duration-300 hidden md:block",
           sidebarCollapsed ? "w-16" : "w-64"
@@ -21,12 +21,12 @@ export const Layout = ({ children }: LayoutProps) => {
           {/* Spacer for sidebar */}
         </div>
         <Sidebar isCollapsed={sidebarCollapsed} />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <Header 
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-20 w-full">
+          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-20 w-full overflow-y-auto">
             <div className="w-full">
               {children}
             </div>
