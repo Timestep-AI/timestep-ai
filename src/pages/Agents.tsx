@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { AgentCard } from '@/components/AgentCard';
+import { AgentRow } from '@/components/AgentRow';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CreateDefaultsButton } from '@/components/CreateDefaultsButton';
@@ -162,7 +162,7 @@ export const Agents = () => {
             </div>
           ) : (
             agents.map((agent) => (
-              <AgentCard
+              <AgentRow
                 key={agent.id}
                 agent={agent}
                 onEdit={handleEditAgent}

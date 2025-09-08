@@ -17,13 +17,13 @@ interface Agent {
   status: 'active' | 'inactive' | 'handoff';
 }
 
-interface AgentCardProps {
+interface AgentRowProps {
   agent: Agent;
   onEdit?: (agent: Agent) => void;
   onDelete?: (agent: Agent) => void;
 }
 
-export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
+export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
   return (
     <div className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
