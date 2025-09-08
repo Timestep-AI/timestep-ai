@@ -111,21 +111,21 @@ export const Agents = () => {
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
             <Button 
               onClick={handleCreateDefaults}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs px-2 py-1.5 h-auto min-h-8"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
               disabled={operationLoading}
             >
-              <Download className="w-3 h-3 mr-1" />
-              <span className="truncate">CREATE DEFAULTS</span>
+              <Download className="w-4 h-4 mr-2" />
+              CREATE DEFAULTS
             </Button>
             
             <Button 
               variant="destructive"
               onClick={handleDeleteAll}
               disabled={agents.length === 0 || operationLoading}
-              className="text-xs px-2 py-1.5 h-auto min-h-8"
+              className="text-sm"
             >
-              <Trash2 className="w-3 h-3 mr-1" />
-              <span className="truncate">DELETE ALL</span>
+              <Trash2 className="w-4 h-4 mr-2" />
+              DELETE ALL
             </Button>
           </div>
           
