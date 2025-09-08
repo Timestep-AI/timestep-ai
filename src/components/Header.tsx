@@ -17,6 +17,9 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     breadcrumbs.push({ text: 'Agent', href: `/agents/${params.id}` });
   } else if (pathname === '/chats') {
     breadcrumbs.push({ text: 'Chats', href: '/chats' });
+  } else if (pathname.startsWith('/chats/') && params?.id) {
+    breadcrumbs.push({ text: 'Chats', href: '/chats' });
+    breadcrumbs.push({ text: 'Chat', href: `/chats/${params.id}` });
   } else if (pathname === '/models') {
     breadcrumbs.push({ text: 'Models', href: '/models' });
   } else if (pathname === '/tools') {

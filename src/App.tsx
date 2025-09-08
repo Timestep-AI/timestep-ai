@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Agents from "./pages/Agents";
 import Agent from "./pages/Agent";
 import Chats from "./pages/Chats";
+import Chat from "./pages/Chat";
 import Models from "./pages/Models";
 import Tools from "./pages/Tools";
 import Traces from "./pages/Traces";
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/agents" element={<Agents />} />
             <Route path="/agents/:id" element={<Agent />} />
             <Route path="/chats" element={<Chats />} />
+            <Route path="/chats/:id" element={<Chat />} />
             <Route path="/models" element={<Models />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/traces" element={<Traces />} />
