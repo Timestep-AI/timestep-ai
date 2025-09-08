@@ -106,7 +106,7 @@ export const Agents = () => {
         </div>
       )}
       
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-full overflow-hidden">
         {/* Action Buttons */}
         <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
@@ -143,7 +143,7 @@ export const Agents = () => {
         </div>
 
         {/* Agents List */}
-        <div className="space-y-3">
+        <div className="space-y-3 max-w-full">
           {agents.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
