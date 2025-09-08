@@ -155,10 +155,13 @@ export const Agents = () => {
               <p className="text-text-secondary mb-4 px-4">
                 Create your first agent to get started with AI workflows.
               </p>
-              <CreateDefaultsButton 
-                onClick={handleCreateDefaults}
-                disabled={operationLoading}
-              />
+              <div className="flex justify-center">
+                <CreateDefaultsButton 
+                  onClick={handleCreateDefaults}
+                  disabled={operationLoading}
+                  className="w-auto"
+                />
+              </div>
             </div>
           ) : (
             agents.map((agent) => (
