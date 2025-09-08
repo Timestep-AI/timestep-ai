@@ -21,13 +21,13 @@ export const Layout = ({ children }: LayoutProps) => {
           {/* Spacer for sidebar */}
         </div>
         <Sidebar isCollapsed={sidebarCollapsed} />
-        <div className="flex-1 flex flex-col min-w-0 max-w-full">
+        <div className="flex-1 flex flex-col min-w-0">
           <Header 
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-20 w-full max-w-full">
-            <div className="w-full max-w-full">
+          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-20 w-full">
+            <div className="w-full">
               {children}
             </div>
           </main>
