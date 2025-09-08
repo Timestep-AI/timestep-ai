@@ -3,7 +3,8 @@ import { Layout } from '@/components/Layout';
 import { AgentCard } from '@/components/AgentCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Download, Search } from 'lucide-react';
+import { CreateDefaultsButton } from '@/components/CreateDefaultsButton';
+import { Plus, Trash2, Search } from 'lucide-react';
 import { Agent } from '@/types/agent';
 import { agentsService } from '@/services/agentsService';
 
@@ -109,14 +110,10 @@ export const Agents = () => {
         {/* Action Buttons */}
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
-            <Button 
+            <CreateDefaultsButton 
               onClick={handleCreateDefaults}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
               disabled={operationLoading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              CREATE DEFAULTS
-            </Button>
+            />
             
             <Button 
               variant="destructive"
@@ -158,14 +155,10 @@ export const Agents = () => {
               <p className="text-text-secondary mb-4 px-4">
                 Create your first agent to get started with AI workflows.
               </p>
-              <Button 
+              <CreateDefaultsButton 
                 onClick={handleCreateDefaults}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
                 disabled={operationLoading}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                CREATE DEFAULTS
-              </Button>
+              />
             </div>
           ) : (
             agents.map((agent) => (
