@@ -15,7 +15,7 @@ export const CreateDefaultsButton = ({
   return (
     <Button 
       onClick={onClick}
-      className={`bg-primary hover:bg-primary/90 text-primary-foreground text-sm ${className}`}
+      className={`bg-primary hover:bg-primary/90 text-primary-foreground text-sm h-10 ${className}`}
       disabled={disabled}
     >
       <Download className="w-4 h-4 mr-2" />
