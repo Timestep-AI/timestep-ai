@@ -117,9 +117,9 @@ export const Agents = () => {
             
             <Button 
               variant="destructive"
+              size="default"
               onClick={handleDeleteAll}
               disabled={agents.length === 0 || operationLoading}
-              className="text-sm h-10"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               DELETE ALL
