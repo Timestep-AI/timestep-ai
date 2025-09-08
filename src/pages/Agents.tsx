@@ -107,14 +107,14 @@ export const Agents = () => {
       
       <div className="space-y-4">
         {/* Action Buttons */}
-        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
             <Button 
               onClick={handleCreateDefaults}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm px-3 py-2"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs px-2 py-1.5 h-auto min-h-8"
               disabled={operationLoading}
             >
-              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Download className="w-3 h-3 mr-1" />
               <span className="truncate">CREATE DEFAULTS</span>
             </Button>
             
@@ -122,14 +122,14 @@ export const Agents = () => {
               variant="destructive"
               onClick={handleDeleteAll}
               disabled={agents.length === 0 || operationLoading}
-              className="text-xs sm:text-sm px-3 py-2"
+              className="text-xs px-2 py-1.5 h-auto min-h-8"
             >
-              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Trash2 className="w-3 h-3 mr-1" />
               <span className="truncate">DELETE ALL</span>
             </Button>
           </div>
           
-          <div className="text-xs sm:text-sm text-text-secondary text-center sm:text-right">
+          <div className="text-xs text-text-secondary text-center sm:text-right mt-1 sm:mt-0">
             {agents.length} agent{agents.length !== 1 ? 's' : ''}
           </div>
         </div>

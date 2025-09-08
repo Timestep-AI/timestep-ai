@@ -26,7 +26,7 @@ export const Layout = ({ children }: LayoutProps) => {
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 p-6 pb-20">
+          <main className="flex-1 p-3 sm:p-6 pb-20">
             {children}
           </main>
         </div>
