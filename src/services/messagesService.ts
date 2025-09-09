@@ -69,6 +69,185 @@ const DEFAULT_MESSAGES: Record<string, Readonly<Message[]>> = {
       status: 'read',
     },
   ],
+  'default-3': [
+    {
+      id: 'msg-3-1',
+      chatId: 'default-3',
+      content: 'Could you review the API documentation I sent over yesterday?',
+      sender: 'user123',
+      timestamp: '8/29/2025, 2:10:12 PM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-3-2',
+      chatId: 'default-3',
+      content: 'I\'ve reviewed the documentation. The endpoints are well-documented, but we need to add more examples.',
+      sender: 'tech-writer',
+      timestamp: '8/30/2025, 10:25:18 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-3-3',
+      chatId: 'default-3',
+      content: 'I\'ve added the examples and updated the authentication section.',
+      sender: 'user123',
+      timestamp: '8/31/2025, 3:15:22 PM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-3-4',
+      chatId: 'default-3',
+      content: 'The API documentation looks good to go.',
+      sender: 'tech-writer',
+      timestamp: '8/31/2025, 4:20:33 PM',
+      type: 'assistant',
+      status: 'read',
+    },
+  ],
+  'default-4': [
+    {
+      id: 'msg-4-1',
+      chatId: 'default-4',
+      content: 'I found a bug in the user registration form. Users can\'t submit with special characters in their names.',
+      sender: 'user123',
+      timestamp: '8/28/2025, 11:05:18 AM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-4-2',
+      chatId: 'default-4',
+      content: 'Thank you for the report. I\'ll investigate this issue right away.',
+      sender: 'qa-engineer',
+      timestamp: '8/28/2025, 11:20:30 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-4-3',
+      chatId: 'default-4',
+      content: 'I\'ve reproduced the issue. It\'s related to input validation.',
+      sender: 'qa-engineer',
+      timestamp: '8/29/2025, 2:10:15 PM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-4-4',
+      chatId: 'default-4',
+      content: 'Issue has been reproduced and assigned to dev team.',
+      sender: 'qa-engineer',
+      timestamp: '8/30/2025, 9:15:45 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+  ],
+  'default-5': [
+    {
+      id: 'msg-5-1',
+      chatId: 'default-5',
+      content: 'I\'d like to request a dark mode feature for the application.',
+      sender: 'user123',
+      timestamp: '8/27/2025, 3:45:22 PM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-5-2',
+      chatId: 'default-5',
+      content: 'That\'s a great suggestion! Dark mode is definitely something our users have been asking for.',
+      sender: 'product-manager',
+      timestamp: '8/27/2025, 4:12:10 PM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-5-3',
+      chatId: 'default-5',
+      content: 'I can provide some mockups of how the dark theme would look across different pages.',
+      sender: 'user123',
+      timestamp: '8/28/2025, 10:30:45 AM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-5-4',
+      chatId: 'default-5',
+      content: 'That would be fantastic! Please share the mockups when you have them ready.',
+      sender: 'product-manager',
+      timestamp: '8/28/2025, 11:15:20 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-5-5',
+      chatId: 'default-5',
+      content: 'We\'ll add this to the next sprint backlog.',
+      sender: 'product-manager',
+      timestamp: '8/29/2025, 1:12:08 PM',
+      type: 'assistant',
+      status: 'read',
+    },
+  ],
+  'default-6': [
+    {
+      id: 'msg-6-1',
+      chatId: 'default-6',
+      content: 'Welcome to our advanced React training session! Today we\'ll cover hooks and state management.',
+      sender: 'trainer',
+      timestamp: '8/26/2025, 10:30:15 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-6-2',
+      chatId: 'default-6',
+      content: 'Excited to learn about useEffect and useContext hooks!',
+      sender: 'trainee1',
+      timestamp: '8/26/2025, 10:32:20 AM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-6-3',
+      chatId: 'default-6',
+      content: 'Can you explain the difference between useState and useReducer?',
+      sender: 'trainee2',
+      timestamp: '8/26/2025, 11:15:30 AM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-6-4',
+      chatId: 'default-6',
+      content: 'Great question! useState is perfect for simple state, while useReducer is better for complex state logic with multiple actions.',
+      sender: 'trainer',
+      timestamp: '8/26/2025, 11:18:45 AM',
+      type: 'assistant',
+      status: 'read',
+    },
+    {
+      id: 'msg-6-5',
+      chatId: 'default-6',
+      content: 'The examples you provided really helped clarify the concepts.',
+      sender: 'user123',
+      timestamp: '8/27/2025, 2:20:15 PM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-6-6',
+      chatId: 'default-6',
+      content: 'Thanks for the comprehensive training materials.',
+      sender: 'trainee1',
+      timestamp: '8/27/2025, 5:45:30 PM',
+      type: 'user',
+      status: 'read',
+    },
+  ],
 } as const;
 
 class MessagesService {
@@ -180,16 +359,28 @@ class MessagesService {
   async createDefaults(): Promise<Message[]> {
     await this.delay(300);
     
+    // Import chatsService to get the actual chat IDs
+    const { chatsService } = await import('@/services/chatsService');
+    const chats = await chatsService.getAll();
+    
     const clonedDefaults: Message[] = [];
     
-    Object.entries(DEFAULT_MESSAGES).forEach(([chatId, chatMessages]) => {
-      chatMessages.forEach((defaultMessage, index) => {
-        clonedDefaults.push({
-          ...defaultMessage,
-          id: `cloned-msg-${Date.now()}-${chatId}-${index}`, // Generate unique IDs
-          timestamp: new Date().toLocaleString(), // Update timestamp
+    // Map default messages to actual chat IDs
+    const defaultKeys = Object.keys(DEFAULT_MESSAGES);
+    chats.forEach((chat, index) => {
+      if (index < defaultKeys.length) {
+        const defaultKey = defaultKeys[index];
+        const defaultMessages = DEFAULT_MESSAGES[defaultKey];
+        
+        defaultMessages.forEach((defaultMessage, msgIndex) => {
+          clonedDefaults.push({
+            ...defaultMessage,
+            id: `cloned-msg-${Date.now()}-${chat.id}-${msgIndex}`,
+            chatId: chat.id, // Use the actual chat ID
+            timestamp: new Date(Date.now() - (defaultMessages.length - msgIndex) * 3600000).toLocaleString(), // Spread messages over time
+          });
         });
-      });
+      }
     });
 
     this.messages = [...clonedDefaults];
