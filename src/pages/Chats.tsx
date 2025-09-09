@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
+import { CollectionPage } from '@/components/CollectionPage';
 import { ChatRow } from '@/components/ChatRow';
-import { CreateDefaultsButton } from '@/components/CreateDefaultsButton';
 import { MessageSquare } from 'lucide-react';
 import { Chat } from '@/types/chat';
 import { chatsService } from '@/services/chatsService';
@@ -51,52 +50,29 @@ export const Chats = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-text-secondary">Loading chats...</div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-text-primary">Chats</h2>
-          <CreateDefaultsButton 
-            onClick={handleCreateDefaults}
-          />
-        </div>
-        
-        {chats.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="text-4xl text-text-tertiary" />
-            </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">
-              No chats found
-            </h3>
-            <p className="text-text-secondary mb-4">
-              Get started by creating some default chats.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {chats.map((chat) => (
-              <ChatRow
-                key={chat.id}
-                chat={chat}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </Layout>
+    <CollectionPage
+      title="Chats"
+      items={chats}
+      loading={loading}
+      emptyIcon={<MessageSquare className="text-4xl text-text-tertiary" />}
+      emptyTitle="No chats found"
+      emptyDescription="Get started by creating some default chats."
+      searchPlaceholder="Search chats..."
+      itemCountLabel={(count) => `${count} chat${count !== 1 ? 's' : ''}`}
+      onCreateDefaults={handleCreateDefaults}
+      renderItem={(chat) => (
+        <ChatRow
+          key={chat.id}
+          chat={chat}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+      showSearch={false}
+      showDeleteAll={false}
+      showCreateButton={false}
+    />
   );
 };
 
