@@ -49,9 +49,34 @@ export function CollectionPage<T extends { id: string }>({
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredItems = items.filter(item => {
-    // This assumes items have a 'name' or 'title' property for search
-    const searchableText = (item as any).name || (item as any).title || '';
-    return searchableText.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const searchableFields = [
+      (item as any).name,
+      (item as any).title,
+      (item as any).description,
+      (item as any).provider,
+      (item as any).sender,
+    ].filter(Boolean);
+    
+    // Also search in array fields like capabilities, participants
+    const arrayFields = [
+      (item as any).capabilities,
+      (item as any).participants,
+    ].filter(Boolean);
+    
+    // Search in basic fields
+    const matchesBasicFields = searchableFields.some(field => 
+      field.toLowerCase().includes(searchLower)
+    );
+    
+    // Search in array fields
+    const matchesArrayFields = arrayFields.some(array => 
+      array.some((element: string) => element.toLowerCase().includes(searchLower))
+    );
+    
+    return matchesBasicFields || matchesArrayFields;
   });
 
   if (loading) {
