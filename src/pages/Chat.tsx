@@ -96,54 +96,58 @@ export const Chat = () => {
       onDelete={handleDelete}
       statusBadge={getStatusBadge()}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-          <Calendar className="w-4 h-4 flex-shrink-0" />
-          <span>Created: {chat.createdAt}</span>
-        </div>
-        
-        <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-          <Hash className="w-4 h-4 flex-shrink-0" />
-          <span>{messages.length} messages</span>
-        </div>
-        
-        {chat.participants && chat.participants.length > 0 && (
-          <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-            <Users className="w-4 h-4 flex-shrink-0" />
-            <span>{chat.participants.length} participants</span>
-          </div>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div className="border-t border-border pt-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-4">Messages</h2>
-        
-        {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="text-4xl text-text-tertiary" />
+      {chat && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Calendar className="w-4 h-4 flex-shrink-0" />
+              <span>Created: {chat.createdAt}</span>
             </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">
-              No messages found
-            </h3>
-            <p className="text-text-secondary">
-              This chat doesn't have any messages yet.
-            </p>
+            
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Hash className="w-4 h-4 flex-shrink-0" />
+              <span>{messages.length} messages</span>
+            </div>
+            
+            {chat.participants && chat.participants.length > 0 && (
+              <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+                <Users className="w-4 h-4 flex-shrink-0" />
+                <span>{chat.participants.length} participants</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="space-y-3">
-            {messages.map((message) => (
-              <MessageRow
-                key={message.id}
-                message={message}
-                onEdit={handleEditMessage}
-                onDelete={handleDeleteMessage}
-              />
-            ))}
+
+          {/* Messages */}
+          <div className="border-t border-border pt-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">Messages</h2>
+            
+            {messages.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="text-4xl text-text-tertiary" />
+                </div>
+                <h3 className="text-lg font-semibold text-text-primary mb-2">
+                  No messages found
+                </h3>
+                <p className="text-text-secondary">
+                  This chat doesn't have any messages yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((message) => (
+                  <MessageRow
+                    key={message.id}
+                    message={message}
+                    onEdit={handleEditMessage}
+                    onDelete={handleDeleteMessage}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </ItemPage>
   );
 };

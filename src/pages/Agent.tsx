@@ -63,40 +63,44 @@ export const Agent = () => {
       onDelete={handleDelete}
       statusBadge={statusBadge}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-          <Calendar className="w-4 h-4 flex-shrink-0" />
-          <span>Created: {agent.createdAt}</span>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          {agent.model ? (
-            <Badge className="bg-info/10 text-info border-info/20">
-              <Cpu className="w-3 h-3 mr-1" />
-              {agent.model}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-text-tertiary">
-              No Model
-            </Badge>
-          )}
-        </div>
-      </div>
-      
-      {/* Additional Details */}
-      <div className="border-t border-border pt-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-text-secondary">ID</label>
-            <p className="text-text-primary font-mono text-sm break-all">{agent.id}</p>
+      {agent && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Calendar className="w-4 h-4 flex-shrink-0" />
+              <span>Created: {agent.createdAt}</span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {agent.model ? (
+                <Badge className="bg-info/10 text-info border-info/20">
+                  <Cpu className="w-3 h-3 mr-1" />
+                  {agent.model}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-text-tertiary">
+                  No Model
+                </Badge>
+              )}
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-text-secondary">Status</label>
-            <p className="text-text-primary capitalize">{agent.status}</p>
+          
+          {/* Additional Details */}
+          <div className="border-t border-border pt-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-text-secondary">ID</label>
+                <p className="text-text-primary font-mono text-sm break-all">{agent.id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Status</label>
+                <p className="text-text-primary capitalize">{agent.status}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </ItemPage>
   );
 };
