@@ -105,7 +105,7 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
       return (
         <div className="bg-surface-elevated rounded-lg p-3 border border-border">
           <div className="flex items-center mb-2">
-            <span className="text-xs font-medium text-text-primary">Tool Response</span>
+            <span className="text-xs font-medium text-text-primary">Response</span>
             {message.toolCallId && (
               <span className="text-xs text-text-tertiary ml-2">({message.toolCallId})</span>
             )}
@@ -141,7 +141,7 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
                 {message.sender}
               </h3>
               <Badge variant="outline" className="text-xs flex-shrink-0 capitalize">
-                {message.type.replace('_', ' ')}
+                {message.type === 'tool_call' ? 'assistant' : message.type === 'tool_response' ? 'tool' : message.type.replace('_', ' ')}
               </Badge>
               {getStatusBadge()}
             </div>
