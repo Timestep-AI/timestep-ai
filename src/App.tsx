@@ -9,6 +9,7 @@ import Chats from "./pages/Chats";
 import Chat from "./pages/Chat";
 import Message from "./pages/Message";
 import Models from "./pages/Models";
+import Model from "./pages/Model";
 import Tools from "./pages/Tools";
 import Traces from "./pages/Traces";
 import Settings from "./pages/Settings";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/chats/:id" element={<Chat />} />
             <Route path="/chats/:id/messages/:messageId" element={<Message />} />
             <Route path="/models" element={<Models />} />
+            <Route path="/models/:id" element={<Model />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/traces" element={<Traces />} />
             <Route path="/settings" element={<Settings />} />
