@@ -69,7 +69,7 @@ export const Chats = () => {
           onDelete={handleDelete}
         />
       )}
-      showSearch={false}
+      showSearch={true}
       showDeleteAll={false}
       showCreateButton={false}
     />
