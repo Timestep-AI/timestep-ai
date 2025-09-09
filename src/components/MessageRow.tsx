@@ -1,4 +1,4 @@
-import { MoreHorizontal, MessageSquare, Calendar, User, Bot, Settings } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Calendar, User, Bot, Settings, Wrench, Code } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,17 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface Message {
-  id: string;
-  chatId: string;
-  content: string;
-  sender: string;
-  timestamp: string;
-  type: 'user' | 'assistant' | 'system';
-  status: 'sent' | 'delivered' | 'read' | 'failed';
-  attachments?: string[];
-}
+import { Message } from '@/types/message';
 
 interface MessageRowProps {
   message: Message;
@@ -46,6 +36,10 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
         return <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
       case 'system':
         return <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+      case 'tool_call':
+        return <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+      case 'tool_response':
+        return <Code className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
       default:
         return <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
     }
@@ -71,6 +65,65 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
     return content.substring(0, maxLength) + '...';
   };
 
+  const renderContent = () => {
+    if (message.type === 'tool_call' && message.toolCalls && message.toolCalls.length > 0) {
+      const toolCall = message.toolCalls[0];
+      return (
+        <div className="space-y-2">
+          <p className="text-xs sm:text-sm text-text-secondary">
+            {message.content}
+          </p>
+          <div className="bg-surface-elevated rounded-lg p-3 border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-text-primary">Tool Call: {toolCall.function.name}</span>
+              {message.approved ? (
+                <Badge className="bg-success/10 text-success border-success/20 text-xs">Approved</Badge>
+              ) : (
+                <div className="flex space-x-1">
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs">Reject</Button>
+                  <Button size="sm" className="h-6 px-2 text-xs">Approve</Button>
+                </div>
+              )}
+            </div>
+            <pre className="text-xs text-text-tertiary whitespace-pre-wrap break-words font-mono">
+              {JSON.stringify(JSON.parse(toolCall.function.arguments), null, 2)}
+            </pre>
+          </div>
+        </div>
+      );
+    }
+    
+    if (message.type === 'tool_response') {
+      let formattedResponse;
+      try {
+        const parsed = JSON.parse(message.content);
+        formattedResponse = JSON.stringify(parsed, null, 2);
+      } catch {
+        formattedResponse = message.content;
+      }
+      
+      return (
+        <div className="bg-surface-elevated rounded-lg p-3 border border-border">
+          <div className="flex items-center mb-2">
+            <span className="text-xs font-medium text-text-primary">Tool Response</span>
+            {message.toolCallId && (
+              <span className="text-xs text-text-tertiary ml-2">({message.toolCallId})</span>
+            )}
+          </div>
+          <pre className="text-xs text-text-tertiary whitespace-pre-wrap break-words font-mono">
+            {formattedResponse}
+          </pre>
+        </div>
+      );
+    }
+    
+    return (
+      <p className="text-xs sm:text-sm text-text-secondary mb-2 break-words line-clamp-2">
+        {truncateContent(message.content)}
+      </p>
+    );
+  };
+
   return (
     <div 
       className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group cursor-pointer"
@@ -88,14 +141,12 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
                 {message.sender}
               </h3>
               <Badge variant="outline" className="text-xs flex-shrink-0 capitalize">
-                {message.type}
+                {message.type.replace('_', ' ')}
               </Badge>
               {getStatusBadge()}
             </div>
             
-            <p className="text-xs sm:text-sm text-text-secondary mb-2 break-words line-clamp-2">
-              {truncateContent(message.content)}
-            </p>
+            {renderContent()}
             
             <div className="flex items-center flex-wrap gap-1 sm:gap-3 text-xs text-text-tertiary">
               <div className="flex items-center space-x-1">

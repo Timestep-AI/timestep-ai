@@ -3,6 +3,16 @@ import { Chat, CreateChatRequest, UpdateChatRequest } from '@/types/chat';
 // Immutable default chats - these never change
 const DEFAULT_CHATS: Readonly<Chat[]> = [
   {
+    id: 'default-0',
+    title: 'Weather Assistant with Tools',
+    lastMessage: 'The current weather in Oakland is 72°F and partly cloudy with light winds.',
+    createdAt: '9/2/2025, 2:30:15 PM',
+    updatedAt: '9/2/2025, 2:35:45 PM',
+    messageCount: 4,
+    status: 'active',
+    participants: ['user123', 'weather-assistant'],
+  },
+  {
     id: 'default-1',
     title: 'Customer Support Conversation',
     lastMessage: 'Thank you for your help with the billing issue.',

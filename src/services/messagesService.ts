@@ -2,6 +2,56 @@ import { Message, CreateMessageRequest, UpdateMessageRequest } from '@/types/mes
 
 // Immutable default messages for different chats
 const DEFAULT_MESSAGES: Record<string, Readonly<Message[]>> = {
+  'default-0': [
+    {
+      id: 'msg-0-1',
+      chatId: 'default-0',
+      content: "What's the weather in Oakland?",
+      sender: 'user123',
+      timestamp: '9/2/2025, 2:30:15 PM',
+      type: 'user',
+      status: 'read',
+    },
+    {
+      id: 'msg-0-2',
+      chatId: 'default-0',
+      content: "I'll check the current weather in Oakland for you.",
+      sender: 'weather-assistant',
+      timestamp: '9/2/2025, 2:30:30 PM',
+      type: 'tool_call',
+      status: 'read',
+      toolCalls: [
+        {
+          id: 'call_1234567890',
+          type: 'function',
+          function: {
+            name: 'get_weather',
+            arguments: '{"location": "Oakland, CA", "unit": "fahrenheit"}'
+          }
+        }
+      ],
+      approved: true,
+    },
+    {
+      id: 'msg-0-3',
+      chatId: 'default-0',
+      content: '{"location": "Oakland, CA", "temperature": 72, "condition": "partly cloudy", "humidity": 65, "wind": "5 mph NW", "feels_like": 74}',
+      sender: 'get_weather',
+      timestamp: '9/2/2025, 2:30:35 PM',
+      type: 'tool_response',
+      status: 'read',
+      toolCallId: 'call_1234567890',
+    },
+    {
+      id: 'msg-0-4',
+      chatId: 'default-0',
+      content: 'The current weather in Oakland is 72°F and partly cloudy with light winds from the northwest at 5 mph. The humidity is at 65% and it feels like 74°F outside. Perfect weather for a walk!',
+      sender: 'weather-assistant',
+      timestamp: '9/2/2025, 2:35:45 PM',
+      type: 'assistant',
+      status: 'read',
+    },
+  ],
   'default-1': [
     {
       id: 'msg-1-1',
