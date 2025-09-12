@@ -86,8 +86,7 @@ export function SpanTreeRow({ span, onSelect, maxDuration = 10000, isSelected = 
       {/* Left section - Icon, title, description */}
       <div className="flex items-center space-x-2 flex-1 min-w-0">
         <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${getTypeColor(span.type)}`}>
-          {getTypeIcon(span.type)}
-          <div className="text-white text-xs">
+          <div className="text-white">
             {getTypeIcon(span.type)}
           </div>
         </div>
