@@ -36,7 +36,14 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
   ];
 
   const rightContent = agent.model ? (
-    <Badge className="bg-info/10 text-info border-info/20 text-xs">
+    <Badge 
+      className="bg-info/10 text-info border-info/20 text-xs cursor-pointer hover:bg-info/20 transition-colors"
+      onClick={(e) => {
+        e.stopPropagation();
+        // Navigate to model page - we'll use the model name as ID for now
+        navigate(`/models/ollama-gpt-oss-20b`);
+      }}
+    >
       <Cpu className="w-3 h-3 mr-1" />
       <span className="truncate max-w-[120px] sm:max-w-none">{agent.model}</span>
     </Badge>

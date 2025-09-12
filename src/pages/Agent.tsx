@@ -73,7 +73,10 @@ export const Agent = () => {
             
             <div className="flex items-center space-x-2">
               {agent.model ? (
-                <Badge className="bg-info/10 text-info border-info/20">
+                <Badge 
+                  className="bg-info/10 text-info border-info/20 cursor-pointer hover:bg-info/20 transition-colors"
+                  onClick={() => navigate(`/models/ollama-gpt-oss-20b`)}
+                >
                   <Cpu className="w-3 h-3 mr-1" />
                   {agent.model}
                 </Badge>
