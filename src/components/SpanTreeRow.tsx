@@ -1,6 +1,6 @@
 import { Span } from '@/types/trace';
 import { TimingBar } from './TimingBar';
-import { Zap, Clock, CheckCircle, XCircle, AlertTriangle, Bot, Globe, Cpu, ArrowRight } from 'lucide-react';
+import { Zap, Clock, CheckCircle, XCircle, AlertTriangle, Bot, Globe, Cpu, ArrowRight, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface SpanTreeRowProps {
   span: Span;
@@ -8,6 +8,9 @@ interface SpanTreeRowProps {
   maxDuration?: number;
   isSelected?: boolean;
   level?: number;
+  hasChildren?: boolean;
+  isExpanded?: boolean;
+  onToggleExpanded?: (spanId: string) => void;
 }
 
 const getStatusIcon = (status: string) => {
@@ -48,7 +51,16 @@ const formatDuration = (duration: number) => {
   }
 };
 
-export function SpanTreeRow({ span, onSelect, maxDuration = 10000, isSelected = false, level = 0 }: SpanTreeRowProps) {
+export function SpanTreeRow({ 
+  span, 
+  onSelect, 
+  maxDuration = 10000, 
+  isSelected = false, 
+  level = 0,
+  hasChildren = false,
+  isExpanded = false,
+  onToggleExpanded
+}: SpanTreeRowProps) {
   const getDescription = () => {
     if (span.type === 'agent' && span.model) {
       return span.model;
@@ -83,8 +95,27 @@ export function SpanTreeRow({ span, onSelect, maxDuration = 10000, isSelected = 
       onClick={() => onSelect(span)}
       style={{ paddingLeft: `${12 + level * 20}px` }}
     >
-      {/* Left section - Icon, title, description */}
+      {/* Left section - Expand/collapse, Icon, title, description */}
       <div className="flex items-center space-x-2 flex-1 min-w-0">
+        {/* Expand/collapse button */}
+        <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+          {hasChildren && onToggleExpanded ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpanded(span.id);
+              }}
+              className="hover:bg-surface-elevated rounded p-0.5 transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-3 h-3 text-text-tertiary" />
+              ) : (
+                <ChevronRight className="w-3 h-3 text-text-tertiary" />
+              )}
+            </button>
+          ) : null}
+        </div>
+        
         <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${getTypeColor(span.type)}`}>
           <div className="text-white">
             {getTypeIcon(span.type)}

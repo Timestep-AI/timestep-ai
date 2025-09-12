@@ -16,6 +16,7 @@ export const TracePage = () => {
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
   const [loading, setLoading] = useState(true);
   const [spansLoading, setSpansLoading] = useState(true);
+  const [expandedSpans, setExpandedSpans] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {
@@ -66,6 +67,57 @@ export const TracePage = () => {
 
   const handleSpanSelect = (span: Span) => {
     setSelectedSpan(span);
+  };
+
+  const handleToggleExpanded = (spanId: string) => {
+    setExpandedSpans(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(spanId)) {
+        newSet.delete(spanId);
+      } else {
+        newSet.add(spanId);
+      }
+      return newSet;
+    });
+  };
+
+  // Build span tree and filter visible spans
+  const getVisibleSpans = (spans: Span[]) => {
+    // Build parent-child map
+    const childrenMap = new Map<string, Span[]>();
+    const parentMap = new Map<string, string>();
+    
+    spans.forEach(span => {
+      if (span.parentId) {
+        parentMap.set(span.id, span.parentId);
+        if (!childrenMap.has(span.parentId)) {
+          childrenMap.set(span.parentId, []);
+        }
+        childrenMap.get(span.parentId)!.push(span);
+      }
+    });
+
+    // Determine which spans are visible
+    const visibleSpans: Array<{span: Span, level: number, hasChildren: boolean}> = [];
+    
+    const addSpanAndChildren = (span: Span, level: number) => {
+      const hasChildren = childrenMap.has(span.id);
+      const isExpanded = expandedSpans.has(span.id);
+      
+      visibleSpans.push({ span, level, hasChildren });
+      
+      // Add children if expanded
+      if (hasChildren && isExpanded) {
+        const children = childrenMap.get(span.id) || [];
+        children.forEach(child => addSpanAndChildren(child, level + 1));
+      }
+    };
+    
+    // Add root spans (those without parents)
+    const rootSpans = spans.filter(span => !span.parentId);
+    rootSpans.forEach(span => addSpanAndChildren(span, 0));
+    
+    return visibleSpans;
   };
 
   const formatDuration = (duration: number) => {
@@ -154,13 +206,11 @@ export const TracePage = () => {
                 {/* Left Panel - Spans List */}
                 <div className="bg-card border border-border rounded-xl overflow-hidden">
                   <div className="overflow-y-auto h-full">
-                    {spans.map((span) => {
-                      // Calculate max duration for consistent timing bar scaling
+                    {(() => {
+                      const visibleSpans = getVisibleSpans(spans);
                       const maxDuration = Math.max(...spans.map(s => s.duration));
-                      // Calculate indentation level based on parent hierarchy
-                      const level = span.parentId ? 1 : 0;
                       
-                      return (
+                      return visibleSpans.map(({ span, level, hasChildren }) => (
                         <SpanTreeRow
                           key={span.id}
                           span={span}
@@ -168,9 +218,12 @@ export const TracePage = () => {
                           maxDuration={maxDuration}
                           isSelected={selectedSpan?.id === span.id}
                           level={level}
+                          hasChildren={hasChildren}
+                          isExpanded={expandedSpans.has(span.id)}
+                          onToggleExpanded={handleToggleExpanded}
                         />
-                      );
-                    })}
+                      ));
+                    })()}
                   </div>
                 </div>
 
