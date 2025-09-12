@@ -55,6 +55,7 @@ const mockSpans: Span[] = [
   {
     id: 'span_3',
     traceId: '1',
+    parentId: 'span_1', // Handoff is initiated by Triage Agent
     operationName: 'Handoff → Approval agent',
     serviceName: 'LLM Orchestrator',
     type: 'handoff',
@@ -205,6 +206,7 @@ const mockSpans: Span[] = [
   {
     id: 'span_11',
     traceId: '1',
+    parentId: 'span_4', // Handoff is initiated by Approval Agent
     operationName: 'Handoff → Summarizer Agent',
     serviceName: 'LLM Orchestrator',
     type: 'handoff',
