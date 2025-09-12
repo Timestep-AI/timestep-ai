@@ -13,6 +13,7 @@ export const TracePage = () => {
   const navigate = useNavigate();
   const [trace, setTrace] = useState<Trace | null>(null);
   const [spans, setSpans] = useState<Span[]>([]);
+  const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
   const [loading, setLoading] = useState(true);
   const [spansLoading, setSpansLoading] = useState(true);
 
@@ -64,8 +65,7 @@ export const TracePage = () => {
   };
 
   const handleSpanSelect = (span: Span) => {
-    // In a real app, this might navigate to a span detail page
-    console.log('Selected span:', span);
+    setSelectedSpan(span);
   };
 
   const formatDuration = (duration: number) => {
@@ -129,7 +129,7 @@ export const TracePage = () => {
             )}
           </div>
 
-          {/* Spans */}
+          {/* Spans - Two Panel Layout */}
           <div className="border-t border-border pt-6">
             <h2 className="text-xl font-semibold text-text-primary mb-4">Spans</h2>
             
@@ -150,14 +150,116 @@ export const TracePage = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {spans.map((span) => (
-                  <SpanRow
-                    key={span.id}
-                    span={span}
-                    onSelect={handleSpanSelect}
-                  />
-                ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+                {/* Left Panel - Spans List */}
+                <div className="space-y-3 overflow-y-auto pr-2">
+                  {spans.map((span) => (
+                    <div
+                      key={span.id}
+                      className={`cursor-pointer ${selectedSpan?.id === span.id ? 'ring-2 ring-primary' : ''}`}
+                      onClick={() => handleSpanSelect(span)}
+                    >
+                      <SpanRow
+                        span={span}
+                        onSelect={handleSpanSelect}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right Panel - Span Details */}
+                <div className="bg-card border border-border rounded-xl p-6 overflow-y-auto">
+                  {selectedSpan ? (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-text-primary mb-2">
+                          {selectedSpan.operationName}
+                        </h3>
+                        <p className="text-text-secondary text-sm mb-4">
+                          {selectedSpan.serviceName}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          {selectedSpan.status === 'ok' && <CheckCircle className="w-4 h-4 text-emerald-500" />}
+                          {selectedSpan.status === 'error' && <XCircle className="w-4 h-4 text-red-500" />}
+                          {selectedSpan.status === 'timeout' && <AlertTriangle className="w-4 h-4 text-orange-500" />}
+                          <span className="text-sm capitalize">{selectedSpan.status}</span>
+                        </div>
+                      </div>
+
+                      {/* Properties */}
+                      <div>
+                        <h4 className="font-medium text-text-primary mb-3">Properties</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-text-tertiary">Duration</span>
+                            <span className="text-text-primary">{formatDuration(selectedSpan.duration)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-text-tertiary">Start Time</span>
+                            <span className="text-text-primary">{new Date(selectedSpan.startTime).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-text-tertiary">End Time</span>
+                            <span className="text-text-primary">{new Date(selectedSpan.endTime).toLocaleString()}</span>
+                          </div>
+                          {selectedSpan.parentId && (
+                            <div className="flex justify-between">
+                              <span className="text-text-tertiary">Parent Span</span>
+                              <span className="text-text-primary font-mono text-xs">{selectedSpan.parentId}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tags */}
+                      {selectedSpan.tags && Object.keys(selectedSpan.tags).length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-text-primary mb-3">Tags</h4>
+                          <div className="bg-surface rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                            <pre className="text-text-primary">
+                              {JSON.stringify(selectedSpan.tags, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Logs */}
+                      {selectedSpan.logs && selectedSpan.logs.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-text-primary mb-3">Logs</h4>
+                          <div className="space-y-2">
+                            {selectedSpan.logs.map((log, index) => (
+                              <div key={index} className="bg-surface rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleString()}
+                                  </span>
+                                  <Badge 
+                                    variant={log.level === 'error' ? 'destructive' : 'secondary'}
+                                    className="text-xs"
+                                  >
+                                    {log.level}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-text-primary">{log.message}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Layers className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-text-primary mb-2">
+                        Select a span
+                      </h3>
+                      <p className="text-text-secondary">
+                        Click on a span from the left to view its details.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
