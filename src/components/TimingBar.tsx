@@ -26,8 +26,8 @@ export function TimingBar({ duration, maxDuration, status, className }: TimingBa
   };
 
   return (
-    <div className={cn("flex items-center space-x-2", className)}>
-      <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[100px]">
+    <div className={cn("w-full", className)}>
+      <div className="w-full bg-surface-elevated/50 rounded-full h-2">
         <div
           className={cn("h-2 rounded-full transition-all duration-300", getBarColor())}
           style={{ width: `${percentage}%` }}

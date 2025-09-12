@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ItemPage } from '@/components/ItemPage';
 import { Badge } from '@/components/ui/badge';
-import { SpanRow } from '@/components/SpanRow';
+import { SpanTreeRow } from '@/components/SpanTreeRow';
 import { Trace, Span } from '@/types/trace';
 import { tracesService } from '@/services/tracesService';
 import { spansService } from '@/services/spansService';
@@ -152,19 +152,26 @@ export const TracePage = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
                 {/* Left Panel - Spans List */}
-                <div className="space-y-3 overflow-y-auto pr-2">
-                  {spans.map((span) => (
-                    <div
-                      key={span.id}
-                      className={`cursor-pointer ${selectedSpan?.id === span.id ? 'ring-2 ring-primary' : ''}`}
-                      onClick={() => handleSpanSelect(span)}
-                    >
-                      <SpanRow
-                        span={span}
-                        onSelect={handleSpanSelect}
-                      />
-                    </div>
-                  ))}
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div className="overflow-y-auto h-full">
+                    {spans.map((span) => {
+                      // Calculate max duration for consistent timing bar scaling
+                      const maxDuration = Math.max(...spans.map(s => s.duration));
+                      // Calculate indentation level based on parent hierarchy
+                      const level = span.parentId ? 1 : 0;
+                      
+                      return (
+                        <SpanTreeRow
+                          key={span.id}
+                          span={span}
+                          onSelect={handleSpanSelect}
+                          maxDuration={maxDuration}
+                          isSelected={selectedSpan?.id === span.id}
+                          level={level}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Right Panel - Span Details */}
