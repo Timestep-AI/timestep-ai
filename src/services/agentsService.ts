@@ -165,10 +165,9 @@ class AgentsService {
   async createDefaults(): Promise<Agent[]> {
     await this.delay(300);
     
-    // Clone default agents with new IDs to avoid conflicts
-    const clonedDefaults: Agent[] = DEFAULT_AGENTS.map((defaultAgent, index) => ({
+    // Clone default agents preserving original IDs
+    const clonedDefaults: Agent[] = DEFAULT_AGENTS.map((defaultAgent) => ({
       ...defaultAgent,
-      id: `cloned-${Date.now()}-${index}`, // Generate unique IDs
       createdAt: new Date().toLocaleString(), // Update creation time
     }));
 
