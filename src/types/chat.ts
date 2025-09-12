@@ -7,6 +7,7 @@ export interface Chat {
   messageCount: number;
   status: 'active' | 'archived' | 'paused';
   participants?: string[];
+  agentId: string;
 }
 
 export interface CreateChatRequest {
@@ -14,6 +15,7 @@ export interface CreateChatRequest {
   lastMessage?: string;
   status?: 'active' | 'archived' | 'paused';
   participants?: string[];
+  agentId: string;
 }
 
 export interface UpdateChatRequest {
@@ -21,4 +23,5 @@ export interface UpdateChatRequest {
   lastMessage?: string;
   status?: 'active' | 'archived' | 'paused';
   participants?: string[];
+  agentId?: string;
 }

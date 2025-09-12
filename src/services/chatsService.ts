@@ -11,6 +11,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 4,
     status: 'active',
     participants: ['user123', 'weather-assistant'],
+    agentId: '00000000-0000-0000-0000-000000000000'
   },
   {
     id: 'default-1',
@@ -21,6 +22,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 12,
     status: 'active',
     participants: ['user123', 'support-agent'],
+    agentId: '11111111-1111-1111-1111-111111111111'
   },
   {
     id: 'default-2',
@@ -31,6 +33,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 28,
     status: 'active',
     participants: ['user123', 'project-manager', 'team-lead'],
+    agentId: '44444444-4444-4444-4444-444444444444'
   },
   {
     id: 'default-3',
@@ -41,6 +44,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 15,
     status: 'archived',
     participants: ['user123', 'tech-writer'],
+    agentId: '33333333-3333-3333-3333-333333333333'
   },
   {
     id: 'default-4',
@@ -51,6 +55,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 8,
     status: 'paused',
     participants: ['user123', 'qa-engineer'],
+    agentId: '55555555-5555-5555-5555-555555555555'
   },
   {
     id: 'default-5',
@@ -61,6 +66,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 22,
     status: 'active',
     participants: ['user123', 'product-manager'],
+    agentId: '44444444-4444-4444-4444-444444444444'
   },
   {
     id: 'default-6',
@@ -71,6 +77,7 @@ const DEFAULT_CHATS: Readonly<Chat[]> = [
     messageCount: 35,
     status: 'archived',
     participants: ['user123', 'trainer', 'trainee1', 'trainee2'],
+    agentId: '66666666-6666-6666-6666-666666666666'
   },
 ] as const;
 
@@ -117,6 +124,7 @@ class ChatsService {
       messageCount: 0,
       createdAt: now,
       updatedAt: now,
+      agentId: request.agentId
     };
 
     this.chats.push(newChat);

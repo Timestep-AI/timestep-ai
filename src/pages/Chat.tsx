@@ -4,11 +4,13 @@ import { ItemPage } from '@/components/ItemPage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, Calendar, Users, Hash, Send } from 'lucide-react';
+import { MessageCircle, Calendar, Users, Hash, Send, Bot } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
 import { Message } from '@/types/message';
+import { Agent } from '@/types/agent';
 import { chatsService } from '@/services/chatsService';
 import { messagesService } from '@/services/messagesService';
+import { agentsService } from '@/services/agentsService';
 import { MessageRow } from '@/components/MessageRow';
 import { a2aClient } from '@/services/a2aClient';
 import { toast } from 'sonner';
@@ -17,6 +19,7 @@ export const Chat = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [chat, setChat] = useState<ChatType | null>(null);
+  const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
@@ -36,6 +39,12 @@ export const Chat = () => {
         const foundChat = chats.find(c => c.id === id);
         setChat(foundChat || null);
         setMessages(chatMessages);
+
+        // Load agent information
+        if (foundChat?.agentId) {
+          const agentInfo = await agentsService.getById(foundChat.agentId);
+          setAgent(agentInfo);
+        }
       } catch (error) {
         console.error('Error loading chat and messages:', error);
       } finally {
@@ -103,10 +112,13 @@ export const Chat = () => {
       const a2aMessage = a2aClient.convertToA2AMessage(userMessage);
       const messageParams = { message: a2aMessage };
 
-      toast.info('Sending message to A2A agent...');
+      toast.info(`Sending message to ${agent?.name || 'agent'}...`);
+
+      // Use agent-specific client if available
+      const clientForAgent = agent ? a2aClient.createClientForAgent(agent) : a2aClient;
 
       // Process A2A response stream
-      const stream = a2aClient.sendMessageStream(messageParams);
+      const stream = clientForAgent.sendMessageStream(messageParams);
       for await (const event of stream) {
         console.log('A2A Event:', event);
         
@@ -170,7 +182,7 @@ export const Chat = () => {
     >
       {chat && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="flex items-center space-x-2 text-sm text-text-tertiary">
               <Calendar className="w-4 h-4 flex-shrink-0" />
               <span>Created: {chat.createdAt}</span>
@@ -180,6 +192,13 @@ export const Chat = () => {
               <Hash className="w-4 h-4 flex-shrink-0" />
               <span>{messages.length} messages</span>
             </div>
+
+            {agent && (
+              <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+                <Bot className="w-4 h-4 flex-shrink-0" />
+                <span>Agent: {agent.name}</span>
+              </div>
+            )}
             
             {chat.participants && chat.participants.length > 0 && (
               <div className="flex items-center space-x-2 text-sm text-text-tertiary">

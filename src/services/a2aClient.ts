@@ -1,18 +1,35 @@
 import { MessageSendParams, A2AEvent, AgentCard, A2AMessage } from '@/types/a2a';
 import { Message } from '@/types/message';
+import { Agent } from '@/types/agent';
 
 export class A2AClient {
   private serverUrl: string;
+  private agent?: Agent;
 
-  constructor(serverUrl: string) {
+  constructor(serverUrl: string, agent?: Agent) {
     this.serverUrl = serverUrl;
+    this.agent = agent;
+  }
+
+  createClientForAgent(agent: Agent): A2AClient {
+    // Create a new client instance for the specific agent
+    // In a real implementation, this might use agent-specific endpoints or configuration
+    const agentServerUrl = this.getAgentServerUrl(agent);
+    return new A2AClient(agentServerUrl, agent);
+  }
+
+  private getAgentServerUrl(agent: Agent): string {
+    // In a real implementation, this would return the agent's specific server URL
+    // For now, we'll use the same base URL but could be extended to support per-agent endpoints
+    return this.serverUrl;
   }
 
   async getAgentCard(): Promise<AgentCard> {
     // Stub implementation - in a real implementation this would fetch from the server
+    const agentName = this.agent?.name || 'Demo Agent';
     return {
-      name: 'Demo Agent',
-      description: 'A demonstration agent for testing A2A protocol',
+      name: agentName,
+      description: this.agent?.description || 'A demonstration agent for testing A2A protocol',
       version: '1.0.0',
       capabilities: {
         streaming: true
@@ -22,7 +39,8 @@ export class A2AClient {
 
   async *sendMessageStream(params: MessageSendParams): AsyncGenerator<A2AEvent> {
     // Stub implementation - simulate streaming response
-    console.log('A2A Client: Sending message', params);
+    const agentName = this.agent?.name || 'Demo Agent';
+    console.log(`A2A Client: Sending message to ${agentName}`, params);
 
     // Simulate task creation
     const taskId = crypto.randomUUID();
@@ -41,13 +59,17 @@ export class A2AClient {
     await this.delay(1000);
 
     // Yield a response message
+    const responseText = this.agent 
+      ? `Hello! I'm ${this.agent.name}. I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`
+      : `I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`;
+
     yield {
       messageId: crypto.randomUUID(),
       kind: 'message',
       role: 'agent',
       parts: [{
         kind: 'text',
-        text: `I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`
+        text: responseText
       }],
       taskId,
       contextId
