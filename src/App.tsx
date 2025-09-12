@@ -13,6 +13,7 @@ import Model from "./pages/Model";
 import Tools from "./pages/Tools";
 import Tool from "./pages/Tool";
 import Traces from "./pages/Traces";
+import TracePage from "./pages/Trace";
 import Settings from "./pages/Settings";
 import Logout from "./pages/Logout";
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/tools" element={<Tools />} />
             <Route path="/tools/:id" element={<Tool />} />
             <Route path="/traces" element={<Traces />} />
+            <Route path="/traces/:id" element={<TracePage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/logout" element={<Logout />} />
             <Route path="/" element={<Agents />} />
