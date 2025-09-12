@@ -1,0 +1,99 @@
+import { MessageSendParams, A2AEvent, AgentCard, A2AMessage } from '@/types/a2a';
+import { Message } from '@/types/message';
+
+export class A2AClient {
+  private serverUrl: string;
+
+  constructor(serverUrl: string) {
+    this.serverUrl = serverUrl;
+  }
+
+  async getAgentCard(): Promise<AgentCard> {
+    // Stub implementation - in a real implementation this would fetch from the server
+    return {
+      name: 'Demo Agent',
+      description: 'A demonstration agent for testing A2A protocol',
+      version: '1.0.0',
+      capabilities: {
+        streaming: true
+      }
+    };
+  }
+
+  async *sendMessageStream(params: MessageSendParams): AsyncGenerator<A2AEvent> {
+    // Stub implementation - simulate streaming response
+    console.log('A2A Client: Sending message', params);
+
+    // Simulate task creation
+    const taskId = crypto.randomUUID();
+    const contextId = crypto.randomUUID();
+
+    // Yield status update
+    yield {
+      kind: 'status-update',
+      taskId,
+      contextId,
+      status: { state: 'working' },
+      final: false
+    } as const;
+
+    // Simulate some processing time
+    await this.delay(1000);
+
+    // Yield a response message
+    yield {
+      messageId: crypto.randomUUID(),
+      kind: 'message',
+      role: 'agent',
+      parts: [{
+        kind: 'text',
+        text: `I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`
+      }],
+      taskId,
+      contextId
+    } as A2AMessage;
+
+    // Yield final status
+    yield {
+      kind: 'status-update', 
+      taskId,
+      contextId,
+      status: { state: 'completed' },
+      final: true
+    } as const;
+  }
+
+  // Convert our internal Message format to A2A Message format
+  convertToA2AMessage(message: Partial<Message>): A2AMessage {
+    return {
+      messageId: crypto.randomUUID(),
+      kind: 'message',
+      role: message.type === 'user' ? 'user' : 'agent',
+      parts: [{
+        kind: 'text',
+        text: message.content || ''
+      }]
+    };
+  }
+
+  // Convert A2A Message to our internal Message format
+  convertFromA2AMessage(a2aMessage: A2AMessage, chatId: string): Partial<Message> {
+    const textPart = a2aMessage.parts.find(p => p.kind === 'text');
+    return {
+      id: a2aMessage.messageId,
+      chatId,
+      content: textPart?.text || '',
+      sender: a2aMessage.role === 'user' ? 'User' : 'Agent',
+      timestamp: new Date().toLocaleString(),
+      type: a2aMessage.role === 'user' ? 'user' : 'assistant',
+      status: 'sent'
+    };
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Export a singleton instance
+export const a2aClient = new A2AClient('http://localhost:41241');

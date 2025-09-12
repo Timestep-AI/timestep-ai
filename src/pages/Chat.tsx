@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ItemPage } from '@/components/ItemPage';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Calendar, Users, Hash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { MessageCircle, Calendar, Users, Hash, Send } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
 import { Message } from '@/types/message';
 import { chatsService } from '@/services/chatsService';
 import { messagesService } from '@/services/messagesService';
 import { MessageRow } from '@/components/MessageRow';
+import { a2aClient } from '@/services/a2aClient';
+import { toast } from 'sonner';
 
 export const Chat = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +19,8 @@ export const Chat = () => {
   const [chat, setChat] = useState<ChatType | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const loadChatAndMessages = async () => {
@@ -68,6 +74,72 @@ export const Chat = () => {
       setMessages(updatedMessages);
     } catch (error) {
       console.error('Error deleting message:', error);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !id || sending) return;
+
+    try {
+      setSending(true);
+      
+      // Create user message first
+      const userMessage = await messagesService.create({
+        chatId: id,
+        content: newMessage,
+        sender: 'User',
+        type: 'user',
+        status: 'sent'
+      });
+
+      // Update messages list immediately
+      const updatedMessages = await messagesService.getByChatId(id);
+      setMessages(updatedMessages);
+      
+      // Clear input
+      setNewMessage('');
+
+      // Send to A2A agent
+      const a2aMessage = a2aClient.convertToA2AMessage(userMessage);
+      const messageParams = { message: a2aMessage };
+
+      toast.info('Sending message to A2A agent...');
+
+      // Process A2A response stream
+      const stream = a2aClient.sendMessageStream(messageParams);
+      for await (const event of stream) {
+        console.log('A2A Event:', event);
+        
+        if (event.kind === 'message' && 'role' in event && event.role === 'agent') {
+          // Convert A2A response to our message format and save
+          const agentMessage = a2aClient.convertFromA2AMessage(event, id);
+          await messagesService.create({
+            chatId: id,
+            content: agentMessage.content!,
+            sender: agentMessage.sender!,
+            type: agentMessage.type!,
+            status: agentMessage.status!
+          });
+
+          // Refresh messages list
+          const refreshedMessages = await messagesService.getByChatId(id);
+          setMessages(refreshedMessages);
+        }
+      }
+
+      toast.success('Message sent successfully!');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -145,6 +217,27 @@ export const Chat = () => {
                 ))}
               </div>
             )}
+
+            {/* Message Input */}
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="flex gap-2">
+                <Textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                  className="flex-1 resize-none min-h-[80px]"
+                  disabled={sending}
+                />
+                <Button 
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="self-end"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </>
       )}
