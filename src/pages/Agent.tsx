@@ -47,7 +47,7 @@ export const Agent = () => {
     }
   };
 
-  const statusBadge = agent?.status === 'handoff' ? (
+  const statusBadge = agent?.isHandoff ? (
     <Badge variant="secondary">Handoff</Badge>
   ) : null;
 
@@ -96,6 +96,10 @@ export const Agent = () => {
               <div>
                 <label className="text-sm font-medium text-text-secondary">Status</label>
                 <p className="text-text-primary capitalize">{agent.status}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Handoff Agent</label>
+                <p className="text-text-primary">{agent.isHandoff ? 'Yes' : 'No'}</p>
               </div>
             </div>
           </div>

@@ -9,7 +9,8 @@ interface Agent {
   description?: string;
   createdAt: string;
   model?: string;
-  status: 'active' | 'inactive' | 'handoff';
+  status: 'active' | 'inactive';
+  isHandoff: boolean;
 }
 
 interface AgentRowProps {
@@ -21,7 +22,7 @@ interface AgentRowProps {
 export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
   const navigate = useNavigate();
 
-  const statusBadge = agent.status === 'handoff' ? (
+  const statusBadge = agent.isHandoff ? (
     <Badge variant="secondary" className="text-xs flex-shrink-0">
       Handoff
     </Badge>

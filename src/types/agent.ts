@@ -10,7 +10,8 @@ export interface Agent {
   modelSettings?: {
     temperature?: number;
   };
-  status: 'active' | 'inactive' | 'handoff';
+  status: 'active' | 'inactive';
+  isHandoff: boolean;
 }
 
 export interface CreateAgentRequest {
@@ -23,7 +24,8 @@ export interface CreateAgentRequest {
   modelSettings?: {
     temperature?: number;
   };
-  status?: 'active' | 'inactive' | 'handoff';
+  status?: 'active' | 'inactive';
+  isHandoff?: boolean;
 }
 
 export interface UpdateAgentRequest {
@@ -36,5 +38,6 @@ export interface UpdateAgentRequest {
   modelSettings?: {
     temperature?: number;
   };
-  status?: 'active' | 'inactive' | 'handoff';
+  status?: 'active' | 'inactive';
+  isHandoff?: boolean;
 }

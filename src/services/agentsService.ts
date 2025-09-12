@@ -11,6 +11,7 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
     status: 'active',
+    isHandoff: false,
   },
   {
     id: '11111111-1111-1111-1111-111111111111',
@@ -20,7 +21,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
@@ -30,7 +32,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
   {
     id: '33333333-3333-3333-3333-333333333333',
@@ -40,7 +43,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
   {
     id: '44444444-4444-4444-4444-444444444444',
@@ -50,7 +54,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
   {
     id: '55555555-5555-5555-5555-555555555555',
@@ -60,7 +65,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:26 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
   {
     id: '66666666-6666-6666-6666-666666666666',
@@ -70,7 +76,8 @@ const DEFAULT_AGENTS: Readonly<Agent[]> = [
     model: 'ollama/gpt-oss:20b',
     modelSettings: { temperature: 0.0 },
     createdAt: '8/31/2025, 3:06:27 PM',
-    status: 'handoff',
+    status: 'active',
+    isHandoff: true,
   },
 ] as const;
 
@@ -111,8 +118,13 @@ class AgentsService {
       id: `agent-${this.nextId++}`,
       name: request.name,
       description: request.description,
+      instructions: request.instructions,
+      handoffIds: request.handoffIds,
+      handoffDescription: request.handoffDescription,
       model: request.model,
+      modelSettings: request.modelSettings,
       status: request.status || 'active',
+      isHandoff: request.isHandoff || false,
       createdAt: new Date().toLocaleString(),
     };
 
