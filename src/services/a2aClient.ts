@@ -1,4 +1,4 @@
-import { MessageSendParams, A2AEvent, AgentCard, A2AMessage } from '@/types/a2a';
+import { MessageSendParams, A2AEvent, AgentCard, A2AMessage, Task, TaskStatusUpdateEvent, TextPart } from '@/types/a2a';
 import { Message } from '@/types/message';
 import { Agent } from '@/types/agent';
 
@@ -31,29 +31,51 @@ export class A2AClient {
       name: agentName,
       description: this.agent?.description || 'A demonstration agent for testing A2A protocol',
       version: '1.0.0',
+      url: this.serverUrl,
       capabilities: {
-        streaming: true
-      }
+        streaming: true,
+        pushNotifications: false,
+        stateTransitionHistory: false
+      },
+      inputModes: ['text/plain'],
+      outputModes: ['text/plain']
     };
   }
 
   async *sendMessageStream(params: MessageSendParams): AsyncGenerator<A2AEvent> {
     // Stub implementation - simulate streaming response
     const agentName = this.agent?.name || 'Demo Agent';
-    console.log(`A2A Client: Sending message to ${agentName}`, params);
+    console.log(`A2A Client: Sending message to ${agentName} via message/stream`, params);
 
     // Simulate task creation
     const taskId = crypto.randomUUID();
     const contextId = crypto.randomUUID();
 
-    // Yield status update
+    // Yield initial task object
+    yield {
+      kind: 'task',
+      id: taskId,
+      contextId,
+      status: {
+        state: 'submitted',
+        timestamp: new Date().toISOString()
+      },
+      artifacts: [],
+      history: [params.message],
+      metadata: {}
+    } as Task;
+
+    // Yield status update - working
     yield {
       kind: 'status-update',
       taskId,
       contextId,
-      status: { state: 'working' },
+      status: { 
+        state: 'working',
+        timestamp: new Date().toISOString()
+      },
       final: false
-    } as const;
+    } as TaskStatusUpdateEvent;
 
     // Simulate some processing time
     await this.delay(1000);
@@ -75,14 +97,17 @@ export class A2AClient {
       contextId
     } as A2AMessage;
 
-    // Yield final status
+    // Yield final status - completed
     yield {
-      kind: 'status-update', 
+      kind: 'status-update',
       taskId,
       contextId,
-      status: { state: 'completed' },
+      status: { 
+        state: 'completed',
+        timestamp: new Date().toISOString()
+      },
       final: true
-    } as const;
+    } as TaskStatusUpdateEvent;
   }
 
   // Convert our internal Message format to A2A Message format
@@ -100,7 +125,7 @@ export class A2AClient {
 
   // Convert A2A Message to our internal Message format
   convertFromA2AMessage(a2aMessage: A2AMessage, chatId: string): Partial<Message> {
-    const textPart = a2aMessage.parts.find(p => p.kind === 'text');
+    const textPart = a2aMessage.parts.find(p => p.kind === 'text') as TextPart;
     return {
       id: a2aMessage.messageId,
       chatId,
