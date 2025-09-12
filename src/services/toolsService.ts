@@ -4,109 +4,56 @@ import { Tool, CreateToolRequest, UpdateToolRequest } from '@/types/tool';
 const mockTools: Tool[] = [
   {
     id: '1',
-    name: 'Code Formatter',
-    description: 'Automatically format and beautify your code across multiple languages',
-    category: 'development',
-    version: '2.1.3',
+    name: 'get_emails',
+    description: 'Retrieve and manage email messages from various email accounts',
+    category: 'communication',
+    version: '1.0.0',
     isEnabled: true,
-    permissions: ['read', 'write'],
+    permissions: ['read'],
     status: 'active',
     lastUsed: '2024-01-10T14:30:00Z',
     createdAt: '2024-01-01T10:00:00Z',
     updatedAt: '2024-01-10T14:30:00Z',
     usage: {
-      daily: 15,
-      weekly: 89,
-      monthly: 340
+      daily: 25,
+      weekly: 150,
+      monthly: 620
     }
   },
   {
     id: '2',
-    name: 'API Documentation Generator',
-    description: 'Generate comprehensive API documentation from your code annotations',
-    category: 'development',
-    version: '1.8.2',
+    name: 'get_weather',
+    description: 'Get current weather conditions and forecasts for any location',
+    category: 'productivity',
+    version: '1.0.0',
     isEnabled: true,
     permissions: ['read'],
     status: 'active',
-    lastUsed: '2024-01-09T09:15:00Z',
-    createdAt: '2024-01-02T11:00:00Z',
-    updatedAt: '2024-01-09T09:15:00Z',
+    lastUsed: '2024-01-11T09:15:00Z',
+    createdAt: '2024-01-01T10:00:00Z',
+    updatedAt: '2024-01-11T09:15:00Z',
     usage: {
-      daily: 8,
-      weekly: 45,
-      monthly: 178
+      daily: 12,
+      weekly: 78,
+      monthly: 305
     }
   },
   {
     id: '3',
-    name: 'Task Scheduler',
-    description: 'Schedule and automate recurring tasks with intelligent reminders',
-    category: 'productivity',
-    version: '3.0.1',
-    isEnabled: false,
-    permissions: ['read', 'write', 'execute'],
-    status: 'maintenance',
-    lastUsed: '2024-01-05T16:45:00Z',
-    createdAt: '2023-12-15T08:00:00Z',
-    updatedAt: '2024-01-08T12:00:00Z',
-    usage: {
-      daily: 3,
-      weekly: 12,
-      monthly: 67
-    }
-  },
-  {
-    id: '4',
-    name: 'Data Analytics Dashboard',
-    description: 'Visualize and analyze your application data with interactive charts',
+    name: 'think',
+    description: 'Process information and provide thoughtful analysis and reasoning',
     category: 'analysis',
-    version: '1.5.7',
+    version: '1.0.0',
     isEnabled: true,
-    permissions: ['read'],
+    permissions: ['read', 'write'],
     status: 'active',
-    lastUsed: '2024-01-11T11:20:00Z',
-    createdAt: '2024-01-03T14:00:00Z',
-    updatedAt: '2024-01-11T11:20:00Z',
-    usage: {
-      daily: 22,
-      weekly: 134,
-      monthly: 521
-    }
-  },
-  {
-    id: '5',
-    name: 'Team Collaboration Hub',
-    description: 'Centralized communication and project management for development teams',
-    category: 'communication',
-    version: '2.3.0',
-    isEnabled: true,
-    permissions: ['read', 'write', 'admin'],
-    status: 'active',
-    lastUsed: '2024-01-11T15:30:00Z',
-    createdAt: '2023-11-20T09:00:00Z',
-    updatedAt: '2024-01-11T15:30:00Z',
+    lastUsed: '2024-01-11T16:45:00Z',
+    createdAt: '2024-01-01T10:00:00Z',
+    updatedAt: '2024-01-11T16:45:00Z',
     usage: {
       daily: 45,
-      weekly: 289,
-      monthly: 1205
-    }
-  },
-  {
-    id: '6',
-    name: 'Automated Testing Suite',
-    description: 'Comprehensive testing framework with CI/CD integration',
-    category: 'automation',
-    version: '4.2.1',
-    isEnabled: true,
-    permissions: ['read', 'write', 'execute'],
-    status: 'active',
-    createdAt: '2023-10-10T10:00:00Z',
-    updatedAt: '2024-01-07T08:15:00Z',
-    usage: {
-      daily: 18,
-      weekly: 95,
-      monthly: 412
+      weekly: 280,
+      monthly: 1150
     }
   }
 ];
@@ -181,38 +128,56 @@ export const toolsService = {
     mockTools.push(...[
       {
         id: '1',
-        name: 'Code Formatter',
-        description: 'Automatically format and beautify your code across multiple languages',
-        category: 'development' as const,
-        version: '2.1.3',
+        name: 'get_emails',
+        description: 'Retrieve and manage email messages from various email accounts',
+        category: 'communication' as const,
+        version: '1.0.0',
         isEnabled: true,
-        permissions: ['read', 'write'],
+        permissions: ['read'],
         status: 'active' as const,
         lastUsed: '2024-01-10T14:30:00Z',
         createdAt: '2024-01-01T10:00:00Z',
         updatedAt: '2024-01-10T14:30:00Z',
         usage: {
-          daily: 15,
-          weekly: 89,
-          monthly: 340
+          daily: 25,
+          weekly: 150,
+          monthly: 620
         }
       },
       {
         id: '2',
-        name: 'API Documentation Generator',
-        description: 'Generate comprehensive API documentation from your code annotations',
-        category: 'development' as const,
-        version: '1.8.2',
+        name: 'get_weather',
+        description: 'Get current weather conditions and forecasts for any location',
+        category: 'productivity' as const,
+        version: '1.0.0',
         isEnabled: true,
         permissions: ['read'],
         status: 'active' as const,
-        lastUsed: '2024-01-09T09:15:00Z',
-        createdAt: '2024-01-02T11:00:00Z',
-        updatedAt: '2024-01-09T09:15:00Z',
+        lastUsed: '2024-01-11T09:15:00Z',
+        createdAt: '2024-01-01T10:00:00Z',
+        updatedAt: '2024-01-11T09:15:00Z',
         usage: {
-          daily: 8,
-          weekly: 45,
-          monthly: 178
+          daily: 12,
+          weekly: 78,
+          monthly: 305
+        }
+      },
+      {
+        id: '3',
+        name: 'think',
+        description: 'Process information and provide thoughtful analysis and reasoning',
+        category: 'analysis' as const,
+        version: '1.0.0',
+        isEnabled: true,
+        permissions: ['read', 'write'],
+        status: 'active' as const,
+        lastUsed: '2024-01-11T16:45:00Z',
+        createdAt: '2024-01-01T10:00:00Z',
+        updatedAt: '2024-01-11T16:45:00Z',
+        usage: {
+          daily: 45,
+          weekly: 280,
+          monthly: 1150
         }
       }
     ]);
