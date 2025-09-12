@@ -4,10 +4,18 @@ export interface Span {
   parentId?: string;
   operationName: string;
   serviceName: string;
+  type: 'agent' | 'function_call' | 'api_request' | 'handoff' | 'completion';
   startTime: string;
   endTime: string;
   duration: number; // in milliseconds
-  status: 'ok' | 'error' | 'timeout';
+  status: 'ok' | 'error' | 'timeout' | 'running';
+  model?: string;
+  tokens?: {
+    input: number;
+    output: number;
+    total: number;
+  };
+  functions?: string[];
   tags?: Record<string, string>;
   logs?: Array<{
     timestamp: string;
@@ -62,10 +70,18 @@ export interface CreateSpanRequest {
   parentId?: string;
   operationName: string;
   serviceName: string;
+  type: 'agent' | 'function_call' | 'api_request' | 'handoff' | 'completion';
   startTime?: string;
   endTime?: string;
   duration?: number;
-  status?: 'ok' | 'error' | 'timeout';
+  status?: 'ok' | 'error' | 'timeout' | 'running';
+  model?: string;
+  tokens?: {
+    input: number;
+    output: number;
+    total: number;
+  };
+  functions?: string[];
   tags?: Record<string, string>;
   logs?: Array<{
     timestamp: string;
@@ -78,10 +94,18 @@ export interface UpdateSpanRequest {
   parentId?: string;
   operationName?: string;
   serviceName?: string;
+  type?: 'agent' | 'function_call' | 'api_request' | 'handoff' | 'completion';
   startTime?: string;
   endTime?: string;
   duration?: number;
-  status?: 'ok' | 'error' | 'timeout';
+  status?: 'ok' | 'error' | 'timeout' | 'running';
+  model?: string;
+  tokens?: {
+    input: number;
+    output: number;
+    total: number;
+  };
+  functions?: string[];
   tags?: Record<string, string>;
   logs?: Array<{
     timestamp: string;

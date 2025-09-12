@@ -1,76 +1,48 @@
 import { Trace, CreateTraceRequest, UpdateTraceRequest } from '@/types/trace';
 
-// Mock data for traces
+// Mock data for traces - LLM orchestration focused
 const mockTraces: Trace[] = [
   {
     id: '1',
-    name: 'User Login Flow',
-    rootSpanId: 'span-1',
+    name: 'Insurance Claim Processing',
+    rootSpanId: 'span_1',
     serviceCount: 3,
-    spanCount: 8,
-    startTime: '2024-01-12T10:30:00Z',
-    endTime: '2024-01-12T10:30:02.450Z',
-    duration: 2450,
+    spanCount: 13,
+    startTime: '2024-03-15T10:00:00.000Z',
+    endTime: '2024-03-15T10:00:08.000Z',
+    duration: 8000,
     status: 'ok',
     errorCount: 0,
-    createdAt: '2024-01-12T10:30:00Z',
-    updatedAt: '2024-01-12T10:30:02.450Z'
+    createdAt: '2024-03-15T10:00:00.000Z',
+    updatedAt: '2024-03-15T10:00:08.000Z'
   },
   {
     id: '2',
-    name: 'API Data Fetch',
-    rootSpanId: 'span-9',
-    serviceCount: 5,
-    spanCount: 15,
-    startTime: '2024-01-12T11:15:00Z',
-    endTime: '2024-01-12T11:15:01.200Z',
-    duration: 1200,
+    name: 'Customer Support Workflow',
+    rootSpanId: 'span_14',
+    serviceCount: 2,
+    spanCount: 8,
+    startTime: '2024-03-15T11:15:00Z',
+    endTime: '2024-03-15T11:15:03.200Z',
+    duration: 3200,
     status: 'error',
-    errorCount: 2,
-    createdAt: '2024-01-12T11:15:00Z',
-    updatedAt: '2024-01-12T11:15:01.200Z'
+    errorCount: 1,
+    createdAt: '2024-03-15T11:15:00Z',
+    updatedAt: '2024-03-15T11:15:03.200Z'
   },
   {
     id: '3',
-    name: 'Background Job Processing',
-    rootSpanId: 'span-24',
-    serviceCount: 2,
-    spanCount: 12,
-    startTime: '2024-01-12T12:00:00Z',
-    endTime: '2024-01-12T12:00:05.800Z',
-    duration: 5800,
-    status: 'ok',
-    errorCount: 0,
-    createdAt: '2024-01-12T12:00:00Z',
-    updatedAt: '2024-01-12T12:00:05.800Z'
-  },
-  {
-    id: '4',
-    name: 'Database Migration',
-    rootSpanId: 'span-36',
-    serviceCount: 1,
-    spanCount: 25,
-    startTime: '2024-01-12T09:45:00Z',
-    endTime: '2024-01-12T09:47:30.500Z',
-    duration: 150500,
-    status: 'timeout',
-    errorCount: 1,
-    createdAt: '2024-01-12T09:45:00Z',
-    updatedAt: '2024-01-12T09:47:30.500Z'
-  },
-  {
-    id: '5',
-    name: 'Real-time Notification',
-    rootSpanId: 'span-61',
+    name: 'Document Analysis Pipeline',
+    rootSpanId: 'span_22',
     serviceCount: 4,
-    spanCount: 6,
-    startTime: '2024-01-12T14:20:00Z',
-    endTime: '2024-01-12T14:20:00.850Z',
-    duration: 850,
+    spanCount: 15,
+    startTime: '2024-03-15T12:00:00Z',
+    endTime: '2024-03-15T12:00:12.800Z',
+    duration: 12800,
     status: 'ok',
     errorCount: 0,
-    createdAt: '2024-01-12T14:20:00Z',
-    updatedAt: '2024-01-12T14:20:00.850Z'
+    createdAt: '2024-03-15T12:00:00Z',
+    updatedAt: '2024-03-15T12:00:12.800Z'
   }
 ];
 
@@ -143,31 +115,45 @@ export const tracesService = {
     mockTraces.push(...[
       {
         id: '1',
-        name: 'User Login Flow',
-        rootSpanId: 'span-1',
+        name: 'Insurance Claim Processing',
+        rootSpanId: 'span_1',
         serviceCount: 3,
-        spanCount: 8,
-        startTime: '2024-01-12T10:30:00Z',
-        endTime: '2024-01-12T10:30:02.450Z',
-        duration: 2450,
+        spanCount: 13,
+        startTime: '2024-03-15T10:00:00.000Z',
+        endTime: '2024-03-15T10:00:08.000Z',
+        duration: 8000,
         status: 'ok' as const,
         errorCount: 0,
-        createdAt: '2024-01-12T10:30:00Z',
-        updatedAt: '2024-01-12T10:30:02.450Z'
+        createdAt: '2024-03-15T10:00:00.000Z',
+        updatedAt: '2024-03-15T10:00:08.000Z'
       },
       {
         id: '2',
-        name: 'API Data Fetch',
-        rootSpanId: 'span-9',
-        serviceCount: 5,
-        spanCount: 15,
-        startTime: '2024-01-12T11:15:00Z',
-        endTime: '2024-01-12T11:15:01.200Z',
-        duration: 1200,
+        name: 'Customer Support Workflow',
+        rootSpanId: 'span_14',
+        serviceCount: 2,
+        spanCount: 8,
+        startTime: '2024-03-15T11:15:00Z',
+        endTime: '2024-03-15T11:15:03.200Z',
+        duration: 3200,
         status: 'error' as const,
-        errorCount: 2,
-        createdAt: '2024-01-12T11:15:00Z',
-        updatedAt: '2024-01-12T11:15:01.200Z'
+        errorCount: 1,
+        createdAt: '2024-03-15T11:15:00Z',
+        updatedAt: '2024-03-15T11:15:03.200Z'
+      },
+      {
+        id: '3',
+        name: 'Document Analysis Pipeline',
+        rootSpanId: 'span_22',
+        serviceCount: 4,
+        spanCount: 15,
+        startTime: '2024-03-15T12:00:00Z',
+        endTime: '2024-03-15T12:00:12.800Z',
+        duration: 12800,
+        status: 'ok' as const,
+        errorCount: 0,
+        createdAt: '2024-03-15T12:00:00Z',
+        updatedAt: '2024-03-15T12:00:12.800Z'
       }
     ]);
     return mockTraces;
