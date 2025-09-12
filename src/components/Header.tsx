@@ -27,8 +27,14 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     }
   } else if (pathname === '/models') {
     breadcrumbs.push({ text: 'Models', href: '/models' });
+  } else if (pathname.startsWith('/models/') && params?.id) {
+    breadcrumbs.push({ text: 'Models', href: '/models' });
+    breadcrumbs.push({ text: 'Model', href: `/models/${params.id}` });
   } else if (pathname === '/tools') {
     breadcrumbs.push({ text: 'Tools', href: '/tools' });
+  } else if (pathname.startsWith('/tools/') && params?.id) {
+    breadcrumbs.push({ text: 'Tools', href: '/tools' });
+    breadcrumbs.push({ text: 'Tool', href: `/tools/${params.id}` });
   } else if (pathname === '/traces') {
     breadcrumbs.push({ text: 'Traces', href: '/traces' });
   } else {
