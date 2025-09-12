@@ -37,6 +37,9 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     breadcrumbs.push({ text: 'Tool', href: `/tools/${params.id}` });
   } else if (pathname === '/traces') {
     breadcrumbs.push({ text: 'Traces', href: '/traces' });
+  } else if (pathname.startsWith('/traces/') && params?.id) {
+    breadcrumbs.push({ text: 'Traces', href: '/traces' });
+    breadcrumbs.push({ text: 'Trace', href: `/traces/${params.id}` });
   } else {
     breadcrumbs.push({ text: 'Dashboard', href: '/' });
   }
