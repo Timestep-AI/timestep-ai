@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -11,6 +11,20 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Check on initial load
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="flex h-screen">
@@ -20,7 +34,10 @@ export const Layout = ({ children }: LayoutProps) => {
         )}>
           {/* Spacer for sidebar */}
         </div>
-        <Sidebar isCollapsed={sidebarCollapsed} />
+        <Sidebar 
+          isCollapsed={sidebarCollapsed} 
+          onClose={() => setSidebarCollapsed(true)} 
+        />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <Header 
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}

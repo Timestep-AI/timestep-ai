@@ -60,7 +60,7 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
             variant="ghost"
             size="sm"
             onClick={onToggleSidebar}
-            className="hidden md:flex h-8 w-8 p-0"
+            className="flex h-8 w-8 p-0"
           >
             <Menu className="w-4 h-4" />
           </Button>

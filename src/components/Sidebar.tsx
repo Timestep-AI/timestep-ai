@@ -12,6 +12,7 @@ import { useLocation, Link } from 'react-router-dom';
 
 interface SidebarProps {
   isCollapsed: boolean;
+  onClose?: () => void;
 }
 
 const navItems = [
@@ -27,7 +28,7 @@ const accountItems = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
-export const Sidebar = ({ isCollapsed }: SidebarProps) => {
+export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -38,11 +39,25 @@ export const Sidebar = ({ isCollapsed }: SidebarProps) => {
   };
 
   return (
-    <div className={cn(
-      "bg-background border-r border-border transition-all duration-300 hidden md:block fixed left-0 top-0 h-full z-50",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
-      <div className="flex flex-col h-full">
+    <>
+      {/* Mobile overlay backdrop */}
+      {!isCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      <div className={cn(
+        "bg-background border-r border-border transition-all duration-300 fixed left-0 top-0 h-full z-50",
+        // On mobile: show/hide based on collapsed state, on desktop: always show with width changes
+        isCollapsed 
+          ? "w-16 hidden md:block" 
+          : "w-64",
+        // On mobile when not collapsed, slide in from left
+        !isCollapsed && "md:block"
+      )}>
+        <div className="flex flex-col h-full">
         {/* Main Navigation */}
         <nav className="flex-1 p-4 pt-16">
           <div className="mb-6">
@@ -109,6 +124,7 @@ export const Sidebar = ({ isCollapsed }: SidebarProps) => {
           </ul>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
