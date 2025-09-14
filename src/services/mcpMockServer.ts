@@ -32,7 +32,7 @@ export interface MCPCallToolResponse {
 // Mock MCP tools that correspond to our Tool interface
 const mcpTools: MCPTool[] = [
   {
-    name: 'get_emails',
+    name: '00000000-0000-0000-0000-000000000000.get_emails',
     description: 'Retrieve and manage email messages from various email accounts',
     inputSchema: {
       type: 'object',
@@ -44,7 +44,7 @@ const mcpTools: MCPTool[] = [
     }
   },
   {
-    name: 'get_weather',
+    name: '00000000-0000-0000-0000-000000000000.get_weather',
     description: 'Get current weather conditions and forecasts for any location',
     inputSchema: {
       type: 'object',
@@ -56,7 +56,7 @@ const mcpTools: MCPTool[] = [
     }
   },
   {
-    name: 'think',
+    name: '00000000-0000-0000-0000-000000000000.think',
     description: 'Process information and provide thoughtful analysis and reasoning',
     inputSchema: {
       type: 'object',
@@ -93,7 +93,8 @@ function mcpToolToTool(mcpTool: MCPTool, index: number): Tool {
 }
 
 function getMcpServerName(toolName: string): string {
-  switch (toolName) {
+  const actualToolName = toolName.split('.').pop() || toolName;
+  switch (actualToolName) {
     case 'get_emails': return 'Gmail Server';
     case 'get_weather': return 'Weather API Server';
     case 'think': return 'AI Reasoning Server';
@@ -102,7 +103,8 @@ function getMcpServerName(toolName: string): string {
 }
 
 function getToolCategory(toolName: string): Tool['category'] {
-  switch (toolName) {
+  const actualToolName = toolName.split('.').pop() || toolName;
+  switch (actualToolName) {
     case 'get_emails': return 'communication';
     case 'get_weather': return 'productivity';
     case 'think': return 'analysis';
@@ -132,7 +134,8 @@ export class MCPMockServer {
 
     // Mock responses for different tools
     let responseText: string;
-    switch (request.name) {
+    const actualToolName = request.name.split('.').pop() || request.name;
+    switch (actualToolName) {
       case 'get_emails':
         responseText = `Retrieved ${Math.floor(Math.random() * 10) + 1} emails from ${request.arguments.account || 'default account'}`;
         break;
