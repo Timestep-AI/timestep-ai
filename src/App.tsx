@@ -15,6 +15,7 @@ import Tool from "./pages/Tool";
 import Traces from "./pages/Traces";
 import TracePage from "./pages/Trace";
 import Settings from "./pages/Settings";
+import MCPServers from "./pages/MCPServers";
 import MCPServerDetails from "./pages/MCPServerDetails";
 import Logout from "./pages/Logout";
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/traces" element={<Traces />} />
             <Route path="/traces/:id" element={<TracePage />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/mcp_servers" element={<MCPServers />} />
             <Route path="/settings/mcp_servers/:id" element={<MCPServerDetails />} />
             <Route path="/logout" element={<Logout />} />
             <Route path="/" element={<Agents />} />
