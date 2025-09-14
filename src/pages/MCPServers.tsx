@@ -76,7 +76,7 @@ const MCPServers = () => {
   };
 
   return (
-    <CollectionPage<MCPServer>
+    <CollectionPage
       title="MCP Servers"
       items={servers}
       loading={loading}
