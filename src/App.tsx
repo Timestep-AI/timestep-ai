@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/settings/mcp_servers" element={<AuthGuard><MCPServers /></AuthGuard>} />
             <Route path="/settings/mcp_servers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
             <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
-            <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
+            <Route path="/" element={<Auth />} />
           </Routes>
         </BrowserRouter>
       </div>
