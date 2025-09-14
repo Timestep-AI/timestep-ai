@@ -84,6 +84,7 @@ export class MCPClient {
       isEnabled: toolData.isEnabled ?? true,
       permissions: toolData.permissions ?? ['read'],
       status: toolData.status ?? 'active',
+      mcpServer: toolData.mcpServer ?? 'Custom Server',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       usage: {

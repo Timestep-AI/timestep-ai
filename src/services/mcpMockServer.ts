@@ -83,12 +83,22 @@ function mcpToolToTool(mcpTool: MCPTool, index: number): Tool {
     lastUsed: new Date(Date.now() - Math.random() * 86400000).toISOString(),
     createdAt: '2024-01-01T10:00:00Z',
     updatedAt: new Date().toISOString(),
+    mcpServer: getMcpServerName(mcpTool.name),
     usage: {
       daily: Math.floor(Math.random() * 50),
       weekly: Math.floor(Math.random() * 300),
       monthly: Math.floor(Math.random() * 1200)
     }
   };
+}
+
+function getMcpServerName(toolName: string): string {
+  switch (toolName) {
+    case 'get_emails': return 'Gmail Server';
+    case 'get_weather': return 'Weather API Server';
+    case 'think': return 'AI Reasoning Server';
+    default: return 'Generic Server';
+  }
 }
 
 function getToolCategory(toolName: string): Tool['category'] {

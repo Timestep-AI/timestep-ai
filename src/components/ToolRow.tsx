@@ -77,6 +77,7 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
         </span>
       </div>
       <span className="text-xs text-text-tertiary">v{tool.version}</span>
+      <span className="text-xs text-text-secondary font-medium">{tool.mcpServer}</span>
     </div>
   );
 

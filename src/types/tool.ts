@@ -10,6 +10,7 @@ export interface Tool {
   lastUsed?: string;
   createdAt: string;
   updatedAt: string;
+  mcpServer: string;
   usage: {
     daily: number;
     weekly: number;
@@ -25,6 +26,7 @@ export interface CreateToolRequest {
   isEnabled?: boolean;
   permissions?: string[];
   status?: 'active' | 'inactive' | 'maintenance';
+  mcpServer?: string;
 }
 
 export interface UpdateToolRequest {
@@ -35,4 +37,5 @@ export interface UpdateToolRequest {
   isEnabled?: boolean;
   permissions?: string[];
   status?: 'active' | 'inactive' | 'maintenance';
+  mcpServer?: string;
 }
