@@ -77,7 +77,15 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
         </span>
       </div>
       <span className="text-xs text-text-tertiary">v{tool.version}</span>
-      <span className="text-xs text-text-secondary font-medium">{tool.mcpServer}</span>
+      <span 
+        className="text-xs text-text-secondary font-medium hover:text-text-primary cursor-pointer transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/settings/mcp_servers/${tool.name.split('.')[0]}`);
+        }}
+      >
+        {tool.mcpServer}
+      </span>
     </div>
   );
 
