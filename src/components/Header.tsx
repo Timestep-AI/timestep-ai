@@ -1,6 +1,16 @@
 import { useLocation, useParams, Link } from 'react-router-dom';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu, ChevronRight, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -50,7 +60,18 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
 export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
   const location = useLocation();
   const params = useParams();
+  const { user, profile, signOut } = useAuth();
   const breadcrumbs = getBreadcrumbs(location.pathname, params);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const userInitials = profile?.full_name 
+    ? profile.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+    : user?.email?.charAt(0).toUpperCase() || 'U';
+
+  const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
 
   return (
     <header className="bg-surface border-b border-border px-6 py-3">
@@ -97,6 +118,35 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
           <div className="text-sm text-text-tertiary">
             v0.2.3
           </div>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url} alt={displayName} />
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

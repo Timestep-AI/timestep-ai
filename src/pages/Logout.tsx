@@ -1,27 +1,34 @@
-import { Layout } from '@/components/Layout';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2 } from 'lucide-react';
 
 const Logout = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   useEffect(() => {
-    // In a real app, you would handle logout logic here
-    // For now, just redirect back to agents
-    const timer = setTimeout(() => {
-      navigate('/agents');
-    }, 2000);
+    const handleLogout = async () => {
+      try {
+        await signOut();
+        navigate('/auth');
+      } catch (error) {
+        console.error('Error signing out:', error);
+        navigate('/auth');
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    handleLogout();
+  }, [signOut, navigate]);
 
   return (
-    <Layout>
-      <div className="p-6 text-center">
-        <h2 className="text-xl font-semibold text-text-primary mb-4">Logging out...</h2>
-        <p className="text-text-secondary">You will be redirected shortly.</p>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <h2 className="text-xl font-semibold text-text-primary mb-4">Signing out...</h2>
+        <p className="text-text-secondary">Please wait while we sign you out.</p>
       </div>
-    </Layout>
+    </div>
   );
 };
 

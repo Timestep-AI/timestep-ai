@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthGuard } from "@/components/AuthGuard";
+import Auth from "./pages/Auth";
 import Agents from "./pages/Agents";
 import Agent from "./pages/Agent";
 import Chats from "./pages/Chats";
@@ -29,22 +31,23 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/agents" element={<Agents />} />
-            <Route path="/agents/:id" element={<Agent />} />
-            <Route path="/chats" element={<Chats />} />
-            <Route path="/chats/:id" element={<Chat />} />
-            <Route path="/chats/:id/messages/:messageId" element={<Message />} />
-            <Route path="/models" element={<Models />} />
-            <Route path="/models/:id" element={<Model />} />
-            <Route path="/tools" element={<Tools />} />
-            <Route path="/tools/:id" element={<Tool />} />
-            <Route path="/traces" element={<Traces />} />
-            <Route path="/traces/:id" element={<TracePage />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/mcp_servers" element={<MCPServers />} />
-            <Route path="/settings/mcp_servers/:id" element={<MCPServerDetails />} />
-            <Route path="/logout" element={<Logout />} />
-            <Route path="/" element={<Agents />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/agents" element={<AuthGuard><Agents /></AuthGuard>} />
+            <Route path="/agents/:id" element={<AuthGuard><Agent /></AuthGuard>} />
+            <Route path="/chats" element={<AuthGuard><Chats /></AuthGuard>} />
+            <Route path="/chats/:id" element={<AuthGuard><Chat /></AuthGuard>} />
+            <Route path="/chats/:id/messages/:messageId" element={<AuthGuard><Message /></AuthGuard>} />
+            <Route path="/models" element={<AuthGuard><Models /></AuthGuard>} />
+            <Route path="/models/:id" element={<AuthGuard><Model /></AuthGuard>} />
+            <Route path="/tools" element={<AuthGuard><Tools /></AuthGuard>} />
+            <Route path="/tools/:id" element={<AuthGuard><Tool /></AuthGuard>} />
+            <Route path="/traces" element={<AuthGuard><Traces /></AuthGuard>} />
+            <Route path="/traces/:id" element={<AuthGuard><TracePage /></AuthGuard>} />
+            <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+            <Route path="/settings/mcp_servers" element={<AuthGuard><MCPServers /></AuthGuard>} />
+            <Route path="/settings/mcp_servers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
+            <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
+            <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
           </Routes>
         </BrowserRouter>
       </div>
