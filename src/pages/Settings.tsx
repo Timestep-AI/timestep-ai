@@ -19,7 +19,7 @@ const Settings = () => {
   };
 
   return (
-    <CollectionPage<SettingsItem>
+    <CollectionPage
       title="Settings"
       items={settingsItems}
       loading={false}
