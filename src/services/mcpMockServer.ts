@@ -93,6 +93,11 @@ function mcpToolToTool(mcpTool: MCPTool, index: number): Tool {
 }
 
 function getMcpServerName(toolName: string): string {
+  // Check if tool belongs to the built-in MCP server
+  if (toolName.startsWith('00000000-0000-0000-0000-000000000000.')) {
+    return 'Built-in MCP Server';
+  }
+  
   const actualToolName = toolName.split('.').pop() || toolName;
   switch (actualToolName) {
     case 'get_emails': return 'Gmail Server';
