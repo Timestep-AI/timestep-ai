@@ -22,7 +22,6 @@ console.log(`🌐 Starting CLI endpoints server on port ${cliPort}`);
 Deno.serve({ port: cliPort }, async (req: Request) => {
   const url = new URL(req.url);
 
-  // Add CORS headers
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -36,7 +35,6 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
 
   try {
     if (url.pathname === "/agents") {
-      // Read agents from timestep config
       try {
         const agentsContent = await Deno.readTextFile(timestepPaths.agentsConfig);
         const lines = agentsContent.split('\n').filter(line => line.trim());
@@ -62,7 +60,6 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
       }
     }
 
-    // For other endpoints, return placeholder data
     if (url.pathname === "/chats") {
       try {
         const contextsResponse = await listContexts();
@@ -177,18 +174,11 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
   }
 });
 
-// Import the Express app from timestep library
-const { serverMain } = timestep;
-// Import the MCP server class from timestep library  
-const { StatefulMCPServer } = timestep;
-
 console.log("🚀 Starting A2A Agent Server with Deno + Express");
 console.log("📦 Using Express server from a2a_server.ts");
 
-// Start the A2A server
 serverMain();
 
-// Start the MCP server
 const mcpPort = Number(Deno.env.get("MCP_SERVER_PORT") ?? 8000);
 const mcpServer = new StatefulMCPServer(mcpPort);
 mcpServer.run().catch((error: Error) => {
