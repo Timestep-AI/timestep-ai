@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,19 +99,30 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const pathname = url.pathname;
+    
+    // Get the path after removing the base function URL
+    // For URLs like /functions/v1/server/agents, we want just /agents
+    const fullPath = url.pathname;
+    console.log('Full URL pathname:', fullPath);
+    
+    // Extract the route part (everything after /server)
+    const serverIndex = fullPath.indexOf('/server');
+    const routePath = serverIndex >= 0 ? fullPath.substring(serverIndex + '/server'.length) : fullPath;
+    const cleanPath = routePath || '/';
+    
+    console.log('Clean route path:', cleanPath, 'Method:', req.method);
 
     // Route: GET /agents - Get all agents
-    if (pathname === '/agents' && req.method === 'GET') {
-      console.log('GET /agents - Returning all agents');
+    if (cleanPath === '/agents' && req.method === 'GET') {
+      console.log('GET /agents - Returning all agents, count:', agents.length);
       return new Response(JSON.stringify(agents), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Route: GET /agents/:id - Get agent by ID
-    if (pathname.startsWith('/agents/') && req.method === 'GET') {
-      const id = pathname.split('/')[2];
+    if (cleanPath.startsWith('/agents/') && req.method === 'GET' && cleanPath !== '/agents/defaults' && cleanPath !== '/agents/search') {
+      const id = cleanPath.split('/')[2];
       console.log(`GET /agents/${id} - Finding agent by ID`);
       
       const agent = agents.find(a => a.id === id);
@@ -129,7 +139,7 @@ serve(async (req) => {
     }
 
     // Route: POST /agents - Create new agent
-    if (pathname === '/agents' && req.method === 'POST') {
+    if (cleanPath === '/agents' && req.method === 'POST') {
       const requestBody = await req.json();
       console.log('POST /agents - Creating new agent:', requestBody);
       
@@ -156,8 +166,8 @@ serve(async (req) => {
     }
 
     // Route: PUT /agents/:id - Update agent
-    if (pathname.startsWith('/agents/') && req.method === 'PUT') {
-      const id = pathname.split('/')[2];
+    if (cleanPath.startsWith('/agents/') && req.method === 'PUT') {
+      const id = cleanPath.split('/')[2];
       const requestBody = await req.json();
       console.log(`PUT /agents/${id} - Updating agent:`, requestBody);
       
@@ -178,8 +188,8 @@ serve(async (req) => {
     }
 
     // Route: DELETE /agents/:id - Delete agent
-    if (pathname.startsWith('/agents/') && req.method === 'DELETE') {
-      const id = pathname.split('/')[2];
+    if (cleanPath.startsWith('/agents/') && req.method === 'DELETE') {
+      const id = cleanPath.split('/')[2];
       console.log(`DELETE /agents/${id} - Deleting agent`);
       
       const index = agents.findIndex(a => a.id === id);
@@ -199,7 +209,7 @@ serve(async (req) => {
     }
 
     // Route: DELETE /agents - Delete all agents
-    if (pathname === '/agents' && req.method === 'DELETE') {
+    if (cleanPath === '/agents' && req.method === 'DELETE') {
       console.log('DELETE /agents - Deleting all agents');
       agents = [];
       
@@ -210,7 +220,7 @@ serve(async (req) => {
     }
 
     // Route: POST /agents/defaults - Create default agents
-    if (pathname === '/agents/defaults' && req.method === 'POST') {
+    if (cleanPath === '/agents/defaults' && req.method === 'POST') {
       console.log('POST /agents/defaults - Creating default agents');
       
       agents = DEFAULT_AGENTS.map(agent => ({
@@ -224,7 +234,7 @@ serve(async (req) => {
     }
 
     // Route: GET /agents/search?q=query - Search agents
-    if (pathname === '/agents/search' && req.method === 'GET') {
+    if (cleanPath === '/agents/search' && req.method === 'GET') {
       const query = url.searchParams.get('q') || '';
       console.log(`GET /agents/search?q=${query} - Searching agents`);
       
@@ -246,14 +256,32 @@ serve(async (req) => {
     }
 
     // Route not found
-    return new Response(JSON.stringify({ error: 'Route not found' }), {
+    console.log('Route not found:', cleanPath, 'Method:', req.method);
+    return new Response(JSON.stringify({ 
+      error: 'Route not found',
+      path: cleanPath,
+      method: req.method,
+      availableRoutes: [
+        'GET /agents',
+        'GET /agents/:id', 
+        'POST /agents',
+        'PUT /agents/:id',
+        'DELETE /agents/:id',
+        'DELETE /agents',
+        'POST /agents/defaults',
+        'GET /agents/search'
+      ]
+    }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Error in server function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      stack: error.stack
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
