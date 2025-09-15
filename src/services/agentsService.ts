@@ -1,20 +1,11 @@
 import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
 
-// Base URL for the server edge function
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
 
 class AgentsService {
-  constructor() {
-    // Initialize with default agents
-    this.createDefaults();
-  }
-
-  /**
-   * Get all agents
-   */
   async getAll(): Promise<Agent[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents`);
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents`);
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
@@ -26,12 +17,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Get agent by ID
-   */
   async getById(id: string): Promise<Agent | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -46,12 +34,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Create a new agent
-   */
   async create(request: CreateAgentRequest): Promise<Agent> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,12 +56,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Update an existing agent
-   */
   async update(id: string, request: UpdateAgentRequest): Promise<Agent | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -100,12 +82,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Delete an agent by ID
-   */
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`, {
         method: 'DELETE',
       });
       
@@ -124,12 +103,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Delete all agents
-   */
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents`, {
         method: 'DELETE',
       });
       
@@ -142,33 +118,6 @@ class AgentsService {
     }
   }
 
-  /**
-   * Create default agents (clone from immutable defaults)
-   */
-  async createDefaults(): Promise<Agent[]> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/defaults`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create default agents: ${response.statusText}`);
-      }
-      
-      const agents = await response.json();
-      return agents;
-    } catch (error) {
-      console.error('Error creating default agents:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get count of agents
-   */
   async getCount(): Promise<number> {
     try {
       const agents = await this.getAll();
@@ -179,12 +128,9 @@ class AgentsService {
     }
   }
 
-  /**
-   * Search agents by name or description
-   */
   async search(query: string): Promise<Agent[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/server/agents/search?q=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to search agents: ${response.statusText}`);

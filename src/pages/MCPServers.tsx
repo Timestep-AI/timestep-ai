@@ -15,7 +15,6 @@ const MCPServers = () => {
       try {
         const tools = await toolsService.getAll();
         
-        // Group tools by MCP server
         const serverMap = new Map<string, MCPServer>();
         
         tools.forEach(tool => {
@@ -51,16 +50,8 @@ const MCPServers = () => {
     fetchServers();
   }, []);
 
-  const handleCreateDefaults = async () => {
-    // This would typically create default MCP servers
-    await toolsService.createDefaults();
-    // Refresh the servers list
-    window.location.reload();
-  };
-
   const handleDeleteServer = async (serverId: string) => {
     try {
-      // Delete all tools from this server
       const tools = await toolsService.getAll();
       const serverTools = tools.filter(tool => tool.name.startsWith(`${serverId}.`));
       
@@ -68,7 +59,6 @@ const MCPServers = () => {
         await toolsService.delete(tool.id);
       }
       
-      // Remove from local state
       setServers(prev => prev.filter(server => server.id !== serverId));
     } catch (error) {
       console.error('Failed to delete MCP server:', error);
@@ -84,8 +74,6 @@ const MCPServers = () => {
       emptyTitle="No MCP servers"
       emptyDescription="Get started by creating default MCP servers with built-in tools."
       searchPlaceholder="Search MCP servers..."
-      itemCountLabel={(count) => `${count} server${count !== 1 ? 's' : ''}`}
-      onCreateDefaults={handleCreateDefaults}
       renderItem={(server) => (
         <MCPServerRow 
           key={server.id} 
@@ -93,9 +81,6 @@ const MCPServers = () => {
           onDelete={handleDeleteServer}
         />
       )}
-      showSearch={true}
-      showDeleteAll={false}
-      showCreateButton={false}
     />
   );
 };

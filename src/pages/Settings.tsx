@@ -14,10 +14,6 @@ const Settings = () => {
     }
   ];
 
-  const handleCreateDefaults = async () => {
-    // No-op for settings
-  };
-
   return (
     <CollectionPage
       title="Settings"
@@ -27,14 +23,9 @@ const Settings = () => {
       emptyTitle="No settings available"
       emptyDescription="There are no configurable settings at this time."
       searchPlaceholder="Search settings..."
-      itemCountLabel={(count) => `${count} setting${count !== 1 ? 's' : ''}`}
-      onCreateDefaults={handleCreateDefaults}
       renderItem={(setting) => (
         <SettingsRow key={setting.id} setting={setting} />
       )}
-      showSearch={false}
-      showDeleteAll={false}
-      showCreateButton={false}
     />
   );
 };

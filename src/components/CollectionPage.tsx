@@ -2,7 +2,6 @@ import { useState, useEffect, ReactNode } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CreateDefaultsButton } from '@/components/CreateDefaultsButton';
 import { Plus, Trash2, Search } from 'lucide-react';
 
 interface CollectionPageProps<T> {
@@ -13,20 +12,14 @@ interface CollectionPageProps<T> {
   emptyIcon: ReactNode;
   emptyTitle: string;
   emptyDescription: string;
-  searchPlaceholder: string;
-  itemCountLabel: (count: number) => string;
-  onCreateDefaults: () => Promise<void>;
-  onDeleteAll?: () => Promise<void>;
-  onCreate?: () => Promise<void>;
+  searchPlaceholder?: string;
+  onSearch?: (query: string) => void;
   renderItem: (item: T) => ReactNode;
-  showSearch?: boolean;
+  onDeleteAll?: () => void;
   showDeleteAll?: boolean;
-  showCreateButton?: boolean;
-  toastMessage?: string;
-  showToast?: boolean;
 }
 
-export function CollectionPage<T extends { id: string }>({
+export const CollectionPage = <T,>({
   title,
   items,
   loading,
@@ -34,24 +27,16 @@ export function CollectionPage<T extends { id: string }>({
   emptyIcon,
   emptyTitle,
   emptyDescription,
-  searchPlaceholder,
-  itemCountLabel,
-  onCreateDefaults,
-  onDeleteAll,
-  onCreate,
+  searchPlaceholder = "Search...",
+  onSearch,
   renderItem,
-  showSearch = true,
-  showDeleteAll = false,
-  showCreateButton = false,
-  toastMessage = '',
-  showToast = false
-}: CollectionPageProps<T>) {
-  const [searchTerm, setSearchTerm] = useState('');
-
+  onDeleteAll,
+  showDeleteAll = false
+}: CollectionPageProps<T>) => {
   const filteredItems = items.filter(item => {
-    if (!searchTerm) return true;
+    if (!searchPlaceholder) return true;
     
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = searchPlaceholder.toLowerCase();
     const searchableFields = [
       (item as any).name,
       (item as any).title,
@@ -60,18 +45,15 @@ export function CollectionPage<T extends { id: string }>({
       (item as any).sender,
     ].filter(Boolean);
     
-    // Also search in array fields like capabilities, participants
     const arrayFields = [
       (item as any).capabilities,
       (item as any).participants,
     ].filter(Boolean);
     
-    // Search in basic fields
     const matchesBasicFields = searchableFields.some(field => 
       field.toLowerCase().includes(searchLower)
     );
     
-    // Search in array fields
     const matchesArrayFields = arrayFields.some(array => 
       array.some((element: string) => element.toLowerCase().includes(searchLower))
     );
@@ -100,14 +82,8 @@ export function CollectionPage<T extends { id: string }>({
       )}
       
       <div className="space-y-4">
-        {/* Action Buttons */}
         <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-            <CreateDefaultsButton 
-              onClick={onCreateDefaults}
-              disabled={operationLoading}
-            />
-            
             {showDeleteAll && onDeleteAll && (
               <Button 
                 variant="destructive"
@@ -122,26 +98,10 @@ export function CollectionPage<T extends { id: string }>({
           </div>
           
           <div className="text-xs text-text-secondary text-center sm:text-right">
-            {itemCountLabel(filteredItems.length)}
+            {items.length} {items.length !== 1 ? 'items' : 'item'}
           </div>
         </div>
 
-        {/* Search Bar */}
-        {showSearch && (
-          <div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-tertiary" />
-              <Input
-                placeholder={searchPlaceholder}
-                className="pl-10 bg-background border-border"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Items List */}
         <div className="space-y-3">
           {filteredItems.length === 0 ? (
             <div className="text-center py-12">
@@ -154,34 +114,12 @@ export function CollectionPage<T extends { id: string }>({
               <p className="text-text-secondary mb-4 px-4">
                 {emptyDescription}
               </p>
-              <CreateDefaultsButton 
-                onClick={onCreateDefaults}
-                disabled={operationLoading}
-              />
             </div>
           ) : (
             filteredItems.map((item) => renderItem(item))
           )}
         </div>
       </div>
-
-      {/* Floating Action Button */}
-      {showCreateButton && onCreate && (
-        <button
-          className="fixed bottom-20 md:bottom-6 right-6 w-14 h-14 bg-gradient-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity z-40"
-          onClick={onCreate}
-          disabled={operationLoading}
-        >
-          <Plus className="w-6 h-6 text-white" />
-        </button>
-      )}
-
-      {/* Toast notification */}
-      {showToast && toastMessage && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-50">
-          <p className="text-text-primary">{toastMessage}</p>
-        </div>
-      )}
     </Layout>
   );
-}
+};

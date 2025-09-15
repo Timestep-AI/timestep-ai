@@ -26,7 +26,6 @@ export const Chats = () => {
   }, []);
 
   const handleEdit = (chat: Chat) => {
-    // TODO: Implement edit functionality
     console.log('Edit chat:', chat);
   };
 
@@ -37,16 +36,6 @@ export const Chats = () => {
       setChats(updatedChats);
     } catch (error) {
       console.error('Error deleting chat:', error);
-    }
-  };
-
-  const handleCreateDefaults = async () => {
-    try {
-      await chatsService.createDefaults();
-      const updatedChats = await chatsService.getAll();
-      setChats(updatedChats);
-    } catch (error) {
-      console.error('Error creating default chats:', error);
     }
   };
 
@@ -68,9 +57,8 @@ export const Chats = () => {
       emptyTitle="No chats found"
       emptyDescription="Get started by creating some default chats."
       searchPlaceholder="Search chats..."
-      itemCountLabel={(count) => `${count} chat${count !== 1 ? 's' : ''}`}
-      onCreateDefaults={handleCreateDefaults}
       onDeleteAll={handleDeleteAll}
+      showDeleteAll={true}
       renderItem={(chat) => (
         <ChatRow
           key={chat.id}
@@ -79,9 +67,6 @@ export const Chats = () => {
           onDelete={handleDelete}
         />
       )}
-      showSearch={true}
-      showDeleteAll={true}
-      showCreateButton={false}
     />
   );
 };
