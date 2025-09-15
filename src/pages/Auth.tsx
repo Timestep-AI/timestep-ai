@@ -36,11 +36,12 @@ const Auth = () => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth event:', event, 'Session:', session, 'URL params:', window.location.search);
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Redirect authenticated users to main page
-        if (session?.user) {
+        // Only redirect if not in password reset flow
+        if (session?.user && !isPasswordReset) {
           navigate('/');
         }
       }
@@ -48,16 +49,18 @@ const Auth = () => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session, 'URL params:', window.location.search);
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
+      // Only redirect if not in password reset flow
+      if (session?.user && !isPasswordReset) {
         navigate('/');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isPasswordReset]);
 
   const resetMessages = () => {
     setError(null);
