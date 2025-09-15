@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ const Auth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Form state
   const [email, setEmail] = useState('');
@@ -52,6 +53,14 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Redirect authenticated users away from auth page
+  useEffect(() => {
+    if (user && !isPasswordReset) {
+      console.log('Authenticated user detected, navigating to home...');
+      navigate('/', { replace: true });
+    }
+  }, [user, isPasswordReset, navigate]);
 
   const resetMessages = () => {
     setError(null);
