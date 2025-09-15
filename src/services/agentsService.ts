@@ -5,7 +5,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
 class AgentsService {
   async getAll(): Promise<Agent[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents`);
+      const response = await fetch(`${SERVER_BASE_URL}/agents`);
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
@@ -19,7 +19,7 @@ class AgentsService {
 
   async getById(id: string): Promise<Agent | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -36,7 +36,7 @@ class AgentsService {
 
   async create(request: CreateAgentRequest): Promise<Agent> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents`, {
+      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ class AgentsService {
 
   async update(id: string, request: UpdateAgentRequest): Promise<Agent | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ class AgentsService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
         method: 'DELETE',
       });
       
@@ -105,7 +105,7 @@ class AgentsService {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents`, {
+      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
         method: 'DELETE',
       });
       
@@ -130,7 +130,7 @@ class AgentsService {
 
   async search(query: string): Promise<Agent[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/agents/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/agents/search?q=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to search agents: ${response.statusText}`);

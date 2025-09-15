@@ -5,7 +5,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
 class ChatsService {
   async getAll(): Promise<Chat[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats`);
+      const response = await fetch(`${SERVER_BASE_URL}/chats`);
       if (!response.ok) {
         throw new Error(`Failed to fetch chats: ${response.statusText}`);
       }
@@ -19,7 +19,7 @@ class ChatsService {
 
   async getById(id: string): Promise<Chat | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/chats/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -36,7 +36,7 @@ class ChatsService {
 
   async create(request: CreateChatRequest): Promise<Chat> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats`, {
+      const response = await fetch(`${SERVER_BASE_URL}/chats`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ class ChatsService {
 
   async update(id: string, request: UpdateChatRequest): Promise<Chat | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/chats/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ class ChatsService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/chats/${id}`, {
         method: 'DELETE',
       });
       
@@ -105,7 +105,7 @@ class ChatsService {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats`, {
+      const response = await fetch(`${SERVER_BASE_URL}/chats`, {
         method: 'DELETE',
       });
       
@@ -130,7 +130,7 @@ class ChatsService {
 
   async search(query: string): Promise<Chat[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/chats/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/chats/search?q=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to search chats: ${response.statusText}`);

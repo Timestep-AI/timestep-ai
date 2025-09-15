@@ -5,7 +5,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
 export const toolsService = {
   async getAll(): Promise<Tool[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools`);
+      const response = await fetch(`${SERVER_BASE_URL}/tools`);
       if (!response.ok) {
         throw new Error(`Failed to fetch tools: ${response.statusText}`);
       }
@@ -19,7 +19,7 @@ export const toolsService = {
 
   async getById(id: string): Promise<Tool | undefined> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`);
       if (response.status === 404) {
         return undefined;
       }
@@ -36,7 +36,7 @@ export const toolsService = {
 
   async create(toolData: CreateToolRequest): Promise<Tool> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools`, {
+      const response = await fetch(`${SERVER_BASE_URL}/tools`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export const toolsService = {
 
   async update(id: string, updateData: UpdateToolRequest): Promise<Tool> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ export const toolsService = {
 
   async delete(id: string): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, {
         method: 'DELETE',
       });
       
@@ -95,7 +95,7 @@ export const toolsService = {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools`, {
+      const response = await fetch(`${SERVER_BASE_URL}/tools`, {
         method: 'DELETE',
       });
       
@@ -110,7 +110,7 @@ export const toolsService = {
 
   async callTool(name: string, args: Record<string, any> = {}): Promise<string> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/tools/${name}/call`, {
+      const response = await fetch(`${SERVER_BASE_URL}/tools/${name}/call`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

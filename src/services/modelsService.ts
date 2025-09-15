@@ -5,7 +5,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
 class ModelsService {
   async getAll(): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models`);
+      const response = await fetch(`${SERVER_BASE_URL}/models`);
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
@@ -19,7 +19,7 @@ class ModelsService {
 
   async getById(id: string): Promise<Model | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/models/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -36,7 +36,7 @@ class ModelsService {
 
   async create(request: CreateModelRequest): Promise<Model> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models`, {
+      const response = await fetch(`${SERVER_BASE_URL}/models`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ class ModelsService {
 
   async update(id: string, request: UpdateModelRequest): Promise<Model | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/models/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ class ModelsService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/models/${id}`, {
         method: 'DELETE',
       });
       
@@ -105,7 +105,7 @@ class ModelsService {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models`, {
+      const response = await fetch(`${SERVER_BASE_URL}/models`, {
         method: 'DELETE',
       });
       
@@ -130,7 +130,7 @@ class ModelsService {
 
   async search(query: string): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/models/search?q=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to search models: ${response.statusText}`);
@@ -146,7 +146,7 @@ class ModelsService {
 
   async getByProvider(provider: string): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/provider/${encodeURIComponent(provider)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/models/provider/${encodeURIComponent(provider)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to get models by provider: ${response.statusText}`);
@@ -162,7 +162,7 @@ class ModelsService {
 
   async getByStatus(status: 'active' | 'deprecated' | 'beta'): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/server/models/status/${encodeURIComponent(status)}`);
+      const response = await fetch(`${SERVER_BASE_URL}/models/status/${encodeURIComponent(status)}`);
       
       if (!response.ok) {
         throw new Error(`Failed to get models by status: ${response.statusText}`);
