@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { Application, Router } from 'https://deno.land/x/oak@v11.1.0/mod.ts';
+import * as timestep from 'https://esm.sh/@timestep-ai/timestep@2025.9.151135';
 
 // Default agent data
 const DEFAULT_AGENTS = [
