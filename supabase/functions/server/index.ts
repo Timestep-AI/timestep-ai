@@ -1,8 +1,14 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { Application, Router } from 'https://deno.land/x/oak@v11.1.0/mod.ts';
 import * as timestep from 'npm:@timestep-ai/timestep@2025.9.151542';
+import { getTimestepPaths } from "./utils.ts";
+import { listModels } from "./api/modelsApi.ts";
+import { listContexts } from "./api/contextsApi.ts";
+import { listApiKeys } from "./api/settings/apiKeysApi.ts";
+import { listMcpServers } from "./api/settings/mcpServersApi.ts";
+import { listTraces } from "./api/tracesApi.ts";
+import { listTools } from "./api/toolsApi.ts";
 
-// Default agent data
+// Default agent data - kept for backwards compatibility
 const DEFAULT_AGENTS = [
   {
     id: '00000000-0000-0000-0000-000000000000',
@@ -87,187 +93,299 @@ const DEFAULT_AGENTS = [
 let agents = [...DEFAULT_AGENTS];
 let nextId = 1000;
 
-const router = new Router();
+// Get timestep configuration paths
+const timestepPaths = getTimestepPaths();
 
-// CORS middleware
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Start CLI endpoints server for the React CLI
+const cliPort = 3000;
+console.log(`🌐 Starting CLI endpoints server on port ${cliPort}`);
 
-router
-  // GET /server/agents - Get all agents
-  .get('/server/agents', (context) => {
-    console.log('GET /agents - Returning all agents, count:', agents.length);
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    context.response.body = agents;
-  })
-  
-  // GET /server/agents/search - Search agents
-  .get('/server/agents/search', (context) => {
-    const query = context.request.url.searchParams.get('q') || '';
-    console.log(`GET /agents/search?q=${query} - Searching agents`);
-    
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    
-    if (!query.trim()) {
-      context.response.body = agents;
-      return;
-    }
-    
-    const lowercaseQuery = query.toLowerCase();
-    const filtered = agents.filter(agent => 
-      agent.name.toLowerCase().includes(lowercaseQuery) ||
-      (agent.description && agent.description.toLowerCase().includes(lowercaseQuery))
-    );
-    
-    context.response.body = filtered;
-  })
-  
-  // GET /server/agents/:id - Get agent by ID
-  .get('/server/agents/:id', (context) => {
-    const id = context.params.id;
-    console.log(`GET /agents/${id} - Finding agent by ID`);
-    
-    const agent = agents.find(a => a.id === id);
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    
-    if (!agent) {
-      context.response.status = 404;
-      context.response.body = { error: 'Agent not found' };
-      return;
-    }
-    
-    context.response.body = agent;
-  })
-  
-  // POST /server/agents - Create new agent
-  .post('/server/agents', async (context) => {
-    const result = context.request.body({ type: 'json', limit: 0 });
-    const requestBody = await result.value;
-    console.log('POST /agents - Creating new agent:', requestBody);
-    
-    const newAgent = {
-      id: `agent-${nextId++}`,
-      name: requestBody.name,
-      description: requestBody.description,
-      instructions: requestBody.instructions,
-      handoffIds: requestBody.handoffIds || [],
-      handoffDescription: requestBody.handoffDescription,
-      model: requestBody.model,
-      modelSettings: requestBody.modelSettings || {},
-      status: requestBody.status || 'active',
-      isHandoff: requestBody.isHandoff || false,
-      createdAt: new Date().toLocaleString(),
-    };
+Deno.serve({ port: cliPort }, async (req: Request) => {
+  const url = new URL(req.url);
 
-    agents.push(newAgent);
-    
-    context.response.status = 201;
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    context.response.body = newAgent;
-  })
-  
-  // POST /server/agents/defaults - Create default agents
-  .post('/server/agents/defaults', (context) => {
-    console.log('POST /agents/defaults - Creating default agents');
-    
-    agents = DEFAULT_AGENTS.map(agent => ({
-      ...agent,
-      createdAt: new Date().toLocaleString(),
-    }));
-    
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    context.response.body = agents;
-  })
-  
-  // PUT /server/agents/:id - Update agent
-  .put('/server/agents/:id', async (context) => {
-    const id = context.params.id;
-    const result = context.request.body({ type: 'json', limit: 0 });
-    const requestBody = await result.value;
-    console.log(`PUT /agents/${id} - Updating agent:`, requestBody);
-    
-    const index = agents.findIndex(a => a.id === id);
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    
-    if (index === -1) {
-      context.response.status = 404;
-      context.response.body = { error: 'Agent not found' };
-      return;
-    }
+  // Add CORS headers
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Content-Type": "application/json",
+  };
 
-    const updatedAgent = { ...agents[index], ...requestBody };
-    agents[index] = updatedAgent;
-    
-    context.response.body = updatedAgent;
-  })
-  
-  // DELETE /server/agents/:id - Delete agent
-  .delete('/server/agents/:id', (context) => {
-    const id = context.params.id;
-    console.log(`DELETE /agents/${id} - Deleting agent`);
-    
-    const index = agents.findIndex(a => a.id === id);
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    
-    if (index === -1) {
-      context.response.status = 404;
-      context.response.headers.set('Content-Type', 'application/json');
-      context.response.body = { error: 'Agent not found' };
-      return;
-    }
-
-    agents.splice(index, 1);
-    context.response.status = 204;
-  })
-  
-  // DELETE /server/agents - Delete all agents
-  .delete('/server/agents', (context) => {
-    console.log('DELETE /agents - Deleting all agents');
-    agents = [];
-    
-    context.response.status = 204;
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-  });
-
-const app = new Application();
-
-// CORS middleware for OPTIONS requests
-app.use(async (context, next) => {
-  if (context.request.method === 'OPTIONS') {
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-    context.response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    context.response.status = 200;
-    return;
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers });
   }
-  await next();
-});
 
-// Error handling middleware
-app.use(async (context, next) => {
   try {
-    await next();
+    // Legacy agents endpoints - maintain exact same functionality
+    if (url.pathname === "/server/agents") {
+      if (req.method === "GET") {
+        // Check for search query
+        const query = url.searchParams.get('q');
+        if (query) {
+          console.log(`GET /server/agents/search?q=${query} - Searching agents`);
+          const lowercaseQuery = query.toLowerCase();
+          const filtered = agents.filter(agent => 
+            agent.name.toLowerCase().includes(lowercaseQuery) ||
+            (agent.description && agent.description.toLowerCase().includes(lowercaseQuery))
+          );
+          return new Response(JSON.stringify(filtered), { status: 200, headers });
+        }
+        
+        console.log('GET /server/agents - Returning all agents, count:', agents.length);
+        return new Response(JSON.stringify(agents), { status: 200, headers });
+      }
+      
+      if (req.method === "POST") {
+        const requestBody = await req.json();
+        console.log('POST /server/agents - Creating new agent:', requestBody);
+        
+        const newAgent = {
+          id: `agent-${nextId++}`,
+          name: requestBody.name,
+          description: requestBody.description,
+          instructions: requestBody.instructions,
+          handoffIds: requestBody.handoffIds || [],
+          handoffDescription: requestBody.handoffDescription,
+          model: requestBody.model,
+          modelSettings: requestBody.modelSettings || {},
+          status: requestBody.status || 'active',
+          isHandoff: requestBody.isHandoff || false,
+          createdAt: new Date().toLocaleString(),
+        };
+
+        agents.push(newAgent);
+        return new Response(JSON.stringify(newAgent), { status: 201, headers });
+      }
+      
+      if (req.method === "DELETE") {
+        console.log('DELETE /server/agents - Deleting all agents');
+        agents = [];
+        return new Response(null, { status: 204, headers });
+      }
+    }
+
+    // Handle agent by ID endpoints
+    const agentIdMatch = url.pathname.match(/^\/server\/agents\/([^\/]+)$/);
+    if (agentIdMatch) {
+      const id = agentIdMatch[1];
+      
+      if (req.method === "GET") {
+        console.log(`GET /server/agents/${id} - Finding agent by ID`);
+        const agent = agents.find(a => a.id === id);
+        
+        if (!agent) {
+          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
+            status: 404, 
+            headers 
+          });
+        }
+        
+        return new Response(JSON.stringify(agent), { status: 200, headers });
+      }
+      
+      if (req.method === "PUT") {
+        const requestBody = await req.json();
+        console.log(`PUT /server/agents/${id} - Updating agent:`, requestBody);
+        
+        const index = agents.findIndex(a => a.id === id);
+        if (index === -1) {
+          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
+            status: 404, 
+            headers 
+          });
+        }
+
+        const updatedAgent = { ...agents[index], ...requestBody };
+        agents[index] = updatedAgent;
+        
+        return new Response(JSON.stringify(updatedAgent), { status: 200, headers });
+      }
+      
+      if (req.method === "DELETE") {
+        console.log(`DELETE /server/agents/${id} - Deleting agent`);
+        const index = agents.findIndex(a => a.id === id);
+        
+        if (index === -1) {
+          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
+            status: 404, 
+            headers 
+          });
+        }
+
+        agents.splice(index, 1);
+        return new Response(null, { status: 204, headers });
+      }
+    }
+
+    // Handle defaults endpoint
+    if (url.pathname === "/server/agents/defaults" && req.method === "POST") {
+      console.log('POST /server/agents/defaults - Creating default agents');
+      
+      agents = DEFAULT_AGENTS.map(agent => ({
+        ...agent,
+        createdAt: new Date().toLocaleString(),
+      }));
+      
+      return new Response(JSON.stringify(agents), { status: 200, headers });
+    }
+
+    if (url.pathname === "/agents") {
+      // Read agents from timestep config
+      try {
+        const agentsContent = await Deno.readTextFile(timestepPaths.agentsConfig);
+        const lines = agentsContent.split('\n').filter(line => line.trim());
+        const timestepAgents = lines.map(line => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+
+        return new Response(JSON.stringify(timestepAgents), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: `Agents configuration not found at: ${timestepPaths.agentsConfig}`
+        }), {
+          status: 404,
+          headers
+        });
+      }
+    }
+
+    // For other endpoints, return placeholder data
+    if (url.pathname === "/chats") {
+      try {
+        const contextsResponse = await listContexts();
+        return new Response(JSON.stringify(contextsResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch contexts"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    if (url.pathname === "/models") {
+      try {
+        const modelsResponse = await listModels();
+        return new Response(JSON.stringify(modelsResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch models"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    if (url.pathname === "/tools") {
+      try {
+        const toolsResponse = await listTools();
+        return new Response(JSON.stringify(toolsResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch tools"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    if (url.pathname === "/traces") {
+      try {
+        const tracesResponse = await listTraces();
+        return new Response(JSON.stringify(tracesResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch traces"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    if (url.pathname === "/settings/api-keys") {
+      try {
+        const apiKeysResponse = await listApiKeys();
+        return new Response(JSON.stringify(apiKeysResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch API keys"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    if (url.pathname === "/settings/mcp-servers") {
+      try {
+        const mcpServersResponse = await listMcpServers();
+        return new Response(JSON.stringify(mcpServersResponse.data), {
+          status: 200,
+          headers
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error instanceof Error ? error.message : "Failed to fetch MCP servers"
+        }), {
+          status: 500,
+          headers
+        });
+      }
+    }
+
+    return new Response("Not found", { status: 404, headers });
   } catch (error) {
-    console.error('Error in server function:', error);
-    context.response.status = 500;
-    context.response.headers.set('Access-Control-Allow-Origin', '*');
-    context.response.headers.set('Content-Type', 'application/json');
-    context.response.body = { 
-      error: error.message,
-      stack: error.stack
-    };
+    console.error('Error in CLI server:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : "Internal server error"
+    }), {
+      status: 500,
+      headers
+    });
   }
 });
 
-app.use(router.routes());
-app.use(router.allowedMethods());
+// Import the Express app from a2a_server.ts
+// Note: We need to use dynamic import since a2a_server.ts uses ES modules
+const { serverMain } = await import("./api/a2a_server.ts");
+// Import the MCP server class
+const { StatefulMCPServer } = await import("./api/mcp_server.ts");
 
-await app.listen({ port: 8000 });
+console.log("🚀 Starting A2A Agent Server with Deno + Express");
+console.log("📦 Using Express server from a2a_server.ts");
+
+// Start the A2A server
+serverMain();
+
+// Start the MCP server
+const mcpPort = Number(Deno.env.get("MCP_SERVER_PORT") ?? 8000);
+const mcpServer = new StatefulMCPServer(mcpPort);
+mcpServer.run().catch((error: Error) => {
+  console.error("Failed to start MCP server:", error);
+});
