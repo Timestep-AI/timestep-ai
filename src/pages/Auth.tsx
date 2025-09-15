@@ -29,8 +29,10 @@ const Auth = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  // Check if this is a password reset flow
-  const isPasswordReset = searchParams.get('type') === 'recovery';
+  // Check if this is a password reset flow - either from URL or from session
+  const isPasswordReset = searchParams.get('type') === 'recovery' || 
+                          user?.recovery_sent_at ||
+                          session?.user?.recovery_sent_at;
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -40,8 +42,14 @@ const Auth = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Only redirect if not in password reset flow
-        if (session?.user && !isPasswordReset) {
+        // Check if this is a recovery session (password reset flow)
+        const isRecovery = session?.user?.aud === 'authenticated' && 
+                          session?.user?.recovery_sent_at;
+        
+        console.log('Is recovery session:', isRecovery);
+        
+        // Only redirect if user is signed in normally (not in recovery)
+        if (session?.user && !isRecovery) {
           navigate('/');
         }
       }
@@ -53,14 +61,18 @@ const Auth = () => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Only redirect if not in password reset flow
-      if (session?.user && !isPasswordReset) {
+      // Check if this is a recovery session
+      const isRecovery = session?.user?.aud === 'authenticated' && 
+                        session?.user?.recovery_sent_at;
+      
+      // Only redirect if not in password recovery flow
+      if (session?.user && !isRecovery) {
         navigate('/');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, isPasswordReset]);
+  }, [navigate]);
 
   const resetMessages = () => {
     setError(null);
