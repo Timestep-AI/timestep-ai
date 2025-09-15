@@ -1,12 +1,16 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import * as timestep from 'npm:@timestep-ai/timestep@2025.9.151542';
-import { getTimestepPaths } from "./utils.ts";
-import { listModels } from "./api/modelsApi.ts";
-import { listContexts } from "./api/contextsApi.ts";
-import { listApiKeys } from "./api/settings/apiKeysApi.ts";
-import { listMcpServers } from "./api/settings/mcpServersApi.ts";
-import { listTraces } from "./api/tracesApi.ts";
-import { listTools } from "./api/toolsApi.ts";
+
+// Import functions from timestep library
+const { getTimestepPaths } = timestep;
+const { listModels } = timestep;
+const { listContexts } = timestep;
+const { listApiKeys } = timestep;
+const { listMcpServers } = timestep;
+const { listTraces } = timestep;
+const { listTools } = timestep;
+const { serverMain } = timestep;
+const { StatefulMCPServer } = timestep;
 
 // Default agent data - kept for backwards compatibility
 const DEFAULT_AGENTS = [
@@ -371,11 +375,10 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
   }
 });
 
-// Import the Express app from a2a_server.ts
-// Note: We need to use dynamic import since a2a_server.ts uses ES modules
-const { serverMain } = await import("./api/a2a_server.ts");
-// Import the MCP server class
-const { StatefulMCPServer } = await import("./api/mcp_server.ts");
+// Import the Express app from timestep library
+const { serverMain } = timestep;
+// Import the MCP server class from timestep library  
+const { StatefulMCPServer } = timestep;
 
 console.log("🚀 Starting A2A Agent Server with Deno + Express");
 console.log("📦 Using Express server from a2a_server.ts");
