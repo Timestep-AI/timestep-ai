@@ -50,6 +50,7 @@ const Auth = () => {
         
         // Only redirect if user is signed in normally (not in recovery)
         if (session?.user && !isRecovery) {
+          console.log('Redirecting to home...');
           navigate('/');
         }
       }
@@ -65,8 +66,11 @@ const Auth = () => {
       const isRecovery = session?.user?.aud === 'authenticated' && 
                         session?.user?.recovery_sent_at;
       
+      console.log('Initial check - Is recovery session:', isRecovery);
+      
       // Only redirect if not in password recovery flow
       if (session?.user && !isRecovery) {
+        console.log('Initial check - Redirecting to home...');
         navigate('/');
       }
     });
