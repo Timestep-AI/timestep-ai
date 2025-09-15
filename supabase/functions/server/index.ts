@@ -12,10 +12,6 @@ const { listTools } = timestep;
 const { serverMain } = timestep;
 const { StatefulMCPServer } = timestep;
 
-// In-memory storage for demo purposes
-let agents: any[] = [];
-let nextId = 1000;
-
 // Get timestep configuration paths
 const timestepPaths = getTimestepPaths();
 
@@ -39,109 +35,6 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
   }
 
   try {
-    // Legacy agents endpoints - maintain exact same functionality
-    if (url.pathname === "/server/agents") {
-      if (req.method === "GET") {
-        // Check for search query
-        const query = url.searchParams.get('q');
-        if (query) {
-          console.log(`GET /server/agents/search?q=${query} - Searching agents`);
-          const lowercaseQuery = query.toLowerCase();
-          const filtered = agents.filter(agent => 
-            agent.name.toLowerCase().includes(lowercaseQuery) ||
-            (agent.description && agent.description.toLowerCase().includes(lowercaseQuery))
-          );
-          return new Response(JSON.stringify(filtered), { status: 200, headers });
-        }
-        
-        console.log('GET /server/agents - Returning all agents, count:', agents.length);
-        return new Response(JSON.stringify(agents), { status: 200, headers });
-      }
-      
-      if (req.method === "POST") {
-        const requestBody = await req.json();
-        console.log('POST /server/agents - Creating new agent:', requestBody);
-        
-        const newAgent = {
-          id: `agent-${nextId++}`,
-          name: requestBody.name,
-          description: requestBody.description,
-          instructions: requestBody.instructions,
-          handoffIds: requestBody.handoffIds || [],
-          handoffDescription: requestBody.handoffDescription,
-          model: requestBody.model,
-          modelSettings: requestBody.modelSettings || {},
-          status: requestBody.status || 'active',
-          isHandoff: requestBody.isHandoff || false,
-          createdAt: new Date().toLocaleString(),
-        };
-
-        agents.push(newAgent);
-        return new Response(JSON.stringify(newAgent), { status: 201, headers });
-      }
-      
-      if (req.method === "DELETE") {
-        console.log('DELETE /server/agents - Deleting all agents');
-        agents = [];
-        return new Response(null, { status: 204, headers });
-      }
-    }
-
-    // Handle agent by ID endpoints
-    const agentIdMatch = url.pathname.match(/^\/server\/agents\/([^\/]+)$/);
-    if (agentIdMatch) {
-      const id = agentIdMatch[1];
-      
-      if (req.method === "GET") {
-        console.log(`GET /server/agents/${id} - Finding agent by ID`);
-        const agent = agents.find(a => a.id === id);
-        
-        if (!agent) {
-          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
-            status: 404, 
-            headers 
-          });
-        }
-        
-        return new Response(JSON.stringify(agent), { status: 200, headers });
-      }
-      
-      if (req.method === "PUT") {
-        const requestBody = await req.json();
-        console.log(`PUT /server/agents/${id} - Updating agent:`, requestBody);
-        
-        const index = agents.findIndex(a => a.id === id);
-        if (index === -1) {
-          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
-            status: 404, 
-            headers 
-          });
-        }
-
-        const updatedAgent = { ...agents[index], ...requestBody };
-        agents[index] = updatedAgent;
-        
-        return new Response(JSON.stringify(updatedAgent), { status: 200, headers });
-      }
-      
-      if (req.method === "DELETE") {
-        console.log(`DELETE /server/agents/${id} - Deleting agent`);
-        const index = agents.findIndex(a => a.id === id);
-        
-        if (index === -1) {
-          return new Response(JSON.stringify({ error: 'Agent not found' }), { 
-            status: 404, 
-            headers 
-          });
-        }
-
-        agents.splice(index, 1);
-        return new Response(null, { status: 204, headers });
-      }
-    }
-
-    // Handle defaults endpoint - removed
-
     if (url.pathname === "/agents") {
       // Read agents from timestep config
       try {
