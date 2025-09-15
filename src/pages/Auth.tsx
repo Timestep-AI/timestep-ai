@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,6 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   // Form state
@@ -35,48 +34,24 @@ const Auth = () => {
                           session?.user?.recovery_sent_at;
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener for recovery session detection only
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth event:', event, 'Session:', session, 'URL params:', window.location.search);
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Check if this is a recovery session (password reset flow)
-        const isRecovery = session?.user?.aud === 'authenticated' && 
-                          session?.user?.recovery_sent_at;
-        
-        console.log('Is recovery session:', isRecovery);
-        
-        // Only redirect if user is signed in normally (not in recovery)
-        if (session?.user && !isRecovery) {
-          console.log('Redirecting to home...');
-          navigate('/');
-        }
       }
     );
 
-    // THEN check for existing session
+    // Initial session check 
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check:', session, 'URL params:', window.location.search);
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // Check if this is a recovery session
-      const isRecovery = session?.user?.aud === 'authenticated' && 
-                        session?.user?.recovery_sent_at;
-      
-      console.log('Initial check - Is recovery session:', isRecovery);
-      
-      // Only redirect if not in password recovery flow
-      if (session?.user && !isRecovery) {
-        console.log('Initial check - Redirecting to home...');
-        navigate('/');
-      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const resetMessages = () => {
     setError(null);
@@ -208,7 +183,7 @@ const Auth = () => {
 
       setSuccess('Password updated successfully! You can now sign in with your new password.');
       // Clear the URL parameters after successful reset
-      navigate('/auth', { replace: true });
+      window.location.href = '/auth';
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
