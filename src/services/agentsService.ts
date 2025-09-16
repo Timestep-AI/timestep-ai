@@ -1,6 +1,6 @@
 import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 class AgentsService {
   async getAll(): Promise<Agent[]> {

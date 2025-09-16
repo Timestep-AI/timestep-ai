@@ -1,6 +1,6 @@
 import { Model, CreateModelRequest, UpdateModelRequest } from '@/types/model';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 class ModelsService {
   async getAll(): Promise<Model[]> {

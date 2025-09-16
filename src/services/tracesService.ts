@@ -1,6 +1,6 @@
 import { Trace, CreateTraceRequest, UpdateTraceRequest } from '@/types/trace';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 export const tracesService = {
   async getAll(): Promise<Trace[]> {

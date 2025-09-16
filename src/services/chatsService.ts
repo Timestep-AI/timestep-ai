@@ -1,6 +1,6 @@
 import { Chat, CreateChatRequest, UpdateChatRequest } from '@/types/chat';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 class ChatsService {
   async getAll(): Promise<Chat[]> {

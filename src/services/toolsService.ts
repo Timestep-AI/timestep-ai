@@ -1,6 +1,6 @@
 import { Tool, CreateToolRequest, UpdateToolRequest } from '@/types/tool';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1';
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 export const toolsService = {
   async getAll(): Promise<Tool[]> {
