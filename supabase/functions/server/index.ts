@@ -1,5 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import * as timestep from 'npm:@timestep-ai/timestep@2025.9.151911';
+import * as timestep from 'npm:@timestep-ai/timestep@2025.9.152022';
 
 // Import functions from timestep library
 const { getTimestepPaths } = timestep;
