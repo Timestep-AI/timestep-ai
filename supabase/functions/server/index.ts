@@ -35,7 +35,7 @@ import {
   listModelProviders,
   handleAgentRequest,
   TimestepAIAgentExecutor
-} from 'npm:@timestep-ai/timestep@2025.9.171540';
+} from 'npm:@timestep-ai/timestep@latest';
 
 // Import repository interface and base classes
 import { Repository } from '../src/services/backing/repository.js';
