@@ -80,7 +80,7 @@ Deno.serve({ port }, async (request: Request) => {
 
   try {
     // Health check endpoints
-    if (url.pathname === "/health" || url.pathname === "/supabase-health") {
+    if (url.pathname === "/health" || url.pathname === "/supabase-health" || url.pathname === "/server/health" || url.pathname === "/server/supabase-health") {
       return new Response(JSON.stringify({
         status: 'healthy',
         runtime: 'Supabase Edge Function (Manual)',
@@ -93,7 +93,7 @@ Deno.serve({ port }, async (request: Request) => {
     }
 
     // API endpoints using individual library functions
-    if (url.pathname === "/agents") {
+    if (url.pathname === "/agents" || url.pathname === "/server/agents") {
       console.log("🤖 Fetching agents...");
       try {
         const result = await listAgents();
@@ -105,7 +105,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/models") {
+    if (url.pathname === "/models" || url.pathname === "/server/models") {
       console.log("🧠 Fetching models...");
       try {
         const result = await listModels();
@@ -117,7 +117,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/tools") {
+    if (url.pathname === "/tools" || url.pathname === "/server/tools") {
       console.log("🔧 Fetching tools...");
       try {
         const result = await listTools();
@@ -129,7 +129,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/traces") {
+    if (url.pathname === "/traces" || url.pathname === "/server/traces") {
       console.log("📊 Fetching traces...");
       try {
         const result = await listTraces();
@@ -141,7 +141,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/chats") {
+    if (url.pathname === "/chats" || url.pathname === "/server/chats") {
       console.log("💬 Fetching chats...");
       try {
         const result = await listContexts();
@@ -153,7 +153,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/settings/api-keys") {
+    if (url.pathname === "/settings/api-keys" || url.pathname === "/server/settings/api-keys") {
       console.log("🗝️ Fetching API keys...");
       try {
         const result = await listApiKeys();
@@ -165,7 +165,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/settings/mcp-servers") {
+    if (url.pathname === "/settings/mcp-servers" || url.pathname === "/server/settings/mcp-servers") {
       console.log("🔌 Fetching MCP servers...");
       try {
         const result = await listMcpServers();
@@ -177,7 +177,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    if (url.pathname === "/settings/model-providers") {
+    if (url.pathname === "/settings/model-providers" || url.pathname === "/server/settings/model-providers") {
       console.log("🏭 Fetching model providers...");
       try {
         const result = await listModelProviders();
@@ -190,7 +190,7 @@ Deno.serve({ port }, async (request: Request) => {
     }
 
     // Handle dynamic agent routes
-    const agentMatch = url.pathname.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
+    const agentMatch = url.pathname.match(/^\/(?:server\/)?agents\/([^\/]+)(?:\/.*)?$/);
     if (agentMatch) {
       // Create a mock Express-style request object
       const mockReq = {
