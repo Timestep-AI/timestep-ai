@@ -9,7 +9,7 @@ const { listApiKeys } = timestep;
 const { listMcpServers } = timestep;
 const { listTraces } = timestep;
 const { listTools } = timestep;
-const { serverMain } = timestep;
+const { TimestepAIAgentExecutor } = timestep;
 const { StatefulMCPServer } = timestep;
 
 // Get timestep configuration paths
@@ -174,10 +174,11 @@ Deno.serve({ port: cliPort }, async (req: Request) => {
   }
 });
 
-console.log("🚀 Starting A2A Agent Server with Deno + Express");
-console.log("📦 Using Express server from a2a_server.ts");
+console.log("🚀 Starting A2A Agent Server with Deno");
+console.log("📦 Using native timestep library without serverMain");
 
-serverMain();
+// Create agent executor for potential future use
+const agentExecutor = new TimestepAIAgentExecutor();
 
 const mcpPort = Number(Deno.env.get("MCP_SERVER_PORT") ?? 8000);
 const mcpServer = new StatefulMCPServer(mcpPort);
