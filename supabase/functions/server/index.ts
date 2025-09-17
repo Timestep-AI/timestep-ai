@@ -62,6 +62,7 @@ console.log(`🌐 Server will run on port ${port}`);
 // Start the server with manual request handling
 Deno.serve({ port }, async (request: Request) => {
   const url = new URL(request.url);
+  console.log(`📝 ${request.method} ${url.pathname}`);
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -73,6 +74,7 @@ Deno.serve({ port }, async (request: Request) => {
   };
 
   if (request.method === "OPTIONS") {
+    console.log(`✅ CORS preflight for ${url.pathname}`);
     return new Response(null, { status: 200, headers });
   }
 
@@ -92,43 +94,99 @@ Deno.serve({ port }, async (request: Request) => {
 
     // API endpoints using individual library functions
     if (url.pathname === "/agents") {
-      const result = await listAgents();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🤖 Fetching agents...");
+      try {
+        const result = await listAgents();
+        console.log(`✅ Found ${result.data?.length || 0} agents`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching agents:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/models") {
-      const result = await listModels();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🧠 Fetching models...");
+      try {
+        const result = await listModels();
+        console.log(`✅ Found ${result.data?.length || 0} models`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching models:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/tools") {
-      const result = await listTools();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🔧 Fetching tools...");
+      try {
+        const result = await listTools();
+        console.log(`✅ Found ${result.data?.length || 0} tools`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching tools:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/traces") {
-      const result = await listTraces();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("📊 Fetching traces...");
+      try {
+        const result = await listTraces();
+        console.log(`✅ Found ${result.data?.length || 0} traces`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching traces:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/chats") {
-      const result = await listContexts();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("💬 Fetching chats...");
+      try {
+        const result = await listContexts();
+        console.log(`✅ Found ${result.data?.length || 0} chats`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching chats:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/settings/api-keys") {
-      const result = await listApiKeys();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🗝️ Fetching API keys...");
+      try {
+        const result = await listApiKeys();
+        console.log(`✅ Found ${result.data?.length || 0} API keys`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching API keys:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/settings/mcp-servers") {
-      const result = await listMcpServers();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🔌 Fetching MCP servers...");
+      try {
+        const result = await listMcpServers();
+        console.log(`✅ Found ${result.data?.length || 0} MCP servers`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching MCP servers:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     if (url.pathname === "/settings/model-providers") {
-      const result = await listModelProviders();
-      return new Response(JSON.stringify(result.data), { status: 200, headers });
+      console.log("🏭 Fetching model providers...");
+      try {
+        const result = await listModelProviders();
+        console.log(`✅ Found ${result.data?.length || 0} model providers`);
+        return new Response(JSON.stringify(result.data || []), { status: 200, headers });
+      } catch (error) {
+        console.error("❌ Error fetching model providers:", error);
+        return new Response(JSON.stringify([]), { status: 200, headers });
+      }
     }
 
     // Handle dynamic agent routes
@@ -155,7 +213,8 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    return new Response("Not found", { status: 404, headers });
+    console.log(`❓ Unknown endpoint: ${url.pathname}`);
+    return new Response(JSON.stringify({ error: "Not found", path: url.pathname }), { status: 404, headers });
   } catch (error) {
     console.error('Error in Supabase Edge Function:', error);
     return new Response(JSON.stringify({
