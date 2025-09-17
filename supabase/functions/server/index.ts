@@ -4,7 +4,7 @@ import { denoApp } from 'npm:@timestep-ai/timestep@2025.9.171050';
 // Configure the port from environment or default
 const port = parseInt(Deno.env.get("PORT") || "3000");
 
-console.log("🦕 Starting Timestep Server in Supabase Edge Function");
+console.log("🦕 Starting Timestep Server in Supabase Edge Function v2025.9.171050");
 console.log(`🌐 Server will run on port ${port}`);
 
 // Add Supabase-specific middleware to the pre-built Express app
