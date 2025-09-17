@@ -14,6 +14,82 @@
  */
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+
+// Mock filesystem operations before importing timestep library
+const originalMkdirSync = Deno.mkdirSync;
+const originalWriteTextFileSync = Deno.writeTextFileSync;
+const originalReadTextFileSync = Deno.readTextFileSync;
+const originalStatSync = Deno.statSync;
+
+// Create mock implementations that use /tmp instead of home directory
+Deno.mkdirSync = (path: string | URL, options?: Deno.MkdirOptions) => {
+  const pathStr = typeof path === 'string' ? path : path.pathname;
+  console.log(`🔧 Mocking mkdirSync for: ${pathStr}`);
+  
+  if (pathStr.includes('.config/timestep')) {
+    // Use /tmp for timestep config
+    const tmpPath = '/tmp/timestep';
+    try {
+      return originalMkdirSync(tmpPath, { ...options, recursive: true });
+    } catch (error) {
+      console.log(`📁 /tmp/timestep already exists or created: ${error.message}`);
+      return;
+    }
+  }
+  return originalMkdirSync(path, options);
+};
+
+Deno.writeTextFileSync = (path: string | URL, data: string, options?: Deno.WriteFileOptions) => {
+  const pathStr = typeof path === 'string' ? path : path.pathname;
+  console.log(`✏️ Mocking writeTextFileSync for: ${pathStr}`);
+  
+  if (pathStr.includes('.config/timestep')) {
+    const tmpPath = pathStr.replace(/.+\.config\/timestep/, '/tmp/timestep');
+    console.log(`📝 Redirecting write to: ${tmpPath}`);
+    try {
+      return originalWriteTextFileSync(tmpPath, data, options);
+    } catch (error) {
+      console.log(`⚠️ Failed to write to ${tmpPath}: ${error.message}`);
+      return;
+    }
+  }
+  return originalWriteTextFileSync(path, data, options);
+};
+
+Deno.readTextFileSync = (path: string | URL) => {
+  const pathStr = typeof path === 'string' ? path : path.pathname;
+  
+  if (pathStr.includes('.config/timestep')) {
+    const tmpPath = pathStr.replace(/.+\.config\/timestep/, '/tmp/timestep');
+    try {
+      return originalReadTextFileSync(tmpPath);
+    } catch (error) {
+      console.log(`📖 Failed to read ${tmpPath}, returning defaults: ${error.message}`);
+      // Return appropriate defaults based on filename
+      if (pathStr.includes('agents.jsonl')) return '';
+      if (pathStr.includes('app.json')) return '{}';
+      return '';
+    }
+  }
+  return originalReadTextFileSync(path);
+};
+
+Deno.statSync = (path: string | URL) => {
+  const pathStr = typeof path === 'string' ? path : path.pathname;
+  
+  if (pathStr.includes('.config/timestep')) {
+    const tmpPath = pathStr.replace(/.+\.config\/timestep/, '/tmp/timestep');
+    try {
+      return originalStatSync(tmpPath);
+    } catch (error) {
+      console.log(`📊 Stat failed for ${tmpPath}: ${error.message}`);
+      // Return a mock stat object for missing files
+      throw new Deno.errors.NotFound();
+    }
+  }
+  return originalStatSync(path);
+};
+
 import {
   listAgents,
   listModels,
