@@ -1,5 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { denoApp } from 'npm:@timestep-ai/timestep@2025.9.171033';
+import { denoApp } from 'npm:@timestep-ai/timestep@2025.9.171050';
 
 // Configure the port from environment or default
 const port = parseInt(Deno.env.get("PORT") || "3000");
