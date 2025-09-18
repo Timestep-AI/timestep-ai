@@ -388,8 +388,12 @@ Deno.serve({ port }, async (request: Request) => {
   }
 
   try {
+    // Debug logging
+    console.log(`🔍 Processing request: ${request.method} ${url.pathname} -> ${path}`);
+    
     // Version endpoint - returns timestep package version info
     if (path === "/version") {
+      console.log("✅ Version endpoint matched");
       try {
         const versionInfo = await getVersion();
         return new Response(JSON.stringify({
@@ -542,7 +546,15 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    return new Response("Not found", { status: 404, headers });
+    // If no route matches, return 404 with debug info
+    console.log(`❌ No route matched for path: "${path}" (original: "${url.pathname}")`);
+    return new Response(JSON.stringify({
+      error: "Not Found",
+      path: path,
+      originalPath: url.pathname,
+      method: request.method,
+      availableEndpoints: ["/version", "/health", "/agents", "/chats", "/settings/model-providers", "/settings/mcp-servers", "/settings/api-keys", "/tools", "/traces", "/models"]
+    }), { status: 404, headers });
   } catch (error) {
     console.error('Error in Supabase Edge Function:', error);
     return new Response(JSON.stringify({
