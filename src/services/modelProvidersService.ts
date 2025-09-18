@@ -13,7 +13,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/s
 class ModelProvidersService {
   async getAll(): Promise<ModelProvider[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`);
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers`);
       if (!response.ok) {
         throw new Error(`Failed to fetch model providers: ${response.statusText}`);
       }
@@ -27,7 +27,7 @@ class ModelProvidersService {
 
   async getById(id: string): Promise<ModelProvider | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -44,7 +44,7 @@ class ModelProvidersService {
 
   async create(providerData: Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>): Promise<ModelProvider> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`, {
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ class ModelProvidersService {
 
   async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at'>>): Promise<ModelProvider | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ class ModelProvidersService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers/${id}`, {
         method: 'DELETE',
       });
       
@@ -113,7 +113,7 @@ class ModelProvidersService {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`, {
+      const response = await fetch(`${SERVER_BASE_URL}/model_providers`, {
         method: 'DELETE',
       });
       
