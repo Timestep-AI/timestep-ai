@@ -101,6 +101,7 @@ export type Database = {
         Row: {
           created_at: string | null
           handoff_description: string
+          handoff_ids: Json | null
           handoffs: Json
           id: string
           input_guardrails: Json
@@ -114,6 +115,7 @@ export type Database = {
           output_type: string
           prompt: Json | null
           reset_tool_choice: boolean
+          tool_ids: Json | null
           tool_use_behavior: string
           tools: Json
           updated_at: string | null
@@ -122,6 +124,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           handoff_description?: string
+          handoff_ids?: Json | null
           handoffs?: Json
           id?: string
           input_guardrails?: Json
@@ -135,6 +138,7 @@ export type Database = {
           output_type?: string
           prompt?: Json | null
           reset_tool_choice?: boolean
+          tool_ids?: Json | null
           tool_use_behavior?: string
           tools?: Json
           updated_at?: string | null
@@ -143,6 +147,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           handoff_description?: string
+          handoff_ids?: Json | null
           handoffs?: Json
           id?: string
           input_guardrails?: Json
@@ -156,6 +161,7 @@ export type Database = {
           output_type?: string
           prompt?: Json | null
           reset_tool_choice?: boolean
+          tool_ids?: Json | null
           tool_use_behavior?: string
           tools?: Json
           updated_at?: string | null
@@ -292,6 +298,7 @@ export type Database = {
       contexts: {
         Row: {
           agent_id: string
+          context_id: string | null
           conversation_context: Json | null
           created_at: string | null
           description: string | null
@@ -301,12 +308,14 @@ export type Database = {
           pending_interruptions: Json | null
           serialized_agent_state: string | null
           status: string | null
+          task_histories: Json | null
           task_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           agent_id: string
+          context_id?: string | null
           conversation_context?: Json | null
           created_at?: string | null
           description?: string | null
@@ -316,12 +325,14 @@ export type Database = {
           pending_interruptions?: Json | null
           serialized_agent_state?: string | null
           status?: string | null
+          task_histories?: Json | null
           task_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           agent_id?: string
+          context_id?: string | null
           conversation_context?: Json | null
           created_at?: string | null
           description?: string | null
@@ -331,6 +342,7 @@ export type Database = {
           pending_interruptions?: Json | null
           serialized_agent_state?: string | null
           status?: string | null
+          task_histories?: Json | null
           task_id?: string | null
           updated_at?: string | null
           user_id?: string
@@ -764,12 +776,46 @@ export type Database = {
           },
         ]
       }
+      tools: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          function_implementation: string | null
+          id: string
+          input_schema: Json | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          function_implementation?: string | null
+          id?: string
+          input_schema?: Json | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          function_implementation?: string | null
+          id?: string
+          input_schema?: Json | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       traces: {
         Row: {
           agent_id: string | null
           agent_name: string | null
           attributes: Json | null
           context: Json | null
+          context_id: string | null
           created_at: string | null
           duration_ms: number | null
           end_time: string | null
@@ -780,6 +826,7 @@ export type Database = {
           span_count: number | null
           start_time: string
           status: string
+          trace_data: Json | null
           trace_id: string
           updated_at: string | null
           user_id: string
@@ -789,6 +836,7 @@ export type Database = {
           agent_name?: string | null
           attributes?: Json | null
           context?: Json | null
+          context_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           end_time?: string | null
@@ -799,6 +847,7 @@ export type Database = {
           span_count?: number | null
           start_time: string
           status?: string
+          trace_data?: Json | null
           trace_id: string
           updated_at?: string | null
           user_id: string
@@ -808,6 +857,7 @@ export type Database = {
           agent_name?: string | null
           attributes?: Json | null
           context?: Json | null
+          context_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           end_time?: string | null
@@ -818,6 +868,7 @@ export type Database = {
           span_count?: number | null
           start_time?: string
           status?: string
+          trace_data?: Json | null
           trace_id?: string
           updated_at?: string | null
           user_id?: string
