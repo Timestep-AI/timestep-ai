@@ -4,17 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Plus, Trash2, Settings, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { modelProvidersService } from '@/services/modelProvidersService';
-
-interface ModelProvider {
-  id: string;
-  provider: string;
-  base_url: string;
-  models_url: string;
-  api_key?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { ModelProvider, modelProvidersService } from '@/services/modelProvidersService';
 
 export const ModelProvidersSection = () => {
   const [providers, setProviders] = useState<ModelProvider[]>([]);

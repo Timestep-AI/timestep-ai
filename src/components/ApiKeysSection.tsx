@@ -4,15 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Key, Plus, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { apiKeysService } from '@/services/apiKeysService';
-
-interface ApiKey {
-  id: string;
-  name: string;
-  provider: string;
-  created_at: string;
-  updated_at: string;
-}
+import { ApiKey, apiKeysService } from '@/services/apiKeysService';
 
 export const ApiKeysSection = () => {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
