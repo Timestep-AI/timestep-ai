@@ -43,10 +43,7 @@ export const CollectionPage = <T,>({
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Ensure items is always an array to prevent filter errors
-  const safeItems = Array.isArray(items) ? items : [];
-  
-  const filteredItems = safeItems.filter(item => {
+  const filteredItems = items.filter(item => {
     if (!searchQuery.trim()) return true;
     
     const searchLower = searchQuery.toLowerCase();
@@ -127,7 +124,7 @@ export const CollectionPage = <T,>({
                 variant="destructive"
                 size="default"
                 onClick={onDeleteAll}
-                disabled={safeItems.length === 0 || operationLoading}
+                disabled={items.length === 0 || operationLoading}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 DELETE ALL
@@ -137,7 +134,7 @@ export const CollectionPage = <T,>({
           </div>
           
           <div className="text-xs text-text-secondary text-center sm:text-right">
-            {filteredItems.length} of {safeItems.length} {safeItems.length !== 1 ? 'items' : 'item'}
+            {filteredItems.length} of {items.length} {items.length !== 1 ? 'items' : 'item'}
           </div>
         </div>
 

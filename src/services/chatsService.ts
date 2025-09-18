@@ -9,12 +9,11 @@ class ChatsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch chats: ${response.statusText}`);
       }
-      const data = await response.json();
-      // Ensure we always return an array
-      return Array.isArray(data) ? data : [];
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error fetching chats:', error);
-      return []; // Return empty array on error instead of throwing
+      throw error;
     }
   }
 
