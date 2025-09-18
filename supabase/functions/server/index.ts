@@ -1,5 +1,5 @@
 /**
- * Supabase Edge Function with Custom Repositories - Updated for deployment
+ * Supabase Edge Function with Custom Repositories
  *
  * This demonstrates how to replace the built-in JSONL repositories with custom
  * Supabase database repositories. This approach stores all data in your Supabase
@@ -41,7 +41,7 @@ import {
   type Repository,
   type Agent,
   type ModelProvider,
-  type McpServer} from 'npm:@timestep-ai/timestep@2025.9.172126';
+  type McpServer} from 'npm:@timestep-ai/timestep@2025.09.180759';
 
 /**
  * Supabase Agent Repository Implementation
@@ -363,16 +363,10 @@ const port = parseInt(Deno.env.get("PORT") || "3000");
 
 console.log("🦕 Starting Timestep Server with Custom Supabase Repositories");
 console.log(`🌐 Server will run on port ${port}`);
-console.log("🔄 Function deployed and ready to serve requests");
-console.log("📚 Available endpoints:");
-console.log("  - GET /version - Timestep package version information");
 
 // Start the server with custom repositories
 Deno.serve({ port }, async (request: Request) => {
   const url = new URL(request.url);
-  
-  // Strip the /server prefix from the path for routing (Supabase already strips /functions/v1/)
-  const path = url.pathname.replace(/^\/server/, '') || '/';
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -388,12 +382,8 @@ Deno.serve({ port }, async (request: Request) => {
   }
 
   try {
-    // Debug logging
-    console.log(`🔍 Processing request: ${request.method} ${url.pathname} -> ${path}`);
-    
     // Version endpoint - returns timestep package version info
-    if (path === "/version") {
-      console.log("✅ Version endpoint matched");
+    if (url.pathname === "/version") {
       try {
         const versionInfo = await getVersion();
         return new Response(JSON.stringify({
@@ -408,7 +398,7 @@ Deno.serve({ port }, async (request: Request) => {
     }
 
     // Health check endpoints
-    if (path === "/health" || path === "/supabase-health") {
+    if (url.pathname === "/health" || url.pathname === "/supabase-health") {
       return new Response(JSON.stringify({
         status: 'healthy',
         runtime: 'Supabase Edge Function with Custom Repositories',
@@ -416,54 +406,54 @@ Deno.serve({ port }, async (request: Request) => {
         denoVersion: Deno.version.deno,
         deploymentId: Deno.env.get("DENO_DEPLOYMENT_ID") || "local",
         region: Deno.env.get("DENO_REGION") || "unknown",
-        path: path,
+        path: url.pathname,
         repositories: ['agents', 'contexts', 'model_providers', 'mcp_servers', 'api_keys']
       }), { status: 200, headers });
     }
 
     // API endpoints using custom repositories
-    if (path === "/agents") {
+    if (url.pathname === "/agents") {
       const result = await listAgents(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/chats") {
+    if (url.pathname === "/chats") {
       const result = await listContexts(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/settings/model-providers") {
+    if (url.pathname === "/settings/model-providers") {
       const result = await listModelProviders(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/settings/mcp-servers") {
+    if (url.pathname === "/settings/mcp-servers") {
       const result = await listMcpServers(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/settings/api-keys") {
+    if (url.pathname === "/settings/api-keys") {
       const result = await listApiKeys(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/tools") {
+    if (url.pathname === "/tools") {
       const result = await listTools(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/traces") {
+    if (url.pathname === "/traces") {
       const result = await listTraces();
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (path === "/models") {
+    if (url.pathname === "/models") {
       const result = await listModels(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
     // Handle dynamic agent routes with custom repository
-    const agentMatch = path.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
+    const agentMatch = url.pathname.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
     if (agentMatch) {
       // Create a mock Express-style request object that satisfies the Request interface
       const mockReq = {
@@ -546,15 +536,7 @@ Deno.serve({ port }, async (request: Request) => {
       }
     }
 
-    // If no route matches, return 404 with debug info
-    console.log(`❌ No route matched for path: "${path}" (original: "${url.pathname}")`);
-    return new Response(JSON.stringify({
-      error: "Not Found",
-      path: path,
-      originalPath: url.pathname,
-      method: request.method,
-      availableEndpoints: ["/version", "/health", "/agents", "/chats", "/settings/model-providers", "/settings/mcp-servers", "/settings/api-keys", "/tools", "/traces", "/models"]
-    }), { status: 404, headers });
+    return new Response("Not found", { status: 404, headers });
   } catch (error) {
     console.error('Error in Supabase Edge Function:', error);
     return new Response(JSON.stringify({
