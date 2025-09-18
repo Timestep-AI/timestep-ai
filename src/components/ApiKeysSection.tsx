@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Key, Plus, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiKeysService } from '@/services/apiKeysService';
 
 interface ApiKey {
   id: string;
@@ -27,13 +27,8 @@ export const ApiKeysSection = () => {
   const loadApiKeys = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('api_keys')
-        .select('id, name, provider, created_at, updated_at')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setApiKeys(data || []);
+      const data = await apiKeysService.getAll();
+      setApiKeys(data);
     } catch (error) {
       console.error('Error loading API keys:', error);
     } finally {
@@ -43,12 +38,7 @@ export const ApiKeysSection = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('api_keys')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await apiKeysService.delete(id);
       setApiKeys(prev => prev.filter(key => key.id !== id));
     } catch (error) {
       console.error('Error deleting API key:', error);

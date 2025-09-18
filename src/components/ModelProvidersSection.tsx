@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Plus, Trash2, Settings, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { modelProvidersService } from '@/services/modelProvidersService';
 
 interface ModelProvider {
   id: string;
@@ -27,27 +28,8 @@ export const ModelProvidersSection = () => {
   const loadModelProviders = async () => {
     try {
       setLoading(true);
-      // This would typically fetch from your backend or Supabase
-      // For now, using mock data since the table might not exist yet
-      const mockProviders: ModelProvider[] = [
-        {
-          id: '1',
-          provider: 'OpenAI',
-          base_url: 'https://api.openai.com/v1',
-          models_url: 'https://api.openai.com/v1/models',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          provider: 'Anthropic',
-          base_url: 'https://api.anthropic.com/v1',
-          models_url: 'https://api.anthropic.com/v1/models',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      ];
-      setProviders(mockProviders);
+      const data = await modelProvidersService.getAll();
+      setProviders(data);
     } catch (error) {
       console.error('Error loading model providers:', error);
     } finally {
@@ -57,7 +39,7 @@ export const ModelProvidersSection = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      // This would typically delete from your backend
+      await modelProvidersService.delete(id);
       setProviders(prev => prev.filter(provider => provider.id !== id));
     } catch (error) {
       console.error('Error deleting model provider:', error);
