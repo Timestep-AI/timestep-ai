@@ -40,7 +40,7 @@ import {
   type Repository,
   type Agent,
   type ModelProvider,
-  type McpServer} from 'npm:@timestep-ai/timestep@2025.9.180819';
+  type McpServer} from 'npm:@timestep-ai/timestep@2025.9.180831';
 
 /**
  * Supabase Agent Repository Implementation
@@ -548,7 +548,6 @@ console.log("  - GET /agents - List agents (using SupabaseAgentRepository)");
 console.log("  - GET /chats - List chats (using SupabaseContextRepository)");
 console.log("  - GET /settings/model-providers - List model providers (using SupabaseModelProviderRepository)");
 console.log("  - GET /settings/mcp-servers - List MCP servers (using SupabaseMcpServerRepository)");
-
 console.log("  - GET /tools - List tools (via SupabaseMcpServerRepository)");
 console.log("  - GET /models - List models (via SupabaseModelProviderRepository)");
 console.log("  - GET /traces - List traces (using default hardcoded data)");
