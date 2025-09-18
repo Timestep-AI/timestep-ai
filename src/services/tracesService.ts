@@ -10,7 +10,7 @@ export const tracesService = {
         throw new Error(`Failed to fetch traces: ${response.statusText}`);
       }
       const result = await response.json();
-      return result.data || [];
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Error fetching traces:', error);
       throw error;
