@@ -39,10 +39,12 @@ export const CollectionPage = <T,>({
   backLabel
 }: CollectionPageProps<T>) => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const filteredItems = items.filter(item => {
-    if (!searchPlaceholder) return true;
+    if (!searchQuery.trim()) return true;
     
-    const searchLower = searchPlaceholder.toLowerCase();
+    const searchLower = searchQuery.toLowerCase();
     const searchableFields = [
       (item as any).name,
       (item as any).title,
@@ -101,6 +103,18 @@ export const CollectionPage = <T,>({
         
         <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-4 h-4" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  onSearch?.(e.target.value);
+                }}
+                className="pl-10 w-64"
+              />
+            </div>
             {showDeleteAll && onDeleteAll && (
               <Button 
                 variant="destructive"
@@ -115,7 +129,7 @@ export const CollectionPage = <T,>({
           </div>
           
           <div className="text-xs text-text-secondary text-center sm:text-right">
-            {items.length} {items.length !== 1 ? 'items' : 'item'}
+            {filteredItems.length} of {items.length} {items.length !== 1 ? 'items' : 'item'}
           </div>
         </div>
 
