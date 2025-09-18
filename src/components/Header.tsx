@@ -1,5 +1,5 @@
 import { useLocation, useParams, Link } from 'react-router-dom';
-import { Menu, ChevronRight, User, LogOut } from 'lucide-react';
+import { Menu, ChevronRight, User, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useVersion } from '@/hooks/useVersion';
@@ -77,7 +77,7 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
   const location = useLocation();
   const params = useParams();
   const { user, profile, signOut } = useAuth();
-  const { version } = useVersion();
+  const { version, loading } = useVersion();
   const breadcrumbs = getBreadcrumbs(location.pathname, params);
 
   const handleSignOut = async () => {
@@ -132,8 +132,12 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
             </h1>
           </div>
           
-          <div className="text-sm text-text-tertiary">
-            {version}
+          <div className="text-sm text-text-tertiary flex items-center">
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : version ? (
+              `v${version}`
+            ) : null}
           </div>
 
           {/* User Menu */}

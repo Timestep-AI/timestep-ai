@@ -20,11 +20,11 @@ export const useVersion = () => {
           setVersionInfo(data);
         } else {
           console.warn('Failed to fetch version info');
-          setVersionInfo({ version: 'v0.2.3' }); // Fallback version
+          setVersionInfo({ error: 'Failed to fetch version' });
         }
       } catch (error) {
         console.warn('Error fetching version:', error);
-        setVersionInfo({ version: 'v0.2.3' }); // Fallback version
+        setVersionInfo({ error: 'Network error' });
       } finally {
         setLoading(false);
       }
@@ -34,7 +34,7 @@ export const useVersion = () => {
   }, []);
 
   return {
-    version: versionInfo.version || 'v0.2.3',
+    version: versionInfo.version,
     runtime: versionInfo.runtime,
     loading,
     error: versionInfo.error
