@@ -117,7 +117,7 @@ export const Tools = () => {
                       </div>
                     ) : mcpServers.length === 0 ? (
                       <div className="text-center py-8">
-                        <Server className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
+                        <Settings2 className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
                         <p className="text-text-tertiary">No tool providers configured</p>
                       </div>
                     ) : (
