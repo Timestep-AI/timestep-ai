@@ -50,6 +50,15 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
   } else if (pathname.startsWith('/traces/') && params?.id) {
     breadcrumbs.push({ text: 'Traces', href: '/traces' });
     breadcrumbs.push({ text: 'Trace', href: `/traces/${params.id}` });
+  } else if (pathname === '/settings') {
+    breadcrumbs.push({ text: 'Settings', href: '/settings' });
+  } else if (pathname === '/settings/mcp_servers') {
+    breadcrumbs.push({ text: 'Settings', href: '/settings' });
+    breadcrumbs.push({ text: 'MCP Servers', href: '/settings/mcp_servers' });
+  } else if (pathname.startsWith('/settings/mcp_servers/') && params?.id) {
+    breadcrumbs.push({ text: 'Settings', href: '/settings' });
+    breadcrumbs.push({ text: 'MCP Servers', href: '/settings/mcp_servers' });
+    breadcrumbs.push({ text: 'Server Details', href: `/settings/mcp_servers/${params.id}` });
   } else {
     breadcrumbs.push({ text: 'Dashboard', href: '/' });
   }
