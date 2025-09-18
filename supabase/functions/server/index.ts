@@ -1,5 +1,5 @@
 /**
- * Supabase Edge Function with Custom Repositories
+ * Supabase Edge Function with Custom Repositories - Updated for deployment
  *
  * This demonstrates how to replace the built-in JSONL repositories with custom
  * Supabase database repositories. This approach stores all data in your Supabase
@@ -363,6 +363,7 @@ const port = parseInt(Deno.env.get("PORT") || "3000");
 
 console.log("🦕 Starting Timestep Server with Custom Supabase Repositories");
 console.log(`🌐 Server will run on port ${port}`);
+console.log("🔄 Function deployed and ready to serve requests");
 
 // Start the server with custom repositories
 Deno.serve({ port }, async (request: Request) => {
