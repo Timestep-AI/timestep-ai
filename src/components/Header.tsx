@@ -2,6 +2,7 @@ import { useLocation, useParams, Link } from 'react-router-dom';
 import { Menu, ChevronRight, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useVersion } from '@/hooks/useVersion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,7 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
   const location = useLocation();
   const params = useParams();
   const { user, profile, signOut } = useAuth();
+  const { version } = useVersion();
   const breadcrumbs = getBreadcrumbs(location.pathname, params);
 
   const handleSignOut = async () => {
@@ -131,7 +133,7 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
           </div>
           
           <div className="text-sm text-text-tertiary">
-            v0.2.3
+            {version}
           </div>
 
           {/* User Menu */}
