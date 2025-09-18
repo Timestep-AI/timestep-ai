@@ -22,7 +22,7 @@ const MCPServerDetails = () => {
         const allTools = await toolsService.getAll();
         // Filter tools that belong to this MCP server
         const serverTools = allTools.filter(tool => 
-          tool.name.startsWith(`${id}.`)
+          tool.serverId === id
         );
         setTools(serverTools);
       } catch (error) {
