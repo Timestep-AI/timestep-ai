@@ -20,6 +20,7 @@ interface CollectionPageProps<T> {
   showDeleteAll?: boolean;
   backPath?: string;
   backLabel?: string;
+  actionButton?: ReactNode;
 }
 
 export const CollectionPage = <T,>({
@@ -36,7 +37,8 @@ export const CollectionPage = <T,>({
   onDeleteAll,
   showDeleteAll = false,
   backPath,
-  backLabel
+  backLabel,
+  actionButton
 }: CollectionPageProps<T>) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,6 +117,8 @@ export const CollectionPage = <T,>({
                 className="pl-10 w-64"
               />
             </div>
+          <div className="flex items-center space-x-2">
+            {actionButton}
             {showDeleteAll && onDeleteAll && (
               <Button 
                 variant="destructive"
@@ -126,6 +130,7 @@ export const CollectionPage = <T,>({
                 DELETE ALL
               </Button>
             )}
+          </div>
           </div>
           
           <div className="text-xs text-text-secondary text-center sm:text-right">
