@@ -371,8 +371,8 @@ console.log("  - GET /version - Timestep package version information");
 Deno.serve({ port }, async (request: Request) => {
   const url = new URL(request.url);
   
-  // Strip the /functions/v1/server prefix from the path for routing
-  const path = url.pathname.replace(/^\/functions\/v1\/server/, '') || '/';
+  // Strip the /server prefix from the path for routing (Supabase already strips /functions/v1/)
+  const path = url.pathname.replace(/^\/server/, '') || '/';
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
