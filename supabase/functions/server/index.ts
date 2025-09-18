@@ -364,6 +364,8 @@ const port = parseInt(Deno.env.get("PORT") || "3000");
 console.log("🦕 Starting Timestep Server with Custom Supabase Repositories");
 console.log(`🌐 Server will run on port ${port}`);
 console.log("🔄 Function deployed and ready to serve requests");
+console.log("📚 Available endpoints:");
+console.log("  - GET /version - Timestep package version information");
 
 // Start the server with custom repositories
 Deno.serve({ port }, async (request: Request) => {
