@@ -2,7 +2,8 @@ import { useState, useEffect, ReactNode } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface CollectionPageProps<T> {
   title: string;
@@ -17,6 +18,8 @@ interface CollectionPageProps<T> {
   renderItem: (item: T) => ReactNode;
   onDeleteAll?: () => void;
   showDeleteAll?: boolean;
+  backPath?: string;
+  backLabel?: string;
 }
 
 export const CollectionPage = <T,>({
@@ -31,8 +34,11 @@ export const CollectionPage = <T,>({
   onSearch,
   renderItem,
   onDeleteAll,
-  showDeleteAll = false
+  showDeleteAll = false,
+  backPath,
+  backLabel
 }: CollectionPageProps<T>) => {
+  const navigate = useNavigate();
   const filteredItems = items.filter(item => {
     if (!searchPlaceholder) return true;
     
@@ -82,6 +88,17 @@ export const CollectionPage = <T,>({
       )}
       
       <div className="space-y-4">
+        {backPath && backLabel && (
+          <Button
+            variant="ghost"
+            onClick={() => navigate(backPath)}
+            className="mb-4 -ml-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {backLabel}
+          </Button>
+        )}
+        
         <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
             {showDeleteAll && onDeleteAll && (

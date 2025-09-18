@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Server, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { MCPServer } from '@/types/mcpServer';
+import { mcpServersService } from '@/services/mcpServersService';
 import { useNavigate } from 'react-router-dom';
 
 export const McpServersSection = () => {
@@ -18,32 +19,8 @@ export const McpServersSection = () => {
   const loadMcpServers = async () => {
     try {
       setLoading(true);
-      // Mock data for MCP servers - this would typically come from your service
-      const mockServers: MCPServer[] = [
-        {
-          id: '1',
-          name: 'Built-in MCP Server',
-          description: 'Built-in server providing essential tools',
-          status: 'active',
-          toolCount: 5,
-          version: '1.0.0',
-          lastConnected: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Custom MCP Server',
-          description: 'Custom server for specialized tools',
-          status: 'inactive',
-          toolCount: 3,
-          version: '1.2.0',
-          lastConnected: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
-      setServers(mockServers);
+      const data = await mcpServersService.getAll();
+      setServers(data);
     } catch (error) {
       console.error('Error loading MCP servers:', error);
     } finally {
@@ -53,6 +30,7 @@ export const McpServersSection = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      await mcpServersService.delete(id);
       setServers(prev => prev.filter(server => server.id !== id));
     } catch (error) {
       console.error('Error deleting MCP server:', error);

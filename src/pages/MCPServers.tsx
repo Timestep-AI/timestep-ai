@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CollectionPage } from '@/components/CollectionPage';
 import { MCPServerRow } from '@/components/MCPServerRow';
 import { MCPServer } from '@/types/mcpServer';
-import { toolsService } from '@/services/toolsService';
+import { mcpServersService } from '@/services/mcpServersService';
 import { Server } from 'lucide-react';
 
 const MCPServers = () => {
@@ -10,56 +10,27 @@ const MCPServers = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchServers = async () => {
-      setLoading(true);
-      try {
-        const tools = await toolsService.getAll();
-        
-        const serverMap = new Map<string, MCPServer>();
-        
-        tools.forEach(tool => {
-          const serverId = tool.name.split('.')[0];
-          const serverName = tool.mcpServer;
-          
-          if (!serverMap.has(serverId)) {
-            serverMap.set(serverId, {
-              id: serverId,
-              name: serverName,
-              status: 'active',
-              toolCount: 0,
-              description: `MCP server providing various tools and capabilities`,
-              version: '1.0.0',
-              lastConnected: new Date().toISOString(),
-              createdAt: '2024-01-01T10:00:00Z',
-              updatedAt: new Date().toISOString()
-            });
-          }
-          
-          const server = serverMap.get(serverId)!;
-          server.toolCount++;
-        });
-        
-        setServers(Array.from(serverMap.values()));
-      } catch (error) {
-        console.error('Failed to fetch MCP servers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchServers();
+    loadServers();
   }, []);
+
+  const loadServers = async () => {
+    try {
+      setLoading(true);
+      const servers = await mcpServersService.getAll();
+      setServers(servers);
+    } catch (error) {
+      console.error('Failed to load MCP servers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeleteServer = async (serverId: string) => {
     try {
-      const tools = await toolsService.getAll();
-      const serverTools = tools.filter(tool => tool.name.startsWith(`${serverId}.`));
-      
-      for (const tool of serverTools) {
-        await toolsService.delete(tool.id);
+      const success = await mcpServersService.delete(serverId);
+      if (success) {
+        setServers(prev => prev.filter(server => server.id !== serverId));
       }
-      
-      setServers(prev => prev.filter(server => server.id !== serverId));
     } catch (error) {
       console.error('Failed to delete MCP server:', error);
     }
@@ -70,6 +41,8 @@ const MCPServers = () => {
       title="MCP Servers"
       items={servers}
       loading={loading}
+      backPath="/settings"
+      backLabel="Back to Settings"
       emptyIcon={<Server className="w-8 h-8 text-text-tertiary" />}
       emptyTitle="No MCP servers"
       emptyDescription="Get started by creating default MCP servers with built-in tools."

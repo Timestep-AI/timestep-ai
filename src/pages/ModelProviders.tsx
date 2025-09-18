@@ -49,6 +49,8 @@ export const ModelProviders = () => {
       items={providers}
       loading={loading}
       operationLoading={operationLoading}
+      backPath="/settings"
+      backLabel="Back to Settings"
       emptyIcon={<Building2 className="w-8 h-8 text-text-tertiary" />}
       emptyTitle="No model providers yet"
       emptyDescription="Configure your first model provider to access AI models."

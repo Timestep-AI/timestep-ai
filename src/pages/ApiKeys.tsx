@@ -49,6 +49,8 @@ export const ApiKeys = () => {
       items={apiKeys}
       loading={loading}
       operationLoading={operationLoading}
+      backPath="/settings"
+      backLabel="Back to Settings"
       emptyIcon={<Key className="w-8 h-8 text-text-tertiary" />}
       emptyTitle="No API keys yet"
       emptyDescription="Add your first API key to start using AI models and services."
