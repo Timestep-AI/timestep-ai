@@ -4,7 +4,7 @@ import { ModelProvidersSection } from '@/components/ModelProvidersSection';
 
 const Settings = () => {
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="space-y-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-text-primary mb-2">Settings</h1>
         <p className="text-text-secondary">
