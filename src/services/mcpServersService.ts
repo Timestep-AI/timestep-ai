@@ -15,7 +15,7 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/s
 class MCPServersService {
   async getAll(): Promise<MCPServer[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`);
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers`);
       if (!response.ok) {
         throw new Error(`Failed to fetch MCP servers: ${response.statusText}`);
       }
@@ -29,7 +29,7 @@ class MCPServersService {
 
   async getById(id: string): Promise<MCPServer | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`);
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers/${id}`);
       if (response.status === 404) {
         return null;
       }
@@ -46,7 +46,7 @@ class MCPServersService {
 
   async create(serverData: Omit<MCPServer, 'id' | 'createdAt' | 'updatedAt'>): Promise<MCPServer> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`, {
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ class MCPServersService {
 
   async update(id: string, updates: Partial<Omit<MCPServer, 'id' | 'createdAt'>>): Promise<MCPServer | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ class MCPServersService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`, {
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers/${id}`, {
         method: 'DELETE',
       });
       
@@ -115,7 +115,7 @@ class MCPServersService {
 
   async deleteAll(): Promise<void> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`, {
+      const response = await fetch(`${SERVER_BASE_URL}/mcp-servers`, {
         method: 'DELETE',
       });
       
