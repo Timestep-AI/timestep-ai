@@ -370,6 +370,9 @@ console.log("  - GET /version - Timestep package version information");
 // Start the server with custom repositories
 Deno.serve({ port }, async (request: Request) => {
   const url = new URL(request.url);
+  
+  // Strip the /functions/v1/server prefix from the path for routing
+  const path = url.pathname.replace(/^\/functions\/v1\/server/, '') || '/';
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -386,7 +389,7 @@ Deno.serve({ port }, async (request: Request) => {
 
   try {
     // Version endpoint - returns timestep package version info
-    if (url.pathname === "/version") {
+    if (path === "/version") {
       try {
         const versionInfo = await getVersion();
         return new Response(JSON.stringify({
@@ -401,7 +404,7 @@ Deno.serve({ port }, async (request: Request) => {
     }
 
     // Health check endpoints
-    if (url.pathname === "/health" || url.pathname === "/supabase-health") {
+    if (path === "/health" || path === "/supabase-health") {
       return new Response(JSON.stringify({
         status: 'healthy',
         runtime: 'Supabase Edge Function with Custom Repositories',
@@ -409,54 +412,54 @@ Deno.serve({ port }, async (request: Request) => {
         denoVersion: Deno.version.deno,
         deploymentId: Deno.env.get("DENO_DEPLOYMENT_ID") || "local",
         region: Deno.env.get("DENO_REGION") || "unknown",
-        path: url.pathname,
+        path: path,
         repositories: ['agents', 'contexts', 'model_providers', 'mcp_servers', 'api_keys']
       }), { status: 200, headers });
     }
 
     // API endpoints using custom repositories
-    if (url.pathname === "/agents") {
+    if (path === "/agents") {
       const result = await listAgents(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/chats") {
+    if (path === "/chats") {
       const result = await listContexts(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/settings/model-providers") {
+    if (path === "/settings/model-providers") {
       const result = await listModelProviders(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/settings/mcp-servers") {
+    if (path === "/settings/mcp-servers") {
       const result = await listMcpServers(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/settings/api-keys") {
+    if (path === "/settings/api-keys") {
       const result = await listApiKeys(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/tools") {
+    if (path === "/tools") {
       const result = await listTools(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/traces") {
+    if (path === "/traces") {
       const result = await listTraces();
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
-    if (url.pathname === "/models") {
+    if (path === "/models") {
       const result = await listModels(repositories);
       return new Response(JSON.stringify(result.data), { status: 200, headers });
     }
 
     // Handle dynamic agent routes with custom repository
-    const agentMatch = url.pathname.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
+    const agentMatch = path.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
     if (agentMatch) {
       // Create a mock Express-style request object that satisfies the Request interface
       const mockReq = {
