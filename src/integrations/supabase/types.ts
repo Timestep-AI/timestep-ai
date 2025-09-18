@@ -429,6 +429,39 @@ export type Database = {
         }
         Relationships: []
       }
+      model_providers: {
+        Row: {
+          api_key: string | null
+          base_url: string
+          created_at: string | null
+          id: string
+          models_url: string
+          provider: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          base_url: string
+          created_at?: string | null
+          id: string
+          models_url: string
+          provider: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          base_url?: string
+          created_at?: string | null
+          id?: string
+          models_url?: string
+          provider?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       parts: {
         Row: {
           artifact_id: string
