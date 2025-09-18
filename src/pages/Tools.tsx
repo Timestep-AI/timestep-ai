@@ -6,7 +6,7 @@ import { mcpServersService } from '@/services/mcpServersService';
 import { CollectionPage } from '@/components/CollectionPage';
 import { ToolRow } from '@/components/ToolRow';
 import { MCPServerRow } from '@/components/MCPServerRow';
-import { Plus, Wrench, Server } from 'lucide-react';
+import { Settings2, Wrench, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -100,7 +100,7 @@ export const Tools = () => {
           <Sheet open={serversOpen} onOpenChange={handleServersOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
-                <Server className="w-4 h-4 mr-2" />
+                <Settings2 className="w-4 h-4 mr-2" />
                 Tool Providers (MCP Servers)
               </Button>
             </SheetTrigger>

@@ -103,7 +103,7 @@ export const Models = () => {
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
                 <Settings2 className="w-4 h-4 mr-2" />
-                Providers
+                Model Providers
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[400px] sm:w-[540px]">
