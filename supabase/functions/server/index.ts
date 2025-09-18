@@ -41,8 +41,7 @@ import {
   type Repository,
   type Agent,
   type ModelProvider,
-  type McpServer
-} from 'npm:@timestep-ai/timestep@latest';
+  type McpServer} from 'npm:@timestep-ai/timestep@latest';
 
 /**
  * Supabase Agent Repository Implementation
@@ -331,18 +330,6 @@ class SupabaseTaskStore {
     this.store.set(task.id, {...task});
     console.log(`📋 SupabaseTaskStore.save(${task.id}) -> SAVED`);
   }
-}
-
-/**
- * Supabase Repository Container Implementation
- */
-class SupabaseRepositoryContainer implements RepositoryContainer {
-  constructor(private supabase: any) {}
-
-  get agents() { return new SupabaseAgentRepository(this.supabase); }
-  get contexts() { return new SupabaseContextRepository(this.supabase); }
-  get modelProviders() { return new SupabaseModelProviderRepository(this.supabase); }
-  get mcpServers() { return new SupabaseMcpServerRepository(this.supabase); }
 }
 
 /**
