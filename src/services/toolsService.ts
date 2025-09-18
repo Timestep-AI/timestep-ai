@@ -3,37 +3,6 @@ import { Tool, CreateToolRequest, UpdateToolRequest } from '@/types/tool';
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 export const toolsService = {
-  mapCategory(serverCategory: string): 'productivity' | 'development' | 'communication' | 'analysis' | 'automation' {
-    // Map server categories to Tool interface categories
-    if (serverCategory?.toLowerCase().includes('development')) return 'development';
-    if (serverCategory?.toLowerCase().includes('communication')) return 'communication';
-    if (serverCategory?.toLowerCase().includes('analysis')) return 'analysis';
-    if (serverCategory?.toLowerCase().includes('automation')) return 'automation';
-    return 'productivity'; // Default fallback
-  },
-
-  transformServerTool(serverTool: any): Tool {
-    return {
-      id: serverTool.id,
-      name: serverTool.name,
-      description: serverTool.description,
-      category: this.mapCategory(serverTool.category),
-      version: '1.0.0',
-      isEnabled: serverTool.status === 'available',
-      permissions: [],
-      status: serverTool.status === 'available' ? 'active' : 'inactive',
-      lastUsed: undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      mcpServer: serverTool.serverName || serverTool.serverId || 'Unknown',
-      usage: {
-        daily: 0,
-        weekly: 0,
-        monthly: 0
-      }
-    };
-  },
-
   async getAll(): Promise<Tool[]> {
     try {
       const response = await fetch(`${SERVER_BASE_URL}/tools`);
@@ -42,10 +11,17 @@ export const toolsService = {
       }
       const serverTools = await response.json();
       
-      // Transform server response to match Tool interface
-      const tools: Tool[] = serverTools.map((serverTool: any) => 
-        this.transformServerTool(serverTool)
-      );
+      // Return tools with only real data from server
+      const tools: Tool[] = serverTools.map((serverTool: any) => ({
+        id: serverTool.id,
+        name: serverTool.name,
+        description: serverTool.description,
+        serverId: serverTool.serverId,
+        serverName: serverTool.serverName,
+        inputSchema: serverTool.inputSchema,
+        category: serverTool.category,
+        status: serverTool.status === 'available' ? 'available' : 'unavailable'
+      }));
       
       return tools;
     } catch (error) {
@@ -64,7 +40,16 @@ export const toolsService = {
         throw new Error(`Failed to fetch tool: ${response.statusText}`);
       }
       const serverTool = await response.json();
-      return this.transformServerTool(serverTool);
+      return {
+        id: serverTool.id,
+        name: serverTool.name,
+        description: serverTool.description,
+        serverId: serverTool.serverId,
+        serverName: serverTool.serverName,
+        inputSchema: serverTool.inputSchema,
+        category: serverTool.category,
+        status: serverTool.status === 'available' ? 'available' : 'unavailable'
+      };
     } catch (error) {
       console.error('Error fetching tool:', error);
       throw error;

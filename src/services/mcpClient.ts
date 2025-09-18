@@ -80,18 +80,12 @@ export class MCPClient {
     const tools = await this.listTools();
     const newTool: Tool = {
       id: (tools.length + 1).toString(),
-      ...toolData,
-      isEnabled: toolData.isEnabled ?? true,
-      permissions: toolData.permissions ?? ['read'],
-      status: toolData.status ?? 'active',
-      mcpServer: toolData.mcpServer ?? 'Custom Server',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      usage: {
-        daily: 0,
-        weekly: 0,
-        monthly: 0
-      }
+      name: toolData.name,
+      description: toolData.description,
+      serverId: toolData.serverId,
+      serverName: toolData.serverName,
+      category: toolData.category,
+      status: toolData.status ?? 'available'
     };
     
     return newTool;

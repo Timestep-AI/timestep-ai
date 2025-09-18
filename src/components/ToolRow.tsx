@@ -4,10 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { 
   Wrench, 
-  Calendar, 
-  Activity,
-  Shield,
-  Tag
+  Server,
+  Activity
 } from 'lucide-react';
 
 interface ToolRowProps {
@@ -21,70 +19,30 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
 
   const getStatusBadge = (status: Tool['status']) => {
     switch (status) {
-      case 'active':
-        return <Badge variant="default">Active</Badge>;
-      case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
-      case 'maintenance':
-        return <Badge variant="outline">Maintenance</Badge>;
+      case 'available':
+        return <Badge variant="default">Available</Badge>;
+      case 'unavailable':
+        return <Badge variant="secondary">Unavailable</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const getCategoryColor = (category: Tool['category']) => {
-    switch (category) {
-      case 'development':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'productivity':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'communication':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      case 'analysis':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-      case 'automation':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
   const metadata = [
     {
-      icon: <Calendar className="w-3 h-3" />,
-      text: `Updated ${formatDate(tool.updatedAt)}`
+      icon: <Server className="w-3 h-3" />,
+      text: tool.serverName
     },
     {
       icon: <Activity className="w-3 h-3" />,
-      text: `${tool.usage.monthly} uses this month`
-    },
-    {
-      icon: <Shield className="w-3 h-3" />,
-      text: `${tool.permissions.length} permissions`
+      text: `ID: ${tool.serverId}`
     }
   ];
 
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
-      <div className="flex items-center space-x-1">
-        <Tag className="w-3 h-3 text-text-tertiary" />
-        <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(tool.category)}`}>
-          {tool.category}
-        </span>
-      </div>
-      <span className="text-xs text-text-tertiary">v{tool.version}</span>
-      <span 
-        className="text-xs text-text-secondary font-medium hover:text-text-primary cursor-pointer transition-colors"
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(`/settings/mcp_servers/${tool.name.split('.')[0]}`);
-        }}
-      >
-        {tool.mcpServer}
+      <span className="text-xs text-text-tertiary px-2 py-1 bg-background-secondary rounded-full">
+        {tool.category}
       </span>
     </div>
   );

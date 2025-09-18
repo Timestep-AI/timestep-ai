@@ -2,40 +2,27 @@ export interface Tool {
   id: string;
   name: string;
   description?: string;
-  category: 'productivity' | 'development' | 'communication' | 'analysis' | 'automation';
-  version: string;
-  isEnabled: boolean;
-  permissions: string[];
-  status: 'active' | 'inactive' | 'maintenance';
-  lastUsed?: string;
-  createdAt: string;
-  updatedAt: string;
-  mcpServer: string;
-  usage: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-  };
+  serverId: string;
+  serverName: string;
+  inputSchema?: any;
+  category: string; // This is actually the server name/category from API
+  status: 'available' | 'unavailable';
 }
 
 export interface CreateToolRequest {
   name: string;
   description?: string;
-  category: 'productivity' | 'development' | 'communication' | 'analysis' | 'automation';
-  version: string;
-  isEnabled?: boolean;
-  permissions?: string[];
-  status?: 'active' | 'inactive' | 'maintenance';
-  mcpServer?: string;
+  serverId: string;
+  serverName: string;
+  category: string;
+  status?: 'available' | 'unavailable';
 }
 
 export interface UpdateToolRequest {
   name?: string;
   description?: string;
-  category?: 'productivity' | 'development' | 'communication' | 'analysis' | 'automation';
-  version?: string;
-  isEnabled?: boolean;
-  permissions?: string[];
-  status?: 'active' | 'inactive' | 'maintenance';
-  mcpServer?: string;
+  serverId?: string;
+  serverName?: string;
+  category?: string;
+  status?: 'available' | 'unavailable';
 }

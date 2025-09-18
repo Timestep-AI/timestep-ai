@@ -75,20 +75,11 @@ function mcpToolToTool(mcpTool: MCPTool, index: number): Tool {
     id: (index + 1).toString(),
     name: mcpTool.name,
     description: mcpTool.description,
+    serverId: 'mock-server-' + index,
+    serverName: getMcpServerName(mcpTool.name),
+    inputSchema: mcpTool.inputSchema,
     category: getToolCategory(mcpTool.name),
-    version: '1.0.0',
-    isEnabled: true,
-    permissions: ['read'],
-    status: 'active',
-    lastUsed: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-    createdAt: '2024-01-01T10:00:00Z',
-    updatedAt: new Date().toISOString(),
-    mcpServer: getMcpServerName(mcpTool.name),
-    usage: {
-      daily: Math.floor(Math.random() * 50),
-      weekly: Math.floor(Math.random() * 300),
-      monthly: Math.floor(Math.random() * 1200)
-    }
+    status: 'available'
   };
 }
 
@@ -107,7 +98,7 @@ function getMcpServerName(toolName: string): string {
   }
 }
 
-function getToolCategory(toolName: string): Tool['category'] {
+function getToolCategory(toolName: string): string {
   const actualToolName = toolName.split('.').pop() || toolName;
   switch (actualToolName) {
     case 'get_emails': return 'communication';
