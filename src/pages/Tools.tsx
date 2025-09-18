@@ -26,17 +26,6 @@ export const Tools = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    try {
-      setOperationLoading(true);
-      await toolsService.deleteAll();
-      await loadTools();
-    } catch (error) {
-      console.error('Error deleting all tools:', error);
-    } finally {
-      setOperationLoading(false);
-    }
-  };
 
   const handleEditTool = (tool: Tool) => {
     console.log('Edit tool:', tool);
@@ -64,8 +53,6 @@ export const Tools = () => {
       emptyTitle="No tools found"
       emptyDescription="Get started by creating some default tools or add your own custom tools."
       searchPlaceholder="Search tools..."
-      onDeleteAll={handleDeleteAll}
-      showDeleteAll={true}
       renderItem={(tool) => (
         <ToolRow
           key={tool.id}

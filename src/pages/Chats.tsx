@@ -39,14 +39,6 @@ export const Chats = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    try {
-      await chatsService.deleteAll();
-      setChats([]);
-    } catch (error) {
-      console.error('Error deleting all chats:', error);
-    }
-  };
 
   return (
     <CollectionPage
@@ -57,8 +49,6 @@ export const Chats = () => {
       emptyTitle="No chats found"
       emptyDescription="Get started by creating some default chats."
       searchPlaceholder="Search chats..."
-      onDeleteAll={handleDeleteAll}
-      showDeleteAll={true}
       renderItem={(chat) => (
         <ChatRow
           key={chat.id}

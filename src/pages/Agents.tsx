@@ -26,17 +26,6 @@ export const Agents = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    try {
-      setOperationLoading(true);
-      await agentsService.deleteAll();
-      setAgents([]);
-    } catch (error) {
-      console.error('Failed to delete all agents:', error);
-    } finally {
-      setOperationLoading(false);
-    }
-  };
 
   const handleEditAgent = async (agent: Agent) => {
     console.log('Editing agent:', agent);
@@ -66,8 +55,6 @@ export const Agents = () => {
       emptyTitle="No agents yet"
       emptyDescription="Create your first agent to get started with AI workflows."
       searchPlaceholder="Search agents..."
-      onDeleteAll={handleDeleteAll}
-      showDeleteAll={true}
       renderItem={(agent) => (
         <AgentRow
           key={agent.id}

@@ -26,17 +26,6 @@ export const Models = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    try {
-      setOperationLoading(true);
-      await modelsService.deleteAll();
-      setModels([]);
-    } catch (error) {
-      console.error('Failed to delete all models:', error);
-    } finally {
-      setOperationLoading(false);
-    }
-  };
 
   const handleEditModel = async (model: Model) => {
     console.log('Editing model:', model);
@@ -66,8 +55,6 @@ export const Models = () => {
       emptyTitle="No models yet"
       emptyDescription="Create your first AI model configuration to get started."
       searchPlaceholder="Search models..."
-      onDeleteAll={handleDeleteAll}
-      showDeleteAll={true}
       renderItem={(model) => (
         <ModelRow
           key={model.id}
