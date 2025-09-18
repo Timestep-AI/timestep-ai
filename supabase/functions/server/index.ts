@@ -41,7 +41,7 @@ import {
   type Repository,
   type Agent,
   type ModelProvider,
-  type McpServer} from 'npm:@timestep-ai/timestep@2025.9.172055';
+  type McpServer} from 'npm:@timestep-ai/timestep@2025.09.172126';
 
 /**
  * Supabase Agent Repository Implementation
@@ -358,41 +358,39 @@ const agentExecutor = new TimestepAIAgentExecutor({
 });
 const taskStore = new SupabaseTaskStore();
 
-// Supabase Edge Function Handler
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Configure the port from environment or default
+const port = parseInt(Deno.env.get("PORT") || "3000");
 
-Deno.serve(async (request: Request): Promise<Response> => {
+console.log("🦕 Starting Timestep Server with Custom Supabase Repositories");
+console.log(`🌐 Server will run on port ${port}`);
+
+// Start the server with custom repositories
+Deno.serve({ port }, async (request: Request) => {
   const url = new URL(request.url);
-  
-  // Handle CORS preflight requests
-  if (request.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
 
   const headers = {
-    ...corsHeaders,
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Content-Type": "application/json",
+    "X-Runtime": "Supabase-Edge-Function-Custom-Repositories",
+    "X-Deployment-ID": Deno.env.get("DENO_DEPLOYMENT_ID") || "local"
   };
 
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers });
+  }
+
   try {
-    console.log(`Handling request: ${request.method} ${url.pathname}`);
-    
     // Version endpoint - returns timestep package version info
     if (url.pathname === "/version") {
       try {
-        console.log("Getting version info...");
         const versionInfo = await getVersion();
-        console.log("Version info obtained:", versionInfo);
         return new Response(JSON.stringify({
           ...versionInfo,
           runtime: "Supabase Edge Function with Custom Repositories"
         }), { status: 200, headers });
       } catch (error) {
-        console.error("Error getting version:", error);
         return new Response(JSON.stringify({
           error: error instanceof Error ? error.message : "Failed to read version information"
         }), { status: 500, headers });
@@ -546,6 +544,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }), { status: 500, headers });
   }
 });
+
+console.log("🚀 Timestep Server running with Custom Supabase Repositories");
 console.log("📚 Available endpoints:");
 console.log("  - GET /version - Timestep package version information");
 console.log("  - GET /health - Health check with repository info");
