@@ -127,26 +127,14 @@ export const TracePage = () => {
     return visibleSpans;
   };
 
-  const formatDuration = (duration: number) => {
+  const formatDuration = (duration: number | null) => {
+    if (duration === null) return 'N/A';
     if (duration < 1000) {
       return `${duration}ms`;
     } else if (duration < 60000) {
       return `${(duration / 1000).toFixed(1)}s`;
     } else {
       return `${(duration / 60000).toFixed(1)}m`;
-    }
-  };
-
-  const getStatusBadge = () => {
-    switch (trace?.status) {
-      case 'ok':
-        return <Badge className="bg-emerald-50 text-emerald-600 border-emerald-200"><CheckCircle className="w-3 h-3 mr-1" />Success</Badge>;
-      case 'error':
-        return <Badge className="bg-red-50 text-red-600 border-red-200"><XCircle className="w-3 h-3 mr-1" />Error</Badge>;
-      case 'timeout':
-        return <Badge className="bg-orange-50 text-orange-600 border-orange-200"><AlertTriangle className="w-3 h-3 mr-1" />Timeout</Badge>;
-      default:
-        return null;
     }
   };
 
@@ -160,30 +148,29 @@ export const TracePage = () => {
       icon={<Activity className="w-8 h-8 text-primary-foreground" />}
       onEdit={handleEdit}
       onDelete={handleDelete}
-      statusBadge={getStatusBadge()}
     >
       {trace && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="flex items-center space-x-2 text-sm text-text-tertiary">
               <Clock className="w-4 h-4 flex-shrink-0" />
-              <span>Duration: {formatDuration(trace.duration)}</span>
-            </div>
-            
-            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-              <Layers className="w-4 h-4 flex-shrink-0" />
-              <span>{trace.spanCount} spans</span>
+              <span>Duration: {formatDuration(trace.duration_ms)}</span>
             </div>
             
             <div className="flex items-center space-x-2 text-sm text-text-tertiary">
               <Activity className="w-4 h-4 flex-shrink-0" />
-              <span>{trace.serviceCount} services</span>
+              <span>{trace.handoff_count} handoff{trace.handoff_count !== 1 ? 's' : ''}</span>
             </div>
             
-            {trace.errorCount > 0 && (
-              <div className="flex items-center space-x-2 text-sm text-red-600">
-                <XCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{trace.errorCount} error{trace.errorCount > 1 ? 's' : ''}</span>
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Layers className="w-4 h-4 flex-shrink-0" />
+              <span>{trace.tool_count} tool{trace.tool_count !== 1 ? 's' : ''}</span>
+            </div>
+            
+            {trace.first_5_agents && trace.first_5_agents.length > 0 && (
+              <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+                <Activity className="w-4 h-4 flex-shrink-0" />
+                <span>{trace.first_5_agents.length} agent{trace.first_5_agents.length > 1 ? 's' : ''}</span>
               </div>
             )}
           </div>

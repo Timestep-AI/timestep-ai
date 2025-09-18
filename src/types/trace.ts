@@ -28,41 +28,35 @@ export interface Span {
 
 export interface Trace {
   id: string;
-  name: string;
-  rootSpanId: string;
-  serviceCount: number;
-  spanCount: number;
-  startTime: string;
-  endTime: string;
-  duration: number; // in milliseconds
-  status: 'ok' | 'error' | 'timeout';
-  errorCount: number;
-  createdAt: string;
-  updatedAt: string;
+  object: string;
+  created_at: string;
+  duration_ms: number | null;
+  first_5_agents: string[] | null;
+  group_id: string | null;
+  handoff_count: number;
+  tool_count: number;
+  workflow_name: string;
+  metadata: Record<string, any>;
 }
 
 export interface CreateTraceRequest {
-  name: string;
-  rootSpanId: string;
-  serviceCount?: number;
-  spanCount?: number;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
-  status?: 'ok' | 'error' | 'timeout';
-  errorCount?: number;
+  workflow_name: string;
+  duration_ms?: number | null;
+  first_5_agents?: string[] | null;
+  group_id?: string | null;
+  handoff_count?: number;
+  tool_count?: number;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateTraceRequest {
-  name?: string;
-  rootSpanId?: string;
-  serviceCount?: number;
-  spanCount?: number;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
-  status?: 'ok' | 'error' | 'timeout';
-  errorCount?: number;
+  workflow_name?: string;
+  duration_ms?: number | null;
+  first_5_agents?: string[] | null;
+  group_id?: string | null;
+  handoff_count?: number;
+  tool_count?: number;
+  metadata?: Record<string, any>;
 }
 
 export interface CreateSpanRequest {
