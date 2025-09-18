@@ -101,12 +101,12 @@ export const Tools = () => {
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
                 <Server className="w-4 h-4 mr-2" />
-                MCP Servers
+                Tool Providers (MCP Servers)
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[400px] sm:w-[540px]">
               <SheetHeader>
-                <SheetTitle>MCP Servers</SheetTitle>
+                <SheetTitle>Tool Providers (MCP Servers)</SheetTitle>
               </SheetHeader>
               <div className="mt-6">
                 <ScrollArea className="h-[calc(100vh-120px)]">
@@ -118,7 +118,7 @@ export const Tools = () => {
                     ) : mcpServers.length === 0 ? (
                       <div className="text-center py-8">
                         <Server className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
-                        <p className="text-text-tertiary">No MCP servers configured</p>
+                        <p className="text-text-tertiary">No tool providers configured</p>
                       </div>
                     ) : (
                       mcpServers.map((server) => (

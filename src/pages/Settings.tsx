@@ -14,7 +14,7 @@ const Settings = () => {
               Model providers can be managed from the <strong>Models</strong> page
             </p>
             <p className="text-sm text-text-tertiary">
-              MCP servers can be managed from the <strong>Tools</strong> page
+              Tool providers (MCP servers) can be managed from the <strong>Tools</strong> page
             </p>
           </div>
         </div>
