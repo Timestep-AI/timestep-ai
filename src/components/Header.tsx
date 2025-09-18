@@ -52,6 +52,12 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     breadcrumbs.push({ text: 'Trace', href: `/traces/${params.id}` });
   } else if (pathname === '/settings') {
     breadcrumbs.push({ text: 'Settings', href: '/settings' });
+  } else if (pathname === '/settings/api-keys') {
+    breadcrumbs.push({ text: 'Settings', href: '/settings' });
+    breadcrumbs.push({ text: 'API Keys', href: '/settings/api-keys' });
+  } else if (pathname === '/settings/model-providers') {
+    breadcrumbs.push({ text: 'Settings', href: '/settings' });
+    breadcrumbs.push({ text: 'Model Providers', href: '/settings/model-providers' });
   } else if (pathname === '/settings/mcp_servers') {
     breadcrumbs.push({ text: 'Settings', href: '/settings' });
     breadcrumbs.push({ text: 'MCP Servers', href: '/settings/mcp_servers' });

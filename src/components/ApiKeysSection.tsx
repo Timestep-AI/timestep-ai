@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Key, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Key, Plus, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ApiKey {
@@ -17,6 +18,7 @@ export const ApiKeysSection = () => {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadApiKeys();
@@ -92,10 +94,21 @@ export const ApiKeysSection = () => {
             <Key className="w-5 h-5" />
             API Keys
           </CardTitle>
-          <Button size="sm" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add API Key
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/settings/api-keys')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View All
+            </Button>
+            <Button size="sm" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add API Key
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -113,7 +126,7 @@ export const ApiKeysSection = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {apiKeys.map((apiKey) => (
+            {apiKeys.slice(0, 3).map((apiKey) => (
               <div
                 key={apiKey.id}
                 className="flex items-center justify-between p-4 border border-border rounded-lg bg-card"
@@ -154,6 +167,17 @@ export const ApiKeysSection = () => {
                 </div>
               </div>
             ))}
+            {apiKeys.length > 3 && (
+              <div className="text-center pt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/settings/api-keys')}
+                >
+                  View all {apiKeys.length} API keys
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

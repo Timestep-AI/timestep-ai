@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Plus, Trash2, Settings } from 'lucide-react';
+import { Building2, Plus, Trash2, Settings, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ModelProvider {
   id: string;
@@ -17,6 +18,7 @@ interface ModelProvider {
 export const ModelProvidersSection = () => {
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadModelProviders();
@@ -93,10 +95,21 @@ export const ModelProvidersSection = () => {
             <Building2 className="w-5 h-5" />
             Model Providers
           </CardTitle>
-          <Button size="sm" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Provider
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/settings/model-providers')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View All
+            </Button>
+            <Button size="sm" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Provider
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -114,7 +127,7 @@ export const ModelProvidersSection = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {providers.map((provider) => (
+            {providers.slice(0, 3).map((provider) => (
               <div
                 key={provider.id}
                 className="flex items-center justify-between p-4 border border-border rounded-lg bg-card"
@@ -155,6 +168,17 @@ export const ModelProvidersSection = () => {
                 </div>
               </div>
             ))}
+            {providers.length > 3 && (
+              <div className="text-center pt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/settings/model-providers')}
+                >
+                  View all {providers.length} providers
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
