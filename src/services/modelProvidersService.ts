@@ -8,92 +8,122 @@ export interface ModelProvider {
   updated_at: string;
 }
 
-class ModelProvidersService {
-  private mockProviders: ModelProvider[] = [
-    {
-      id: '1',
-      provider: 'OpenAI',
-      base_url: 'https://api.openai.com/v1',
-      models_url: 'https://api.openai.com/v1/models',
-      api_key: 'configured',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      provider: 'Anthropic',
-      base_url: 'https://api.anthropic.com/v1',
-      models_url: 'https://api.anthropic.com/v1/models',
-      api_key: 'configured',
-      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: '3',
-      provider: 'Google',
-      base_url: 'https://generativelanguage.googleapis.com/v1',
-      models_url: 'https://generativelanguage.googleapis.com/v1/models',
-      created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-      updated_at: new Date(Date.now() - 172800000).toISOString(),
-    },
-    {
-      id: '4',
-      provider: 'Local Ollama',
-      base_url: 'http://localhost:11434/v1',
-      models_url: 'http://localhost:11434/v1/models',
-      created_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-      updated_at: new Date(Date.now() - 259200000).toISOString(),
-    }
-  ];
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
+class ModelProvidersService {
   async getAll(): Promise<ModelProvider[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [...this.mockProviders];
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch model providers: ${response.statusText}`);
+      }
+      const providers = await response.json();
+      return providers;
+    } catch (error) {
+      console.error('Error fetching model providers:', error);
+      throw error;
+    }
   }
 
   async getById(id: string): Promise<ModelProvider | null> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockProviders.find(provider => provider.id === id) || null;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`);
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch model provider: ${response.statusText}`);
+      }
+      const provider = await response.json();
+      return provider;
+    } catch (error) {
+      console.error('Error fetching model provider:', error);
+      throw error;
+    }
   }
 
   async create(providerData: Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>): Promise<ModelProvider> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newProvider: ModelProvider = {
-      ...providerData,
-      id: Math.random().toString(36).substr(2, 9),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    this.mockProviders.push(newProvider);
-    return newProvider;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(providerData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create model provider: ${response.statusText}`);
+      }
+      
+      const provider = await response.json();
+      return provider;
+    } catch (error) {
+      console.error('Error creating model provider:', error);
+      throw error;
+    }
   }
 
   async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at'>>): Promise<ModelProvider | null> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = this.mockProviders.findIndex(provider => provider.id === id);
-    if (index === -1) return null;
-    
-    this.mockProviders[index] = {
-      ...this.mockProviders[index],
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-    return this.mockProviders[index];
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      
+      if (response.status === 404) {
+        return null;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update model provider: ${response.statusText}`);
+      }
+      
+      const provider = await response.json();
+      return provider;
+    } catch (error) {
+      console.error('Error updating model provider:', error);
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = this.mockProviders.findIndex(provider => provider.id === id);
-    if (index === -1) return false;
-    
-    this.mockProviders.splice(index, 1);
-    return true;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.status === 404) {
+        return false;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete model provider: ${response.statusText}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting model provider:', error);
+      throw error;
+    }
   }
 
   async deleteAll(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    this.mockProviders.length = 0;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/model-providers`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete all model providers: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting all model providers:', error);
+      throw error;
+    }
   }
 }
 

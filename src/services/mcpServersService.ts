@@ -10,80 +10,122 @@ export interface MCPServer {
   updatedAt: string;
 }
 
-class MCPServersService {
-  private mockServers: MCPServer[] = [
-    {
-      id: '1',
-      name: 'Built-in MCP Server',
-      description: 'Built-in server providing essential tools',
-      status: 'active',
-      toolCount: 5,
-      version: '1.0.0',
-      lastConnected: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      name: 'Custom MCP Server',
-      description: 'Custom server for specialized tools',
-      status: 'inactive',
-      toolCount: 3,
-      version: '1.2.0',
-      lastConnected: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
+const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
+class MCPServersService {
   async getAll(): Promise<MCPServer[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [...this.mockServers];
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch MCP servers: ${response.statusText}`);
+      }
+      const servers = await response.json();
+      return servers;
+    } catch (error) {
+      console.error('Error fetching MCP servers:', error);
+      throw error;
+    }
   }
 
   async getById(id: string): Promise<MCPServer | null> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockServers.find(server => server.id === id) || null;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`);
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch MCP server: ${response.statusText}`);
+      }
+      const server = await response.json();
+      return server;
+    } catch (error) {
+      console.error('Error fetching MCP server:', error);
+      throw error;
+    }
   }
 
   async create(serverData: Omit<MCPServer, 'id' | 'createdAt' | 'updatedAt'>): Promise<MCPServer> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newServer: MCPServer = {
-      ...serverData,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.mockServers.push(newServer);
-    return newServer;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(serverData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create MCP server: ${response.statusText}`);
+      }
+      
+      const server = await response.json();
+      return server;
+    } catch (error) {
+      console.error('Error creating MCP server:', error);
+      throw error;
+    }
   }
 
   async update(id: string, updates: Partial<Omit<MCPServer, 'id' | 'createdAt'>>): Promise<MCPServer | null> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = this.mockServers.findIndex(server => server.id === id);
-    if (index === -1) return null;
-    
-    this.mockServers[index] = {
-      ...this.mockServers[index],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return this.mockServers[index];
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      
+      if (response.status === 404) {
+        return null;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update MCP server: ${response.statusText}`);
+      }
+      
+      const server = await response.json();
+      return server;
+    } catch (error) {
+      console.error('Error updating MCP server:', error);
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = this.mockServers.findIndex(server => server.id === id);
-    if (index === -1) return false;
-    
-    this.mockServers.splice(index, 1);
-    return true;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.status === 404) {
+        return false;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete MCP server: ${response.statusText}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting MCP server:', error);
+      throw error;
+    }
   }
 
   async deleteAll(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    this.mockServers.length = 0;
+    try {
+      const response = await fetch(`${SERVER_BASE_URL}/settings/mcp-servers`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete all MCP servers: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting all MCP servers:', error);
+      throw error;
+    }
   }
 }
 
