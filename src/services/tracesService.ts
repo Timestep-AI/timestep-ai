@@ -9,11 +9,12 @@ export const tracesService = {
       if (!response.ok) {
         throw new Error(`Failed to fetch traces: ${response.statusText}`);
       }
-      const traces = await response.json();
-      return traces;
+      const data = await response.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching traces:', error);
-      throw error;
+      return []; // Return empty array on error instead of throwing
     }
   },
 

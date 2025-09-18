@@ -9,11 +9,12 @@ class AgentsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
-      const agents = await response.json();
-      return agents;
+      const data = await response.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching agents:', error);
-      throw error;
+      return []; // Return empty array on error instead of throwing
     }
   }
 
