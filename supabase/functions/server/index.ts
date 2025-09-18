@@ -34,15 +34,13 @@ import {
   listMcpServers,
   listModelProviders,
   handleAgentRequest,
-  TimestepAIAgentExecutor
+  TimestepAIAgentExecutor,
+  Repository,
+  Agent,
+  Context,
+  ModelProvider,
+  McpServer
 } from 'npm:@timestep-ai/timestep@latest';
-
-// Import repository interface and base classes
-import { Repository } from '../src/services/backing/repository.js';
-import { Agent } from '../src/api/agentsApi.js';
-import { Context } from '../src/types/context.js';
-import { ModelProvider } from '../src/api/settings/modelProvidersApi.js';
-import { McpServer } from '../src/api/settings/mcpServersApi.js';
 
 /**
  * Supabase Agent Repository Implementation
