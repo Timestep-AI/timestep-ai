@@ -9,8 +9,29 @@ class AgentsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
-      const result = await response.json();
-      return result.data || [];
+      const apiAgents = await response.json();
+      
+      // If empty array, return empty array
+      if (!Array.isArray(apiAgents) || apiAgents.length === 0) {
+        return [];
+      }
+      
+      // Map server response to our Agent interface
+      const agents: Agent[] = apiAgents.map((apiAgent: any) => ({
+        id: apiAgent.id,
+        name: apiAgent.name,
+        description: `Agent with ${apiAgent.toolIds?.length || 0} tools`,
+        instructions: apiAgent.instructions || '',
+        handoffIds: apiAgent.handoffIds || [],
+        handoffDescription: apiAgent.handoffDescription || '',
+        createdAt: new Date().toISOString(),
+        model: apiAgent.model || '',
+        modelSettings: apiAgent.modelSettings || {},
+        status: 'active' as const,
+        isHandoff: false
+      }));
+      
+      return agents;
     } catch (error) {
       console.error('Error fetching agents:', error);
       throw error;
