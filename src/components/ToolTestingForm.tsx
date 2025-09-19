@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, CheckCircle, XCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Play, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { Tool } from '@/types/tool';
 import { toolsService } from '@/services/toolsService';
 
@@ -60,6 +61,48 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
       setError(err instanceof Error ? err.message : 'Failed to call tool');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const parseWeatherAlerts = (text: string) => {
+    const alerts = text.split('---\n').filter(alert => alert.trim());
+    return alerts.map((alert, index) => {
+      const lines = alert.trim().split('\n');
+      const alertData: any = {};
+      
+      lines.forEach(line => {
+        if (line.startsWith('Event: ')) alertData.event = line.replace('Event: ', '');
+        if (line.startsWith('Area: ')) alertData.area = line.replace('Area: ', '');
+        if (line.startsWith('Severity: ')) alertData.severity = line.replace('Severity: ', '');
+        if (line.startsWith('Description: ')) {
+          const descIndex = lines.indexOf(line);
+          const instructionsIndex = lines.findIndex(l => l.startsWith('Instructions: '));
+          alertData.description = lines.slice(descIndex + 1, instructionsIndex > -1 ? instructionsIndex : undefined).join('\n');
+        }
+        if (line.startsWith('Instructions: ')) {
+          alertData.instructions = line.replace('Instructions: ', '');
+        }
+      });
+      
+      return { ...alertData, id: index };
+    });
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'severe': return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'moderate': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'minor': return <Info className="w-4 h-4 text-blue-500" />;
+      default: return <Info className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'severe': return 'destructive';
+      case 'moderate': return 'secondary';
+      case 'minor': return 'outline';
+      default: return 'outline';
     }
   };
 
@@ -251,11 +294,64 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Badge variant="default">Success</Badge>
-                <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
-                  {result}
-                </pre>
+                
+                <Tabs defaultValue="formatted" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="formatted">Formatted View</TabsTrigger>
+                    <TabsTrigger value="raw">Raw Response</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="formatted" className="mt-4">
+                    {tool.name === 'get-alerts' ? (
+                      <div className="space-y-4">
+                        {parseWeatherAlerts(result).map((alert) => (
+                          <Card key={alert.id} className="border-l-4 border-l-primary">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  {getSeverityIcon(alert.severity)}
+                                  {alert.event}
+                                </CardTitle>
+                                <Badge variant={getSeverityColor(alert.severity) as any}>
+                                  {alert.severity}
+                                </Badge>
+                              </div>
+                              {alert.area && (
+                                <p className="text-sm text-muted-foreground">{alert.area}</p>
+                              )}
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {alert.description && (
+                                <div>
+                                  <h4 className="font-medium text-sm mb-1">Description</h4>
+                                  <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
+                                </div>
+                              )}
+                              {alert.instructions && (
+                                <div>
+                                  <h4 className="font-medium text-sm mb-1">Instructions</h4>
+                                  <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
+                        {result}
+                      </pre>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="raw" className="mt-4">
+                    <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
+                      {result}
+                    </pre>
+                  </TabsContent>
+                </Tabs>
               </div>
             </AlertDescription>
           </Alert>
