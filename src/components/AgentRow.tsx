@@ -64,12 +64,6 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
             ) : null}
           </div>
           
-          {agent.description && (
-            <p className="text-sm text-muted-foreground mb-3">
-              {agent.description}
-            </p>
-          )}
-          
           <div className="flex items-center space-x-1 text-xs text-muted-foreground">
             <Calendar className="w-3 h-3" />
             <span>Created: {agent.createdAt}</span>
