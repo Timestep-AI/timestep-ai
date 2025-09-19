@@ -9,7 +9,29 @@ class ModelsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
-      const models = await response.json();
+      const apiModels = await response.json();
+      
+      // If empty array, return empty array
+      if (!Array.isArray(apiModels) || apiModels.length === 0) {
+        return [];
+      }
+      
+      // Map API response to our Model interface since server returns OpenAI format
+      const models: Model[] = apiModels.map((apiModel: any) => ({
+        id: apiModel.id,
+        name: apiModel.id,
+        description: `${apiModel.object} provided by ${apiModel.owned_by}`,
+        provider: apiModel.owned_by || 'unknown',
+        version: '1.0.0',
+        contextLength: undefined,
+        inputPrice: 0,
+        outputPrice: 0,
+        capabilities: [],
+        status: 'active' as const,
+        createdAt: new Date(apiModel.created * 1000).toISOString(),
+        updatedAt: new Date(apiModel.created * 1000).toISOString()
+      }));
+      
       return models;
     } catch (error) {
       console.error('Error fetching models:', error);
