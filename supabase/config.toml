@@ -2,3 +2,6 @@ project_id = "ohzbghitbjryfpmucgju"
 
 [functions.server]
 verify_jwt = false
+
+[functions.server.env]
+DEFAULT_USER_ID = "3dd1dd8e-3839-4df4-98b4-b0b55394e9e0"
