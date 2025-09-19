@@ -5,7 +5,8 @@ import {
   Cpu, 
   Wrench, 
   Activity,
-  LogOut
+  LogOut,
+  Server
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -17,6 +18,7 @@ interface SidebarProps {
 const navItems = [
   { icon: Users, label: 'Agents', path: '/agents' },
   { icon: MessageSquare, label: 'Chats', path: '/chats' },
+  { icon: Server, label: 'Model Providers', path: '/model_providers' },
   { icon: Cpu, label: 'Models', path: '/models' },
   { icon: Wrench, label: 'Tools', path: '/tools' },
   { icon: Activity, label: 'Traces', path: '/traces' },

@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
 import Agents from "./pages/Agents";
 import Agent from "./pages/Agent";
+import ModelProviders from "./pages/ModelProviders";
 import Chats from "./pages/Chats";
 import Chat from "./pages/Chat";
 import Message from "./pages/Message";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/agents" element={<AuthGuard><Agents /></AuthGuard>} />
               <Route path="/agents/:id" element={<AuthGuard><Agent /></AuthGuard>} />
+              <Route path="/model_providers" element={<AuthGuard><ModelProviders /></AuthGuard>} />
               <Route path="/chats" element={<AuthGuard><Chats /></AuthGuard>} />
               <Route path="/chats/:id" element={<AuthGuard><Chat /></AuthGuard>} />
               <Route path="/chats/:id/messages/:messageId" element={<AuthGuard><Message /></AuthGuard>} />

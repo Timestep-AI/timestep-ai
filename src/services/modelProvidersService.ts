@@ -4,6 +4,8 @@ export interface ModelProvider {
   base_url: string;
   models_url: string;
   api_key?: string;
+  is_active?: boolean;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
