@@ -246,81 +246,104 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {hasInputSchema ? (
-          <div className="space-y-4">
-            <div className="text-sm text-text-secondary">
-              Configure the input parameters for this tool:
-            </div>
-            
-            {Object.entries(tool.inputSchema.properties).map(([key, schema]) =>
-              renderInputField(key, schema)
-            )}
-          </div>
-        ) : (
-          <div className="text-sm text-text-secondary">
-            This tool doesn't require any input parameters.
-          </div>
-        )}
-
-        <Button 
-          onClick={handleTest} 
-          disabled={loading || tool.status !== 'available'}
-          className="w-full"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Calling Tool...
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 mr-2" />
-              Test Tool
-            </>
-          )}
-        </Button>
-
-        {result && (
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
+        <Tabs defaultValue="test" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="test">Test Tool</TabsTrigger>
+            <TabsTrigger value="schema">Input Schema</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="test" className="space-y-6">
+            {hasInputSchema ? (
               <div className="space-y-4">
-                <Badge variant="default">Success</Badge>
+                <div className="text-sm text-text-secondary">
+                  Configure the input parameters for this tool:
+                </div>
                 
-                <Tabs defaultValue="formatted" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="formatted">Formatted View</TabsTrigger>
-                    <TabsTrigger value="raw">Raw Response</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="formatted" className="mt-4">
-                    <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
-                      {result}
-                    </pre>
-                  </TabsContent>
-                  
-                  <TabsContent value="raw" className="mt-4">
-                    <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
-                      {rawResponse || 'No response data'}
-                    </pre>
-                  </TabsContent>
-                </Tabs>
+                {Object.entries(tool.inputSchema.properties).map(([key, schema]) =>
+                  renderInputField(key, schema)
+                )}
               </div>
-            </AlertDescription>
-          </Alert>
-        )}
+            ) : (
+              <div className="text-sm text-text-secondary">
+                This tool doesn't require any input parameters.
+              </div>
+            )}
 
-        {error && (
-          <Alert variant="destructive">
-            <XCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="space-y-2">
-                <Badge variant="destructive">Error</Badge>
-                <p className="text-sm">{error}</p>
+            <Button 
+              onClick={handleTest} 
+              disabled={loading || tool.status !== 'available'}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Calling Tool...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Test Tool
+                </>
+              )}
+            </Button>
+
+            {result && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-4">
+                    <Badge variant="default">Success</Badge>
+                    
+                    <Tabs defaultValue="formatted" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="formatted">Formatted View</TabsTrigger>
+                        <TabsTrigger value="raw">Raw Response</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="formatted" className="mt-4">
+                        <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
+                          {result}
+                        </pre>
+                      </TabsContent>
+                      
+                      <TabsContent value="raw" className="mt-4">
+                        <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
+                          {rawResponse || 'No response data'}
+                        </pre>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <Badge variant="destructive">Error</Badge>
+                    <p className="text-sm">{error}</p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="schema" className="space-y-4">
+            {tool.inputSchema ? (
+              <div className="bg-background-secondary rounded-lg p-4">
+                <pre className="text-sm text-text-primary overflow-x-auto">
+                  {JSON.stringify(tool.inputSchema, null, 2)}
+                </pre>
               </div>
-            </AlertDescription>
-          </Alert>
-        )}
+            ) : (
+              <div className="text-sm text-text-secondary">
+                No input schema available for this tool.
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

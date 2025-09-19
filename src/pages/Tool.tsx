@@ -50,18 +50,6 @@ export const ToolPage = () => {
           <div className="border-t border-border pt-6 mt-6">
             <ToolTestingForm tool={tool} />
           </div>
-
-          {/* Input Schema */}
-          {tool.inputSchema && (
-            <div className="border-t border-border pt-6 mt-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">Input Schema</h3>
-              <div className="bg-background-secondary rounded-lg p-4">
-                <pre className="text-sm text-text-primary overflow-x-auto">
-                  {JSON.stringify(tool.inputSchema, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
         </>
       )}
     </ItemPage>
