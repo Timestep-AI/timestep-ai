@@ -87,37 +87,19 @@ export type Database = {
           url?: string
           version?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "agent_cards_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       agents: {
         Row: {
           created_at: string | null
           handoff_description: string
           handoff_ids: Json | null
-          handoffs: Json
           id: string
-          input_guardrails: Json
           instructions: string
-          mcp_servers: Json
           model: string | null
-          model_api_key_id: string | null
           model_settings: Json
           name: string
-          output_guardrails: Json
-          output_type: string
-          prompt: Json | null
-          reset_tool_choice: boolean
           tool_ids: Json | null
-          tool_use_behavior: string
-          tools: Json
           updated_at: string | null
           user_id: string
         }
@@ -125,22 +107,12 @@ export type Database = {
           created_at?: string | null
           handoff_description?: string
           handoff_ids?: Json | null
-          handoffs?: Json
           id?: string
-          input_guardrails?: Json
           instructions: string
-          mcp_servers?: Json
           model?: string | null
-          model_api_key_id?: string | null
           model_settings?: Json
           name: string
-          output_guardrails?: Json
-          output_type?: string
-          prompt?: Json | null
-          reset_tool_choice?: boolean
           tool_ids?: Json | null
-          tool_use_behavior?: string
-          tools?: Json
           updated_at?: string | null
           user_id: string
         }
@@ -148,34 +120,16 @@ export type Database = {
           created_at?: string | null
           handoff_description?: string
           handoff_ids?: Json | null
-          handoffs?: Json
           id?: string
-          input_guardrails?: Json
           instructions?: string
-          mcp_servers?: Json
           model?: string | null
-          model_api_key_id?: string | null
           model_settings?: Json
           name?: string
-          output_guardrails?: Json
-          output_type?: string
-          prompt?: Json | null
-          reset_tool_choice?: boolean
           tool_ids?: Json | null
-          tool_use_behavior?: string
-          tools?: Json
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "agents_model_api_key_id_fkey"
-            columns: ["model_api_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       api_keys: {
         Row: {
@@ -285,83 +239,28 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "chats_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       contexts: {
         Row: {
           agent_id: string
-          context_id: string | null
-          conversation_context: Json | null
+          context_id: string
           created_at: string | null
-          description: string | null
-          id: string
-          last_activity_at: string | null
-          metadata: Json | null
-          pending_interruptions: Json | null
-          serialized_agent_state: string | null
-          status: string | null
           task_histories: Json | null
-          task_id: string | null
-          task_states: Json | null
-          tasks: Json | null
-          updated_at: string | null
-          user_id: string
         }
         Insert: {
           agent_id: string
-          context_id?: string | null
-          conversation_context?: Json | null
+          context_id: string
           created_at?: string | null
-          description?: string | null
-          id?: string
-          last_activity_at?: string | null
-          metadata?: Json | null
-          pending_interruptions?: Json | null
-          serialized_agent_state?: string | null
-          status?: string | null
           task_histories?: Json | null
-          task_id?: string | null
-          task_states?: Json | null
-          tasks?: Json | null
-          updated_at?: string | null
-          user_id: string
         }
         Update: {
           agent_id?: string
-          context_id?: string | null
-          conversation_context?: Json | null
+          context_id?: string
           created_at?: string | null
-          description?: string | null
-          id?: string
-          last_activity_at?: string | null
-          metadata?: Json | null
-          pending_interruptions?: Json | null
-          serialized_agent_state?: string | null
-          status?: string | null
           task_histories?: Json | null
-          task_id?: string | null
-          task_states?: Json | null
-          tasks?: Json | null
-          updated_at?: string | null
-          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "contexts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       invites: {
         Row: {
@@ -398,33 +297,39 @@ export type Database = {
       }
       mcp_servers: {
         Row: {
-          config: Json
           created_at: string
+          description: string | null
+          disabled: boolean | null
+          enabled: boolean | null
+          env: Json | null
           id: string
           name: string
           status: string
           updated_at: string
-          url: string | null
           user_id: string | null
         }
         Insert: {
-          config?: Json
           created_at?: string
+          description?: string | null
+          disabled?: boolean | null
+          enabled?: boolean | null
+          env?: Json | null
           id?: string
           name: string
           status?: string
           updated_at?: string
-          url?: string | null
           user_id?: string | null
         }
         Update: {
-          config?: Json
           created_at?: string
+          description?: string | null
+          disabled?: boolean | null
+          enabled?: boolean | null
+          env?: Json | null
           id?: string
           name?: string
           status?: string
           updated_at?: string
-          url?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -798,22 +703,7 @@ export type Database = {
           user_id?: string
           webhook_url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_context_id_fkey"
-            columns: ["context_id"]
-            isOneToOne: false
-            referencedRelation: "contexts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       traces: {
         Row: {
@@ -879,15 +769,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "traces_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_invites: {
         Row: {
