@@ -1,7 +1,6 @@
-import { User, Calendar, Cpu, ArrowRightLeft } from 'lucide-react';
+import { User, Calendar, ArrowRightLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { CollectionItemRow } from '@/components/CollectionItemRow';
 
 interface Agent {
   id: string;
@@ -28,47 +27,58 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
     </Badge>
   ) : null;
 
-  const metadata = [
-    {
-      icon: <Calendar className="w-3 h-3 flex-shrink-0" />,
-      text: `Created: ${agent.createdAt}`
-    }
-  ];
-
-  const rightContent = agent.model && agent.model.trim() ? (
-    <Badge 
-      className="bg-info/10 text-info border-info/20 text-xs cursor-pointer hover:bg-info/20 transition-colors"
-      onClick={(e) => {
-        e.stopPropagation();
-        // Navigate to model page using the actual model
-        const modelId = agent.model?.replace('/', '-') || '';
-        navigate(`/models/${modelId}`);
-      }}
-    >
-      <Cpu className="w-3 h-3 mr-1" />
-      <span className="truncate max-w-[120px] sm:max-w-none">{agent.model}</span>
-    </Badge>
-  ) : (
-    <Badge variant="outline" className="text-text-tertiary text-xs">
-      No Model
-    </Badge>
-  );
-
   return (
-    <CollectionItemRow
-      icon={
-        agent.isHandoff ? (
-          <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
-        ) : (
-          <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
-        )
-      }
-      title={agent.name}
-      description={agent.description}
-      statusBadge={statusBadge}
-      metadata={metadata}
-      rightContent={rightContent}
-      onItemClick={() => navigate(`/agents/${agent.id}`)}
-    />
+    <div 
+      className="bg-surface border border-border rounded-lg p-4 hover:bg-surface/80 transition-all duration-200 cursor-pointer"
+      onClick={() => navigate(`/agents/${agent.id}`)}
+    >
+      <div className="flex items-start space-x-3">
+        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+          {agent.isHandoff ? (
+            <ArrowRightLeft className="w-5 h-5 text-primary-foreground" />
+          ) : (
+            <User className="w-5 h-5 text-primary-foreground" />
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-foreground text-base">
+                {agent.name}
+              </h3>
+              {statusBadge}
+            </div>
+            {agent.model && agent.model.trim() ? (
+              <Badge 
+                className="bg-primary/10 text-primary border-primary/20 text-xs cursor-pointer hover:bg-primary/20 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const modelId = agent.model?.replace('/', '-') || '';
+                  navigate(`/models/${modelId}`);
+                }}
+              >
+                {agent.model}
+              </Badge>
+            ) : null}
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-1">
+            {agent.isHandoff ? 'Handoff' : 'AI Agent'}
+          </p>
+          
+          {agent.description && (
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+              {agent.description}
+            </p>
+          )}
+          
+          <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            <span>Created: {agent.createdAt}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
