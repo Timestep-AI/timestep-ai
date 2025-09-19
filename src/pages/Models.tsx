@@ -48,21 +48,11 @@ export const Models = () => {
   };
 
   const handleEditModel = async (model: Model) => {
-    console.log('Editing model:', model);
+    console.log('Edit not implemented - models come from model providers');
   };
 
   const handleDeleteModel = async (model: Model) => {
-    try {
-      setOperationLoading(true);
-      const success = await modelsService.delete(model.id);
-      if (success) {
-        setModels(prevModels => prevModels.filter(m => m.id !== model.id));
-      }
-    } catch (error) {
-      console.error('Failed to delete model:', error);
-    } finally {
-      setOperationLoading(false);
-    }
+    console.log('Delete not implemented - models come from model providers');
   };
 
   const handleEditModelProvider = async (provider: ModelProvider) => {

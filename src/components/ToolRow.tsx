@@ -47,15 +47,11 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
     </div>
   );
 
+  // Only show view option since edit/delete aren't supported
   const dropdownItems = [
     {
-      label: 'Edit',
-      onClick: () => onEdit?.(tool)
-    },
-    {
-      label: 'Delete',
-      onClick: () => onDelete?.(tool.id),
-      destructive: true
+      label: 'View Details',
+      onClick: () => navigate(`/tools/${tool.id}`)
     }
   ];
 

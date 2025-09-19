@@ -28,21 +28,11 @@ export const Agents = () => {
 
 
   const handleEditAgent = async (agent: Agent) => {
-    console.log('Editing agent:', agent);
+    console.log('Edit not implemented - server does not support agent updates');
   };
 
   const handleDeleteAgent = async (agent: Agent) => {
-    try {
-      setOperationLoading(true);
-      const success = await agentsService.delete(agent.id);
-      if (success) {
-        setAgents(prevAgents => prevAgents.filter(a => a.id !== agent.id));
-      }
-    } catch (error) {
-      console.error('Failed to delete agent:', error);
-    } finally {
-      setOperationLoading(false);
-    }
+    console.log('Delete not implemented - server does not support agent deletion');
   };
 
   return (

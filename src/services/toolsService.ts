@@ -11,16 +11,16 @@ export const toolsService = {
       }
       const serverTools = await response.json();
       
-      // Return tools with only real data from server
+      // Return tools with real data from server - server returns MCP tool format
       const tools: Tool[] = serverTools.map((serverTool: any) => ({
         id: serverTool.id,
         name: serverTool.name,
-        description: serverTool.description,
+        description: serverTool.description || 'No description available',
         serverId: serverTool.serverId,
-        serverName: serverTool.serverName,
+        serverName: serverTool.serverName || serverTool.category,
         inputSchema: serverTool.inputSchema,
-        category: serverTool.category,
-        status: serverTool.status === 'available' ? 'available' : 'unavailable'
+        category: serverTool.category || serverTool.serverName,
+        status: 'available' // Server only returns available tools
       }));
       
       return tools;
@@ -57,62 +57,18 @@ export const toolsService = {
   },
 
   async create(toolData: CreateToolRequest): Promise<Tool> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/tools`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(toolData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create tool: ${response.statusText}`);
-      }
-      
-      const tool = await response.json();
-      return tool;
-    } catch (error) {
-      console.error('Error creating tool:', error);
-      throw error;
-    }
+    // Note: Tools come from MCP servers, not created directly
+    throw new Error('Tool creation not supported - tools come from MCP servers');
   },
 
   async update(id: string, updateData: UpdateToolRequest): Promise<Tool> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update tool: ${response.statusText}`);
-      }
-      
-      const tool = await response.json();
-      return tool;
-    } catch (error) {
-      console.error('Error updating tool:', error);
-      throw error;
-    }
+    // Note: Tools come from MCP servers, not updated directly
+    throw new Error('Tool update not supported - tools come from MCP servers');
   },
 
   async delete(id: string): Promise<void> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete tool: ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Error deleting tool:', error);
-      throw error;
-    }
+    // Note: Tools come from MCP servers, not deleted directly
+    throw new Error('Tool deletion not supported - tools come from MCP servers');
   },
 
   async deleteAll(): Promise<void> {

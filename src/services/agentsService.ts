@@ -20,16 +20,10 @@ class AgentsService {
       
       // Map server response to our Agent interface
       const agents: Agent[] = apiAgents.map((apiAgent: any) => {
-        const toolCount = apiAgent.tool_ids?.length || 0;
-        const handoffCount = apiAgent.handoff_ids?.length || 0;
-        
-        const toolText = toolCount === 1 ? 'tool' : 'tools';
-        const handoffText = handoffCount === 1 ? 'handoff' : 'handoffs';
-        
         return {
           id: apiAgent.id,
           name: apiAgent.name,
-          description: `Agent with ${handoffCount} ${handoffText} and ${toolCount} ${toolText}`,
+          description: apiAgent.handoff_description || 'AI Agent', // Use real description from server
           instructions: apiAgent.instructions || '',
           handoffIds: apiAgent.handoff_ids || [],
           handoffDescription: apiAgent.handoff_description || '',
@@ -67,72 +61,18 @@ class AgentsService {
   }
 
   async create(request: CreateAgentRequest): Promise<Agent> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create agent: ${response.statusText}`);
-      }
-      
-      const agent = await response.json();
-      return agent;
-    } catch (error) {
-      console.error('Error creating agent:', error);
-      throw error;
-    }
+    // Note: Server doesn't support agent creation yet
+    throw new Error('Agent creation not implemented in server');
   }
 
   async update(id: string, request: UpdateAgentRequest): Promise<Agent | null> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-      
-      if (response.status === 404) {
-        return null;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update agent: ${response.statusText}`);
-      }
-      
-      const agent = await response.json();
-      return agent;
-    } catch (error) {
-      console.error('Error updating agent:', error);
-      throw error;
-    }
+    // Note: Server doesn't support agent updates yet
+    throw new Error('Agent update not implemented in server');
   }
 
   async delete(id: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (response.status === 404) {
-        return false;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete agent: ${response.statusText}`);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting agent:', error);
-      throw error;
-    }
+    // Note: Server doesn't support agent deletion yet
+    throw new Error('Agent deletion not implemented in server');
   }
 
   async deleteAll(): Promise<void> {

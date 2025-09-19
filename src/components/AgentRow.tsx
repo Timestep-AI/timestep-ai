@@ -54,15 +54,11 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
     </Badge>
   );
 
+  // Only show view option since edit/delete aren't supported by server
   const dropdownItems = [
     {
-      label: 'Edit Agent',
-      onClick: () => onEdit?.(agent)
-    },
-    {
-      label: 'Delete Agent',
-      onClick: () => onDelete?.(agent),
-      destructive: true
+      label: 'View Details',
+      onClick: () => navigate(`/agents/${agent.id}`)
     }
   ];
 

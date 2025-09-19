@@ -48,19 +48,11 @@ export const Tools = () => {
   };
 
   const handleEditTool = (tool: Tool) => {
-    console.log('Edit tool:', tool);
+    console.log('Edit not supported - tools come from MCP servers');
   };
 
   const handleDeleteTool = async (toolId: string) => {
-    try {
-      setOperationLoading(true);
-      await toolsService.delete(toolId);
-      await loadTools();
-    } catch (error) {
-      console.error('Error deleting tool:', error);
-    } finally {
-      setOperationLoading(false);
-    }
+    console.log('Delete not supported - tools come from MCP servers');
   };
 
   const handleEditMcpServer = async (server: MCPServer) => {
@@ -68,14 +60,7 @@ export const Tools = () => {
   };
 
   const handleDeleteMcpServer = async (serverId: string) => {
-    try {
-      const success = await mcpServersService.delete(serverId);
-      if (success) {
-        setMcpServers(prev => prev.filter(s => s.id !== serverId));
-      }
-    } catch (error) {
-      console.error('Failed to delete MCP server:', error);
-    }
+    console.log('Delete functionality needs to be implemented in server for MCP servers');
   };
 
   const handleServersOpen = (open: boolean) => {

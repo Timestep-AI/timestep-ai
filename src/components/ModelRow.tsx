@@ -73,15 +73,11 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
     </div>
   );
 
+  // Only show view option since edit/delete aren't supported
   const dropdownItems = [
     {
-      label: 'Edit Model',
-      onClick: () => onEdit?.(model)
-    },
-    {
-      label: 'Delete Model',
-      onClick: () => onDelete?.(model),
-      destructive: true
+      label: 'View Details',
+      onClick: () => navigate(`/models/${model.id}`)
     }
   ];
 

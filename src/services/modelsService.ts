@@ -20,13 +20,13 @@ class ModelsService {
       const models: Model[] = apiModels.map((apiModel: any) => ({
         id: apiModel.id,
         name: apiModel.id,
-        description: `${apiModel.object} provided by ${apiModel.owned_by}`,
+        description: `Model provided by ${apiModel.owned_by}`,
         provider: apiModel.owned_by || 'unknown',
         version: '1.0.0',
-        contextLength: undefined,
-        inputPrice: 0,
-        outputPrice: 0,
-        capabilities: [],
+        contextLength: 0, // Not provided by OpenAI format
+        inputPrice: 0, // Not provided by OpenAI format
+        outputPrice: 0, // Not provided by OpenAI format  
+        capabilities: [], // Not provided by OpenAI format
         status: 'active' as const,
         createdAt: new Date(apiModel.created * 1000).toISOString(),
         updatedAt: new Date(apiModel.created * 1000).toISOString()
@@ -57,25 +57,8 @@ class ModelsService {
   }
 
   async create(request: CreateModelRequest): Promise<Model> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/models`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create model: ${response.statusText}`);
-      }
-      
-      const model = await response.json();
-      return model;
-    } catch (error) {
-      console.error('Error creating model:', error);
-      throw error;
-    }
+    // Note: Models come from model providers, not created directly
+    throw new Error('Model creation not supported - models come from model providers');
   }
 
   async update(id: string, request: UpdateModelRequest): Promise<Model | null> {

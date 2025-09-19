@@ -35,25 +35,8 @@ class MCPServersService {
   }
 
   async create(serverData: Omit<MCPServer, 'id' | 'createdAt' | 'updatedAt'>): Promise<MCPServer> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(serverData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create MCP server: ${response.statusText}`);
-      }
-      
-      const server = await response.json();
-      return server;
-    } catch (error) {
-      console.error('Error creating MCP server:', error);
-      throw error;
-    }
+    // Note: Server doesn't support MCP server creation yet  
+    throw new Error('MCP server creation not implemented in server');
   }
 
   async update(id: string, updates: Partial<MCPServer>): Promise<MCPServer | null> {
@@ -92,39 +75,13 @@ class MCPServersService {
   }
 
   async delete(id: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (response.status === 404) {
-        return false;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete MCP server: ${response.statusText}`);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting MCP server:', error);
-      throw error;
-    }
+    // Note: Server doesn't support MCP server deletion yet
+    throw new Error('MCP server deletion not implemented in server');
   }
 
   async deleteAll(): Promise<void> {
-    try {
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete all MCP servers: ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Error deleting all MCP servers:', error);
-      throw error;
-    }
+    // Note: Server doesn't support batch MCP server deletion yet
+    throw new Error('MCP server batch deletion not implemented in server');
   }
 }
 
