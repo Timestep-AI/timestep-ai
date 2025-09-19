@@ -29,15 +29,15 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
 
   return (
     <div 
-      className="bg-surface border border-border rounded-xl p-4 hover:bg-surface/80 transition-all duration-200 cursor-pointer"
+      className="border border-border/20 rounded-xl p-4 hover:border-border/40 transition-all duration-200 cursor-pointer bg-card/50"
       onClick={() => navigate(`/agents/${agent.id}`)}
     >
       <div className="flex items-start space-x-3">
         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
           {agent.isHandoff ? (
-            <ArrowRightLeft className="w-5 h-5 text-primary-foreground" />
+            <ArrowRightLeft className="w-5 h-5 text-white" />
           ) : (
-            <User className="w-5 h-5 text-primary-foreground" />
+            <User className="w-5 h-5 text-white" />
           )}
         </div>
         
