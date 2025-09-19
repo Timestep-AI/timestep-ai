@@ -248,7 +248,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
       <CardContent className="space-y-6">
         <Tabs defaultValue="test" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="test">Test Tool</TabsTrigger>
+            <TabsTrigger value="test">Input</TabsTrigger>
             <TabsTrigger value="schema">Input Schema</TabsTrigger>
           </TabsList>
           
