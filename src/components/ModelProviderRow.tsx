@@ -48,7 +48,7 @@ export const ModelProviderRow = ({ provider, onEdit, onDelete }: ModelProviderRo
       title={provider.provider}
       metadata={metadata}
       rightContent={rightContent}
-      onItemClick={() => window.location.href = `/providers/${provider.id}`}
+      onItemClick={() => window.location.href = `/model_providers/${provider.id}`}
       dropdownItems={dropdownItems}
     />
   );
