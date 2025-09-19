@@ -16,17 +16,6 @@ interface ToolRowProps {
 export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
   const navigate = useNavigate();
 
-  const getStatusBadge = (status: Tool['status']) => {
-    switch (status) {
-      case 'available':
-        return <Badge variant="default">Available</Badge>;
-      case 'unavailable':
-        return <Badge variant="secondary">Unavailable</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
       <Badge 
@@ -51,7 +40,7 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
       icon={<Wrench className="w-5 h-5 text-white" />}
       title={tool.name}
       description={tool.description}
-      statusBadge={getStatusBadge(tool.status)}
+      statusBadge={null}
       metadata={[]}
       rightContent={rightContent}
       onItemClick={() => navigate(`/tools/${tool.id}`)}

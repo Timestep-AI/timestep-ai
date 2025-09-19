@@ -34,19 +34,6 @@ export const ToolPage = () => {
     }
   };
 
-  const getStatusBadge = () => {
-    if (!tool) return null;
-    
-    switch (tool.status) {
-      case 'available':
-        return <Badge className="bg-success/10 text-success border-success/20">Available</Badge>;
-      case 'unavailable':
-        return <Badge variant="secondary">Unavailable</Badge>;
-      default:
-        return null;
-    }
-  };
-
   return (
     <ItemPage
       loading={loading}
@@ -55,7 +42,7 @@ export const ToolPage = () => {
       backPath="/tools"
       backLabel="Back to Tools"
       icon={<Wrench className="w-8 h-8 text-primary-foreground" />}
-      statusBadge={getStatusBadge()}
+      statusBadge={null}
     >
       {tool && (
         <>
