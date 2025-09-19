@@ -36,26 +36,53 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
     try {
       const response = await toolsService.callTool(tool.id, inputs);
       
-      // Handle JSON-RPC response format
+      // Handle different response formats
       if (typeof response === 'string') {
         try {
           const parsed = JSON.parse(response);
+          
+          // Handle JSON-RPC format: {"result": {"content": [{"type": "text", "text": "..."}]}}
           if (parsed.result && parsed.result.content && Array.isArray(parsed.result.content)) {
-            // Extract text from content array
             const textContent = parsed.result.content
               .filter((item: any) => item.type === 'text')
               .map((item: any) => item.text)
               .join('\n');
             setResult(textContent);
-          } else {
+          }
+          // Handle direct content format: {"content": [{"type": "text", "text": "..."}]}
+          else if (parsed.content && Array.isArray(parsed.content)) {
+            const textContent = parsed.content
+              .filter((item: any) => item.type === 'text')
+              .map((item: any) => item.text)
+              .join('\n');
+            setResult(textContent);
+          }
+          // Handle plain text in result
+          else if (parsed.result && typeof parsed.result === 'string') {
+            setResult(parsed.result);
+          }
+          // Fallback to raw response
+          else {
             setResult(response);
           }
         } catch {
-          // If parsing fails, just show the raw response
+          // If parsing fails, show the raw response
           setResult(response);
         }
+      } else if (typeof response === 'object' && response !== null) {
+        // Handle object response directly
+        const responseObj = response as any;
+        if (responseObj.content && Array.isArray(responseObj.content)) {
+          const textContent = responseObj.content
+            .filter((item: any) => item.type === 'text')
+            .map((item: any) => item.text)
+            .join('\n');
+          setResult(textContent);
+        } else {
+          setResult(JSON.stringify(response, null, 2));
+        }
       } else {
-        setResult(JSON.stringify(response, null, 2));
+        setResult(String(response));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to call tool');
@@ -65,11 +92,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
   };
 
   const parseWeatherAlerts = (text: string) => {
-    console.log('Parsing text:', text); // Debug log
-    
-    // Split by --- but also handle the case where it might be at the end
     const alerts = text.split(/---\n?/).filter(alert => alert.trim().length > 0);
-    console.log('Split alerts:', alerts.length); // Debug log
     
     return alerts.map((alert, index) => {
       const lines = alert.trim().split('\n');
@@ -119,7 +142,6 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
         }
       }
       
-      console.log('Parsed alert:', alertData); // Debug log
       return alertData;
     }).filter(alert => alert.event); // Only return alerts with an event
   };
@@ -342,54 +364,40 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
                   <TabsContent value="formatted" className="mt-4">
                     {tool.name === 'get-alerts' ? (
                       <div className="space-y-4">
-                        {(() => {
-                          const alerts = parseWeatherAlerts(result);
-                          console.log('Final parsed alerts:', alerts); // Debug log
-                          
-                          if (alerts.length === 0) {
-                            return (
-                              <div className="text-center py-8 text-muted-foreground">
-                                <p>No weather alerts found or unable to parse the response.</p>
-                                <p className="text-xs mt-2">Check the Raw Response tab to see the full data.</p>
+                        {parseWeatherAlerts(result).map((alert) => (
+                          <Card key={alert.id} className="border-l-4 border-l-primary">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  {getSeverityIcon(alert.severity)}
+                                  {alert.event}
+                                </CardTitle>
+                                {alert.severity && (
+                                  <Badge variant={getSeverityColor(alert.severity) as any}>
+                                    {alert.severity}
+                                  </Badge>
+                                )}
                               </div>
-                            );
-                          }
-                          
-                          return alerts.map((alert) => (
-                            <Card key={alert.id} className="border-l-4 border-l-primary">
-                              <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                  <CardTitle className="text-lg flex items-center gap-2">
-                                    {getSeverityIcon(alert.severity)}
-                                    {alert.event || 'Unknown Event'}
-                                  </CardTitle>
-                                  {alert.severity && (
-                                    <Badge variant={getSeverityColor(alert.severity) as any}>
-                                      {alert.severity}
-                                    </Badge>
-                                  )}
+                              {alert.area && (
+                                <p className="text-sm text-muted-foreground">{alert.area}</p>
+                              )}
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {alert.description && (
+                                <div>
+                                  <h4 className="font-medium text-sm mb-1">Description</h4>
+                                  <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
                                 </div>
-                                {alert.area && (
-                                  <p className="text-sm text-muted-foreground">{alert.area}</p>
-                                )}
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                {alert.description && (
-                                  <div>
-                                    <h4 className="font-medium text-sm mb-1">Description</h4>
-                                    <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
-                                  </div>
-                                )}
-                                {alert.instructions && (
-                                  <div>
-                                    <h4 className="font-medium text-sm mb-1">Instructions</h4>
-                                    <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ));
-                        })()}
+                              )}
+                              {alert.instructions && (
+                                <div>
+                                  <h4 className="font-medium text-sm mb-1">Instructions</h4>
+                                  <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
                     ) : (
                       <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
