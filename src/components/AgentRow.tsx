@@ -22,9 +22,6 @@ interface AgentRowProps {
 export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
   const navigate = useNavigate();
 
-  // Debug: log the agent data
-  console.log('AgentRow received agent:', agent.name, 'model:', agent.model);
-
   const statusBadge = agent.isHandoff ? (
     <Badge variant="secondary" className="text-xs flex-shrink-0">
       Handoff
