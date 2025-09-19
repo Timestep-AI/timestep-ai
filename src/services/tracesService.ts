@@ -1,11 +1,22 @@
 import { Trace, CreateTraceRequest, UpdateTraceRequest } from '@/types/trace';
+import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+  };
+};
 
 export const tracesService = {
   async getAll(): Promise<Trace[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/traces`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/traces`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch traces: ${response.statusText}`);
       }
@@ -19,7 +30,8 @@ export const tracesService = {
 
   async getById(id: string): Promise<Trace | undefined> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/traces/${id}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/traces/${id}`, { headers });
       if (response.status === 404) {
         return undefined;
       }
@@ -36,11 +48,10 @@ export const tracesService = {
 
   async create(traceData: CreateTraceRequest): Promise<Trace> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/traces`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(traceData),
       });
       
@@ -58,11 +69,10 @@ export const tracesService = {
 
   async update(id: string, updateData: UpdateTraceRequest): Promise<Trace> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/traces/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(updateData),
       });
       
@@ -80,8 +90,10 @@ export const tracesService = {
 
   async delete(id: string): Promise<void> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/traces/${id}`, {
         method: 'DELETE',
+        headers,
       });
       
       if (!response.ok) {
@@ -95,8 +107,10 @@ export const tracesService = {
 
   async deleteAll(): Promise<void> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/traces`, {
         method: 'DELETE',
+        headers,
       });
       
       if (!response.ok) {
