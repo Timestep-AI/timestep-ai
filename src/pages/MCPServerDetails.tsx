@@ -1,125 +1,156 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Layout } from '@/components/Layout';
-import { ToolRow } from '@/components/ToolRow';
-import { toolsService } from '@/services/toolsService';
+import { ItemPage } from '@/components/ItemPage';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Hash, Server, Settings } from 'lucide-react';
+import { MCPServer } from '@/types/mcpServer';
 import { Tool } from '@/types/tool';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Server } from 'lucide-react';
+import { mcpServersService } from '@/services/mcpServersService';
+import { toolsService } from '@/services/toolsService';
+import { ToolRow } from '@/components/ToolRow';
 
 const MCPServerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [server, setServer] = useState<MCPServer | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchServerTools = async () => {
+    const loadServerAndTools = async () => {
       if (!id) return;
       
-      setLoading(true);
       try {
-        const allTools = await toolsService.getAll();
+        setLoading(true);
+        const [serverData, allTools] = await Promise.all([
+          mcpServersService.getById(id),
+          toolsService.getAll()
+        ]);
+        
+        setServer(serverData);
         // Filter tools that belong to this MCP server
-        const serverTools = allTools.filter(tool => 
-          tool.serverId === id
-        );
+        const serverTools = allTools.filter(tool => tool.serverId === id);
         setTools(serverTools);
       } catch (error) {
-        console.error('Failed to fetch MCP server tools:', error);
+        console.error('Error loading server and tools:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchServerTools();
+    loadServerAndTools();
   }, [id]);
 
+  const handleEdit = () => {
+    if (server) {
+      // Navigate to edit page when available
+      console.log('Edit server:', server);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!server) return;
+    
+    try {
+      await mcpServersService.delete(server.id);
+      navigate('/tool_providers');
+    } catch (error) {
+      console.error('Error deleting server:', error);
+    }
+  };
+
   const handleEditTool = (tool: Tool) => {
-    // Navigate to tool details page
     navigate(`/tools/${tool.id}`);
   };
 
   const handleDeleteTool = async (toolId: string) => {
     try {
       await toolsService.delete(toolId);
-      setTools(prev => prev.filter(tool => tool.id !== toolId));
+      const updatedTools = await toolsService.getAll();
+      setTools(updatedTools.filter(t => t.serverId === id));
     } catch (error) {
-      console.error('Failed to delete tool:', error);
+      console.error('Error deleting tool:', error);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const getStatusBadge = () => {
+    if (!server) return null;
+    
+    return server.enabled 
+      ? <Badge className="bg-success/10 text-success border-success/20">Enabled</Badge>
+      : <Badge variant="secondary">Disabled</Badge>;
+  };
 
   return (
-    <Layout>
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/tools')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Tools
-          </Button>
-        </div>
+    <ItemPage
+      loading={loading}
+      item={server}
+      itemType="Tool Provider"
+      backPath="/tool_providers"
+      backLabel="Back to Tool Providers"
+      icon={<Settings className="w-8 h-8 text-primary-foreground" />}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      statusBadge={getStatusBadge()}
+    >
+      {server && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Calendar className="w-4 h-4 flex-shrink-0" />
+              <span>Created: {new Date(server.createdAt).toLocaleDateString()}</span>
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Hash className="w-4 h-4 flex-shrink-0" />
+              <span>{tools.length} tools</span>
+            </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Server className="w-6 h-6 text-primary" />
+            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+              <Server className="w-4 h-4 flex-shrink-0" />
+              <span>Provider: {server.name}</span>
+            </div>
+            
+            {server.serverUrl && (
+              <div className="flex items-center space-x-2 text-sm text-text-tertiary">
+                <Settings className="w-4 h-4 flex-shrink-0" />
+                <span>URL: {new URL(server.serverUrl).hostname}</span>
+              </div>
+            )}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">MCP Server</h1>
-            <p className="text-text-secondary">Server ID: {id}</p>
-          </div>
-        </div>
 
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-text-primary mb-2">
-            Tools ({tools.length})
-          </h2>
-          <p className="text-text-secondary text-sm">
-            All tools provided by this MCP server
-          </p>
-        </div>
-
-        {tools.length === 0 ? (
-          <div className="text-center py-12">
-            <Server className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-text-primary mb-2">No tools found</h3>
-            <p className="text-text-secondary">This MCP server doesn't have any tools registered.</p>
+          {/* Tools */}
+          <div className="border-t border-border pt-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">Tools</h2>
+            
+            {tools.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Settings className="text-4xl text-text-tertiary" />
+                </div>
+                <h3 className="text-lg font-semibold text-text-primary mb-2">
+                  No tools found
+                </h3>
+                <p className="text-text-secondary">
+                  This tool provider doesn't have any tools available yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tools.map((tool) => (
+                  <ToolRow
+                    key={tool.id}
+                    tool={tool}
+                    onEdit={handleEditTool}
+                    onDelete={handleDeleteTool}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {tools.map((tool) => (
-              <ToolRow
-                key={tool.id}
-                tool={tool}
-                onEdit={handleEditTool}
-                onDelete={handleDeleteTool}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </Layout>
+        </>
+      )}
+    </ItemPage>
   );
 };
 

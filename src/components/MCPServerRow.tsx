@@ -45,7 +45,7 @@ export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) =>
   const dropdownItems = [
     {
       label: 'View Details',
-      onClick: () => navigate(`/admin/tool_providers/${server.id}`)
+      onClick: () => navigate(`/tool_providers/${server.id}`)
     },
     ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(server) }] : [])
   ];
@@ -66,7 +66,7 @@ export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) =>
       statusBadge={getStatusBadge(server.enabled)}
       metadata={metadata}
       rightContent={rightContent}
-      onItemClick={() => navigate(`/admin/tool_providers/${server.id}`)}
+      onItemClick={() => navigate(`/tool_providers/${server.id}`)}
       dropdownItems={dropdownItems}
     />
   );

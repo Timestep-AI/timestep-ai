@@ -92,7 +92,7 @@ export const Models = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.location.href = '/admin/model_providers'}
+            onClick={() => window.location.href = '/model_providers'}
           >
             <Settings2 className="w-4 h-4 mr-2" />
             Model Providers

@@ -36,11 +36,21 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
     } else {
       breadcrumbs.push({ text: 'Chat', href: `/chats/${params.id}` });
     }
+  } else if (pathname === '/model_providers') {
+    breadcrumbs.push({ text: 'Model Providers', href: '/model_providers' });
+  } else if (pathname.startsWith('/model_providers/') && params?.id) {
+    breadcrumbs.push({ text: 'Model Providers', href: '/model_providers' });
+    breadcrumbs.push({ text: 'Model Provider', href: `/model_providers/${params.id}` });
   } else if (pathname === '/models') {
     breadcrumbs.push({ text: 'Models', href: '/models' });
   } else if (pathname.startsWith('/models/') && params?.id) {
     breadcrumbs.push({ text: 'Models', href: '/models' });
     breadcrumbs.push({ text: 'Model', href: `/models/${params.id}` });
+  } else if (pathname === '/tool_providers') {
+    breadcrumbs.push({ text: 'Tool Providers', href: '/tool_providers' });
+  } else if (pathname.startsWith('/tool_providers/') && params?.id) {
+    breadcrumbs.push({ text: 'Tool Providers', href: '/tool_providers' });
+    breadcrumbs.push({ text: 'Tool Provider', href: `/tool_providers/${params.id}` });
   } else if (pathname === '/tools') {
     breadcrumbs.push({ text: 'Tools', href: '/tools' });
   } else if (pathname.startsWith('/tools/') && params?.id) {
@@ -51,12 +61,6 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
   } else if (pathname.startsWith('/traces/') && params?.id) {
     breadcrumbs.push({ text: 'Traces', href: '/traces' });
     breadcrumbs.push({ text: 'Trace', href: `/traces/${params.id}` });
-  } else if (pathname.startsWith('/tool_providers/') && params?.id) {
-    breadcrumbs.push({ text: 'Tool Providers', href: '/tool_providers' });
-    breadcrumbs.push({ text: 'Tool Provider', href: `/tool_providers/${params.id}` });
-  } else if (pathname.startsWith('/model_providers/') && params?.id) {
-    breadcrumbs.push({ text: 'Model Providers', href: '/model_providers' });
-    breadcrumbs.push({ text: 'Model Provider', href: `/model_providers/${params.id}` });
   } else if (pathname === '/admin/model_providers') {
     breadcrumbs.push({ text: 'Admin', href: '/admin' });
     breadcrumbs.push({ text: 'Model Providers', href: '/admin/model_providers' });

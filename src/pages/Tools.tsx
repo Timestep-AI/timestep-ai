@@ -85,7 +85,7 @@ export const Tools = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.location.href = '/admin/tool_providers'}
+            onClick={() => window.location.href = '/tool_providers'}
           >
             <Settings2 className="w-4 h-4 mr-2" />
             Tool Providers (MCP Servers)
