@@ -18,7 +18,25 @@ export const Agents = () => {
     try {
       setLoading(true);
       const agentsList = await agentsService.getAll();
-      setAgents(agentsList);
+      
+      // Sort agents: non-handoffs first, then by name, then by id
+      const sortedAgents = agentsList.sort((a, b) => {
+        // Primary sort: handoffs come last (isHandoff: false comes before isHandoff: true)
+        if (a.isHandoff !== b.isHandoff) {
+          return a.isHandoff ? 1 : -1;
+        }
+        
+        // Secondary sort: by name (alphabetical)
+        const nameComparison = a.name.localeCompare(b.name);
+        if (nameComparison !== 0) {
+          return nameComparison;
+        }
+        
+        // Tertiary sort: by id (alphabetical)
+        return a.id.localeCompare(b.id);
+      });
+      
+      setAgents(sortedAgents);
     } catch (error) {
       console.error('Failed to load agents:', error);
     } finally {
