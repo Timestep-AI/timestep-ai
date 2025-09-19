@@ -35,7 +35,7 @@ class AgentsService {
           model: apiAgent.model || '',
           modelSettings: apiAgent.modelSettings || {},
           status: 'active' as const,
-          isHandoff: false
+          isHandoff: Boolean(apiAgent.handoffDescription) // Agent is a handoff if it has a handoff description
         };
       });
       

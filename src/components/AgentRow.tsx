@@ -1,4 +1,4 @@
-import { User, Calendar, Cpu } from 'lucide-react';
+import { User, Calendar, Cpu, ArrowRightLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { CollectionItemRow } from '@/components/CollectionItemRow';
@@ -67,7 +67,13 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
 
   return (
     <CollectionItemRow
-      icon={<User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />}
+      icon={
+        agent.isHandoff ? (
+          <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+        ) : (
+          <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+        )
+      }
       title={agent.name}
       description={agent.description}
       statusBadge={statusBadge}
