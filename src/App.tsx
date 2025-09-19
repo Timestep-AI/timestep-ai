@@ -19,6 +19,7 @@ import Traces from "./pages/Traces";
 import TracePage from "./pages/Trace";
 import Settings from "./pages/Settings";
 import MCPServerDetails from "./pages/MCPServerDetails";
+import ModelProviderDetails from "./pages/ModelProviderDetails";
 import Logout from "./pages/Logout";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/traces/:id" element={<AuthGuard><TracePage /></AuthGuard>} />
               <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
               <Route path="/settings/mcp_servers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
+              <Route path="/models/providers/:id" element={<AuthGuard><ModelProviderDetails /></AuthGuard>} />
               <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
               <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
             </Routes>
