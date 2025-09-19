@@ -251,7 +251,7 @@ export type Database = {
           task_states: Json | null
           tasks: Json | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           agent_id: string
@@ -262,7 +262,7 @@ export type Database = {
           task_states?: Json | null
           tasks?: Json | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           agent_id?: string
@@ -273,7 +273,7 @@ export type Database = {
           task_states?: Json | null
           tasks?: Json | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -321,7 +321,7 @@ export type Database = {
           name: string
           status: string
           updated_at: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -333,7 +333,7 @@ export type Database = {
           name: string
           status?: string
           updated_at?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -345,7 +345,7 @@ export type Database = {
           name?: string
           status?: string
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -358,7 +358,7 @@ export type Database = {
           models_url: string
           provider: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           api_key?: string | null
@@ -368,7 +368,7 @@ export type Database = {
           models_url: string
           provider: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           api_key?: string | null
@@ -378,7 +378,7 @@ export type Database = {
           models_url?: string
           provider?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
