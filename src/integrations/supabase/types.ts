@@ -92,7 +92,7 @@ export type Database = {
       agents: {
         Row: {
           created_at: string | null
-          handoff_description: string
+          handoff_description: string | null
           handoff_ids: Json | null
           id: string
           instructions: string
@@ -105,7 +105,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          handoff_description?: string
+          handoff_description?: string | null
           handoff_ids?: Json | null
           id?: string
           instructions: string
@@ -118,7 +118,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          handoff_description?: string
+          handoff_description?: string | null
           handoff_ids?: Json | null
           id?: string
           instructions?: string
