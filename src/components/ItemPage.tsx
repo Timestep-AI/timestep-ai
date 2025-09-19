@@ -12,8 +12,8 @@ interface ItemPageProps {
   backPath: string;
   backLabel: string;
   icon: ReactNode;
-  onEdit: () => void;
-  onDelete: () => Promise<void>;
+  onEdit?: () => void;
+  onDelete?: () => Promise<void>;
   statusBadge?: ReactNode;
   children?: ReactNode;
 }
@@ -70,16 +70,22 @@ export function ItemPage({
             {backLabel}
           </Button>
           
-          <div className="flex items-center space-x-2">
-            <Button onClick={onEdit} variant="outline" size="sm" className="text-primary border-border hover:bg-accent">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-            <Button onClick={onDelete} variant="destructive" size="sm">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </Button>
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex items-center space-x-2">
+              {onEdit && (
+                <Button onClick={onEdit} variant="outline" size="sm" className="text-primary border-border hover:bg-accent">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button onClick={onDelete} variant="destructive" size="sm">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Item Header */}

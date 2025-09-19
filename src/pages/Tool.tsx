@@ -34,19 +34,6 @@ export const ToolPage = () => {
     }
   };
 
-  const handleEdit = () => {
-    console.log('Edit tool:', tool);
-  };
-
-  const handleDelete = async () => {
-    if (!id) return;
-    try {
-      await toolsService.delete(id);
-    } catch (error) {
-      console.error('Error deleting tool:', error);
-    }
-  };
-
   const getStatusBadge = () => {
     if (!tool) return null;
     
@@ -68,8 +55,6 @@ export const ToolPage = () => {
       backPath="/tools"
       backLabel="Back to Tools"
       icon={<Wrench className="w-8 h-8 text-primary-foreground" />}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
       statusBadge={getStatusBadge()}
     >
       {tool && (
