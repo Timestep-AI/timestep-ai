@@ -111,6 +111,47 @@ export const Agent = () => {
               </div>
             </div>
           )}
+
+          {/* Handoffs */}
+          {agent.handoffIds && agent.handoffIds.length > 0 && (
+            <div className="border-t border-border pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">
+                Handoffs ({agent.handoffIds.length})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {agent.handoffIds.map((handoffId) => (
+                  <Badge 
+                    key={handoffId}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                    onClick={() => navigate(`/agents/${handoffId}`)}
+                  >
+                    {handoffId}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tools */}
+          {agent.toolIds && agent.toolIds.length > 0 && (
+            <div className="border-t border-border pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">
+                Tools ({agent.toolIds.length})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {agent.toolIds.map((toolId) => (
+                  <Badge 
+                    key={toolId}
+                    className="bg-info/10 text-info border-info/20 cursor-pointer hover:bg-info/20 transition-colors"
+                    onClick={() => navigate(`/tools/${encodeURIComponent(toolId)}`)}
+                  >
+                    {toolId}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Additional Details */}
           <div className="border-t border-border pt-6">

@@ -4,6 +4,7 @@ export interface Agent {
   description?: string;
   instructions?: string;
   handoffIds?: string[];
+  toolIds?: string[];
   handoffDescription?: string;
   createdAt: string;
   model?: string;
