@@ -34,7 +34,28 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
 
     try {
       const response = await toolsService.callTool(tool.id, inputs);
-      setResult(response);
+      
+      // Handle JSON-RPC response format
+      if (typeof response === 'string') {
+        try {
+          const parsed = JSON.parse(response);
+          if (parsed.result && parsed.result.content && Array.isArray(parsed.result.content)) {
+            // Extract text from content array
+            const textContent = parsed.result.content
+              .filter((item: any) => item.type === 'text')
+              .map((item: any) => item.text)
+              .join('\n');
+            setResult(textContent);
+          } else {
+            setResult(response);
+          }
+        } catch {
+          // If parsing fails, just show the raw response
+          setResult(response);
+        }
+      } else {
+        setResult(JSON.stringify(response, null, 2));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to call tool');
     } finally {
