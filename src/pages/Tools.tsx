@@ -82,43 +82,14 @@ export const Tools = () => {
         emptyDescription="Get started by creating some default tools or add your own custom tools."
         searchPlaceholder="Search tools..."
         actionButton={
-          <Sheet open={serversOpen} onOpenChange={handleServersOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings2 className="w-4 h-4 mr-2" />
-                Tool Providers (MCP Servers)
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[400px] sm:w-[540px]">
-              <SheetHeader>
-                <SheetTitle>Tool Providers (MCP Servers)</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <ScrollArea className="h-[calc(100vh-120px)]">
-                  <div className="space-y-4">
-                    {serversLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : mcpServers.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Settings2 className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
-                        <p className="text-text-tertiary">No tool providers configured</p>
-                      </div>
-                    ) : (
-                      mcpServers.map((server) => (
-                        <MCPServerRow
-                          key={server.id}
-                          server={server}
-                          onDelete={handleDeleteMcpServer}
-                        />
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/admin/tool_providers'}
+          >
+            <Settings2 className="w-4 h-4 mr-2" />
+            Tool Providers (MCP Servers)
+          </Button>
         }
         renderItem={(tool) => (
           <ToolRow

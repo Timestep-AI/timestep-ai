@@ -143,45 +143,101 @@ const Admin = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>
-              Common administrative tasks and management tools
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-start space-y-2">
-                <Users className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Manage Users</div>
-                  <div className="text-sm text-text-secondary">View and edit user accounts</div>
+        {/* Admin Sections */}
+        <div className="space-y-8">
+          {/* Model Providers Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Database className="w-5 h-5 mr-2" />
+                  Model Providers
                 </div>
-              </Button>
-              
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-start space-y-2">
-                <Database className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Database Health</div>
-                  <div className="text-sm text-text-secondary">Monitor database performance</div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = '/admin/model_providers'}
+                >
+                  View All
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Manage AI model providers and their configurations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Database className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
+                <p className="text-text-secondary mb-4">Configure model providers to enable AI functionality</p>
+                <Button onClick={() => window.location.href = '/admin/model_providers'}>
+                  Manage Model Providers
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tool Providers Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Settings className="w-5 h-5 mr-2" />
+                  Tool Providers (MCP Servers)
                 </div>
-              </Button>
-              
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-start space-y-2">
-                <Shield className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Security Logs</div>
-                  <div className="text-sm text-text-secondary">Review security events</div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = '/admin/tool_providers'}
+                >
+                  View All
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Manage MCP servers that provide tools and capabilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Settings className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
+                <p className="text-text-secondary mb-4">Configure tool providers to extend system capabilities</p>
+                <Button onClick={() => window.location.href = '/admin/tool_providers'}>
+                  Manage Tool Providers
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* User Settings Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
+                  User Settings
                 </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = '/admin/user_settings'}
+                >
+                  View Settings
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Manage user accounts, permissions, and system preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Users className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
+                <p className="text-text-secondary mb-4">Configure user management and system settings</p>
+                <Button onClick={() => window.location.href = '/admin/user_settings'}>
+                  Manage User Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

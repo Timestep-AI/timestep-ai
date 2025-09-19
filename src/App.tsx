@@ -21,6 +21,11 @@ import TracePage from "./pages/Trace";
 
 import MCPServerDetails from "./pages/MCPServerDetails";
 import ModelProviderDetails from "./pages/ModelProviderDetails";
+import AdminModelProviders from "./pages/admin/ModelProviders";
+import AdminModelProviderDetails from "./pages/admin/ModelProviderDetails";
+import AdminToolProviders from "./pages/admin/ToolProviders";
+import AdminToolProviderDetails from "./pages/admin/ToolProviderDetails";
+import AdminUserSettings from "./pages/admin/UserSettings";
 import Logout from "./pages/Logout";
 
 const queryClient = new QueryClient();
@@ -49,6 +54,11 @@ const App = () => (
               <Route path="/traces/:id" element={<AuthGuard><TracePage /></AuthGuard>} />
               <Route path="/tool_providers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
               <Route path="/model_providers/:id" element={<AuthGuard><ModelProviderDetails /></AuthGuard>} />
+              <Route path="/admin/model_providers" element={<AuthGuard><AdminModelProviders /></AuthGuard>} />
+              <Route path="/admin/model_providers/:id" element={<AuthGuard><AdminModelProviderDetails /></AuthGuard>} />
+              <Route path="/admin/tool_providers" element={<AuthGuard><AdminToolProviders /></AuthGuard>} />
+              <Route path="/admin/tool_providers/:id" element={<AuthGuard><AdminToolProviderDetails /></AuthGuard>} />
+              <Route path="/admin/user_settings" element={<AuthGuard><AdminUserSettings /></AuthGuard>} />
               <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
               <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
             </Routes>

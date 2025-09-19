@@ -89,44 +89,14 @@ export const Models = () => {
         emptyDescription="Create your first AI model configuration to get started."
         searchPlaceholder="Search models..."
         actionButton={
-          <Sheet open={providersOpen} onOpenChange={handleProvidersOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings2 className="w-4 h-4 mr-2" />
-                Model Providers
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[400px] sm:w-[540px]">
-              <SheetHeader>
-                <SheetTitle>Model Providers</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <ScrollArea className="h-[calc(100vh-120px)]">
-                  <div className="space-y-4">
-                    {providersLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : modelProviders.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Settings2 className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
-                        <p className="text-text-tertiary">No model providers configured</p>
-                      </div>
-                    ) : (
-                      modelProviders.map((provider) => (
-                        <ModelProviderRow
-                          key={provider.id}
-                          provider={provider}
-                          onEdit={handleEditModelProvider}
-                          onDelete={handleDeleteModelProvider}
-                        />
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/admin/model_providers'}
+          >
+            <Settings2 className="w-4 h-4 mr-2" />
+            Model Providers
+          </Button>
         }
         renderItem={(model) => (
           <ModelRow
