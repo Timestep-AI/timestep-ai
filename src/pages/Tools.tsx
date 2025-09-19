@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Tool } from '@/types/tool';
-import { MCPServer } from '@/services/mcpServersService';
+import { MCPServer } from '@/types/mcpServer';
 import { toolsService } from '@/services/toolsService';
 import { mcpServersService } from '@/services/mcpServersService';
 import { CollectionPage } from '@/components/CollectionPage';

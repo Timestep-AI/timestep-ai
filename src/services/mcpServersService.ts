@@ -1,14 +1,4 @@
-export interface MCPServer {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'error';
-  toolCount: number;
-  version: string;
-  lastConnected: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { MCPServer } from '@/types/mcpServer';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
