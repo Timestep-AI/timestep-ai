@@ -46,42 +46,6 @@ export const ToolPage = () => {
     >
       {tool && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-              <Server className="w-4 h-4 flex-shrink-0" />
-              <span>Server: {tool.serverName}</span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 text-xs rounded-full bg-background-secondary text-text-secondary">
-                {tool.category}
-              </span>
-            </div>
-          </div>
-
-          {/* Tool Details */}
-          <div className="border-t border-border pt-6">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-text-secondary">ID</label>
-                <p className="text-text-primary font-mono text-sm break-all">{tool.id}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-secondary">Server ID</label>
-                <p className="text-text-primary font-mono text-sm">{tool.serverId}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-secondary">Server Name</label>
-                <p className="text-text-primary">{tool.serverName}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-secondary">Status</label>
-                <p className="text-text-primary capitalize">{tool.status}</p>
-              </div>
-            </div>
-          </div>
-
           {/* Tool Testing */}
           <div className="border-t border-border pt-6 mt-6">
             <ToolTestingForm tool={tool} />
