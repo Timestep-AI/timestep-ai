@@ -1,4 +1,4 @@
-import { User, Calendar, ArrowRightLeft } from 'lucide-react';
+import { User, Calendar, ArrowRightLeft, Cpu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 
@@ -51,13 +51,14 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
             </div>
             {agent.model && agent.model.trim() ? (
               <Badge 
-                className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
+                className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors flex items-center gap-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   const modelId = agent.model?.replace('/', '-') || '';
                   navigate(`/models/${modelId}`);
                 }}
               >
+                <Cpu className="w-3 h-3" />
                 {agent.model}
               </Badge>
             ) : null}
