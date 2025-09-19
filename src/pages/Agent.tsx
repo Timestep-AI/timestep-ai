@@ -87,6 +87,18 @@ export const Agent = () => {
               )}
             </div>
           </div>
+
+          {/* Instructions */}
+          {agent.instructions && (
+            <div className="border-t border-border pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Instructions</h3>
+              <div className="bg-surface/50 border border-border rounded-lg p-4">
+                <pre className="text-sm text-text-primary whitespace-pre-wrap font-sans leading-relaxed">
+                  {agent.instructions}
+                </pre>
+              </div>
+            </div>
+          )}
           
           {/* Additional Details */}
           <div className="border-t border-border pt-6">
