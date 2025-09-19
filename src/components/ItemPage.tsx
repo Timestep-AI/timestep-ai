@@ -36,7 +36,7 @@ export function ItemPage({
     return (
       <Layout>
         <div className="flex items-center justify-center py-12">
-          <div className="text-text-secondary">Loading {itemType.toLowerCase()}...</div>
+          <div className="text-muted-foreground">Loading {itemType.toLowerCase()}...</div>
         </div>
       </Layout>
     );
@@ -46,7 +46,7 @@ export function ItemPage({
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-text-secondary mb-4">{itemType} not found</div>
+          <div className="text-muted-foreground mb-4">{itemType} not found</div>
           <Button onClick={() => navigate(backPath)} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             {backLabel}
@@ -59,19 +59,19 @@ export function ItemPage({
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header Navigation */}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate(backPath)}
-            className="p-2"
+            className="text-foreground hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {backLabel}
           </Button>
           
           <div className="flex items-center space-x-2">
-            <Button onClick={onEdit} variant="outline" size="sm">
+            <Button onClick={onEdit} variant="outline" size="sm" className="text-primary border-border hover:bg-accent">
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
@@ -82,31 +82,32 @@ export function ItemPage({
           </div>
         </div>
 
-        {/* Item Overview */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-start space-x-4 mb-4">
-            <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center flex-shrink-0">
+        {/* Item Header */}
+        <div className="bg-surface border border-border rounded-lg p-6">
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
               {icon}
             </div>
             
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
-                <h1 className="text-2xl font-bold text-text-primary">
+                <h1 className="text-2xl font-bold text-foreground">
                   {item.name || item.title}
                 </h1>
                 {statusBadge}
               </div>
               
               {item.description && (
-                <p className="text-text-secondary mb-4">
+                <p className="text-muted-foreground text-base">
                   {item.description}
                 </p>
               )}
             </div>
           </div>
-          
-          {children}
         </div>
+        
+        {/* Content */}
+        {children}
       </div>
     </Layout>
   );

@@ -127,35 +127,12 @@ export const Agent = () => {
       >
         {agent && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="flex items-center space-x-2 text-sm text-text-tertiary">
-                <Calendar className="w-4 h-4 flex-shrink-0" />
-                <span>Created: {agent.createdAt}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                {agent.model ? (
-                  <Badge 
-                    className="bg-info/10 text-info border-info/20 cursor-pointer hover:bg-info/20 transition-colors"
-                    onClick={() => navigate(`/models/ollama-gpt-oss-20b`)}
-                  >
-                    <Cpu className="w-3 h-3 mr-1" />
-                    {agent.model}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-text-tertiary">
-                    No Model
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Instructions */}
+            <div className="space-y-6">{/* Instructions */}
             {agent.instructions && (
-              <div className="border-t border-border pt-6 mb-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Instructions</h3>
-                <div className="bg-surface/50 border border-border rounded-lg p-4">
-                  <pre className="text-sm text-text-primary whitespace-pre-wrap font-sans leading-relaxed">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Instructions</h3>
+                <div className="bg-surface border border-border rounded-lg p-4">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
                     {agent.instructions}
                   </pre>
                 </div>
@@ -164,10 +141,10 @@ export const Agent = () => {
 
             {/* Handoff Description */}
             {agent.handoffDescription && (
-              <div className="border-t border-border pt-6 mb-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Handoff Description</h3>
-                <div className="bg-surface/50 border border-border rounded-lg p-4">
-                  <p className="text-sm text-text-primary leading-relaxed">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Handoff Description</h3>
+                <div className="bg-surface border border-border rounded-lg p-4">
+                  <p className="text-sm text-foreground leading-relaxed">
                     {agent.handoffDescription}
                   </p>
                 </div>
@@ -176,8 +153,8 @@ export const Agent = () => {
 
             {/* Handoffs */}
             {agent.handoffIds && agent.handoffIds.length > 0 && (
-              <div className="border-t border-border pt-6 mb-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
                   Handoffs ({agent.handoffIds.length})
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -197,15 +174,15 @@ export const Agent = () => {
 
             {/* Tools */}
             {agent.toolIds && agent.toolIds.length > 0 && (
-              <div className="border-t border-border pt-6 mb-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
                   Tools ({agent.toolIds.length})
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {agent.toolIds.map((toolId) => (
                     <Badge 
                       key={toolId}
-                      className="bg-info/10 text-info border-info/20 cursor-pointer hover:bg-info/20 transition-colors"
+                      className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors"
                       onClick={() => navigate(`/tools/${encodeURIComponent(toolId)}`)}
                     >
                       {getToolName(toolId)}
@@ -214,24 +191,6 @@ export const Agent = () => {
                 </div>
               </div>
             )}
-            
-            {/* Additional Details */}
-            <div className="border-t border-border pt-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">ID</label>
-                  <p className="text-text-primary font-mono text-sm break-all">{agent.id}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">Status</label>
-                  <p className="text-text-primary capitalize">{agent.status}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">Handoff Agent</label>
-                  <p className="text-text-primary">{agent.isHandoff ? 'Yes' : 'No'}</p>
-                </div>
-              </div>
             </div>
           </>
         )}
