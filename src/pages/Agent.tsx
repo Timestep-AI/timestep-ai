@@ -5,12 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { User, Calendar, Cpu } from 'lucide-react';
 import { Agent as AgentType } from '@/types/agent';
 import { agentsService } from '@/services/agentsService';
+import { toolsService } from '@/services/toolsService';
 
 export const Agent = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allAgents, setAllAgents] = useState<AgentType[]>([]);
+  const [allTools, setAllTools] = useState<any[]>([]);
 
   useEffect(() => {
     const loadAgent = async () => {
@@ -18,9 +21,16 @@ export const Agent = () => {
       
       try {
         setLoading(true);
-        const agents = await agentsService.getAll();
+        // Fetch all agents and tools to resolve names
+        const [agents, tools] = await Promise.all([
+          agentsService.getAll(),
+          toolsService.getAll().catch(() => []) // Handle potential tools service errors
+        ]);
+        
         const foundAgent = agents.find(a => a.id === id);
         setAgent(foundAgent || null);
+        setAllAgents(agents);
+        setAllTools(tools);
       } catch (error) {
         console.error('Error loading agent:', error);
       } finally {
@@ -30,6 +40,18 @@ export const Agent = () => {
 
     loadAgent();
   }, [id]);
+
+  // Helper function to get agent name by ID
+  const getAgentName = (agentId: string) => {
+    const foundAgent = allAgents.find(a => a.id === agentId);
+    return foundAgent?.name || agentId;
+  };
+
+  // Helper function to get tool name by ID
+  const getToolName = (toolId: string) => {
+    const foundTool = allTools.find(t => t.id === toolId);
+    return foundTool?.name || toolId;
+  };
 
   const handleEdit = () => {
     // TODO: Implement edit functionality
@@ -126,7 +148,7 @@ export const Agent = () => {
                     className="cursor-pointer hover:bg-primary/10 hover:border-primary/30 transition-colors"
                     onClick={() => navigate(`/agents/${handoffId}`)}
                   >
-                    {handoffId}
+                    {getAgentName(handoffId)}
                   </Badge>
                 ))}
               </div>
@@ -146,7 +168,7 @@ export const Agent = () => {
                     className="bg-info/10 text-info border-info/20 cursor-pointer hover:bg-info/20 transition-colors"
                     onClick={() => navigate(`/tools/${encodeURIComponent(toolId)}`)}
                   >
-                    {toolId}
+                    {getToolName(toolId)}
                   </Badge>
                 ))}
               </div>
