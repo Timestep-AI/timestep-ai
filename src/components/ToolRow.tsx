@@ -27,15 +27,14 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
     }
   };
 
-  const metadata = [
-    {
-      icon: <Server className="w-3 h-3" />,
-      text: tool.serverName
-    }
-  ];
-
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
+      <Badge 
+        className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs flex items-center gap-1"
+      >
+        <Server className="w-3 h-3" />
+        {tool.serverName}
+      </Badge>
       <span className="text-xs text-text-tertiary px-2 py-1 bg-background-secondary rounded-full">
         {tool.category}
       </span>
@@ -56,7 +55,7 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
       title={tool.name}
       description={tool.description}
       statusBadge={getStatusBadge(tool.status)}
-      metadata={metadata}
+      metadata={[]}
       rightContent={rightContent}
       onItemClick={() => navigate(`/tools/${tool.id}`)}
       dropdownItems={dropdownItems}
