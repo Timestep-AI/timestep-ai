@@ -15,7 +15,6 @@ import {
 
 const Admin = () => {
   const systemStats = [
-    { label: "Active Users", value: "42", change: "+5%", icon: Users },
     { label: "Database Queries", value: "1.2K", change: "+12%", icon: Database },
     { label: "API Requests", value: "8.4K", change: "+8%", icon: Activity },
     { label: "System Health", value: "98.5%", change: "+0.1%", icon: Shield },
