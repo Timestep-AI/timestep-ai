@@ -1,11 +1,22 @@
 import { Tool, CreateToolRequest, UpdateToolRequest } from '@/types/tool';
+import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+  };
+};
 
 export const toolsService = {
   async getAll(): Promise<Tool[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/tools`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/tools`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch tools: ${response.statusText}`);
       }
@@ -32,7 +43,8 @@ export const toolsService = {
 
   async getById(id: string): Promise<Tool | undefined> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, { headers });
       if (response.status === 404) {
         return undefined;
       }
@@ -73,8 +85,10 @@ export const toolsService = {
 
   async deleteAll(): Promise<void> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/tools`, {
         method: 'DELETE',
+        headers,
       });
       
       if (!response.ok) {
@@ -88,11 +102,10 @@ export const toolsService = {
 
   async callTool(name: string, args: Record<string, any> = {}): Promise<string> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/tools/${name}/call`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ arguments: args }),
       });
       
