@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VersionInfo {
   version?: string;
@@ -13,7 +14,20 @@ export const useVersion = () => {
   useEffect(() => {
     const fetchVersion = async () => {
       try {
-        const response = await fetch('https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/version');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.access_token) {
+          setVersionInfo({ error: 'Not authenticated' });
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/version', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (response.ok) {
           const data = await response.json();
