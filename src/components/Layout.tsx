@@ -43,7 +43,7 @@ export const Layout = ({ children }: LayoutProps) => {
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-24 w-full overflow-y-auto min-h-0">
+          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 pb-32 w-full overflow-y-auto min-h-0">
             <div className="w-full h-full">
               {children}
             </div>
