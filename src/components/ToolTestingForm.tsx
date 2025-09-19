@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Play, CheckCircle, XCircle } from 'lucide-react';
 import { Tool } from '@/types/tool';
-import { mcpClient } from '@/services/mcpClient';
+import { toolsService } from '@/services/toolsService';
 
 interface ToolTestingFormProps {
   tool: Tool;
@@ -33,7 +33,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
     setResult(null);
 
     try {
-      const response = await mcpClient.callTool(tool.name, inputs);
+      const response = await toolsService.callTool(tool.id, inputs);
       setResult(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to call tool');
