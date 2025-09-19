@@ -26,9 +26,6 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
         <Cpu className="w-3 h-3" />
         {model.owned_by}
       </Badge>
-      <span className="text-xs text-text-tertiary">
-        {model.object}
-      </span>
     </div>
   );
 
