@@ -1,11 +1,22 @@
 import { Model, CreateModelRequest, UpdateModelRequest } from '@/types/model';
+import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+  };
+};
 
 class ModelsService {
   async getAll(): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/models`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/models`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
@@ -33,7 +44,8 @@ class ModelsService {
 
   async getById(id: string): Promise<Model | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/models/${id}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/models/${id}`, { headers });
       if (response.status === 404) {
         return null;
       }
@@ -55,11 +67,10 @@ class ModelsService {
 
   async update(id: string, request: UpdateModelRequest): Promise<Model | null> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/models/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(request),
       });
       
@@ -81,8 +92,10 @@ class ModelsService {
 
   async delete(id: string): Promise<boolean> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/models/${id}`, {
         method: 'DELETE',
+        headers,
       });
       
       if (response.status === 404) {
@@ -102,8 +115,10 @@ class ModelsService {
 
   async deleteAll(): Promise<void> {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/models`, {
         method: 'DELETE',
+        headers,
       });
       
       if (!response.ok) {
@@ -127,7 +142,8 @@ class ModelsService {
 
   async search(query: string): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/models/search?q=${encodeURIComponent(query)}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/models/search?q=${encodeURIComponent(query)}`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to search models: ${response.statusText}`);
@@ -143,7 +159,8 @@ class ModelsService {
 
   async getByProvider(provider: string): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/models/provider/${encodeURIComponent(provider)}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/models/provider/${encodeURIComponent(provider)}`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to get models by provider: ${response.statusText}`);
@@ -159,7 +176,8 @@ class ModelsService {
 
   async getByStatus(status: 'active' | 'deprecated' | 'beta'): Promise<Model[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/models/status/${encodeURIComponent(status)}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/models/status/${encodeURIComponent(status)}`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to get models by status: ${response.statusText}`);

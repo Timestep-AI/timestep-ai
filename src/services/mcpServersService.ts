@@ -1,11 +1,22 @@
 import { MCPServer } from '@/types/mcpServer';
+import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+  };
+};
 
 class MCPServersService {
   async getAll(): Promise<MCPServer[]> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch MCP servers: ${response.statusText}`);
       }
@@ -19,7 +30,8 @@ class MCPServersService {
 
   async getById(id: string): Promise<MCPServer | null> {
     try {
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, { headers });
       if (response.status === 404) {
         return null;
       }
@@ -50,11 +62,10 @@ class MCPServersService {
         authToken: updates.authToken,
       };
       
+      const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload),
       });
       
