@@ -31,7 +31,7 @@ const ModelProviderDetails = () => {
         if (providerData) {
           const allModels = await modelsService.getAll();
           const providerModels = allModels.filter(model => 
-            model.provider === providerData.provider
+            model.owned_by === providerData.provider
           );
           setModels(providerModels);
         }
@@ -51,12 +51,7 @@ const ModelProviderDetails = () => {
   };
 
   const handleDeleteModel = async (model: Model) => {
-    try {
-      await modelsService.delete(model.id);
-      setModels(prev => prev.filter(m => m.id !== model.id));
-    } catch (error) {
-      console.error('Failed to delete model:', error);
-    }
+    console.log('Delete not supported - models come from model providers');
   };
 
   if (loading) {

@@ -16,20 +16,12 @@ class ModelsService {
         return [];
       }
       
-      // Map API response to our Model interface since server returns OpenAI format
+      // Return models exactly as server provides them (OpenAI format)
       const models: Model[] = apiModels.map((apiModel: any) => ({
         id: apiModel.id,
-        name: apiModel.id,
-        description: `Model provided by ${apiModel.owned_by}`,
-        provider: apiModel.owned_by || 'unknown',
-        version: '1.0.0',
-        contextLength: 0, // Not provided by OpenAI format
-        inputPrice: 0, // Not provided by OpenAI format
-        outputPrice: 0, // Not provided by OpenAI format  
-        capabilities: [], // Not provided by OpenAI format
-        status: 'active' as const,
-        createdAt: new Date(apiModel.created * 1000).toISOString(),
-        updatedAt: new Date(apiModel.created * 1000).toISOString()
+        created: apiModel.created,
+        object: apiModel.object,
+        owned_by: apiModel.owned_by
       }));
       
       return models;
