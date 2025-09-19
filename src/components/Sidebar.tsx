@@ -6,7 +6,6 @@ import {
   Wrench, 
   Activity,
   LogOut,
-  Settings,
   Shield
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
@@ -26,7 +25,6 @@ const navItems = [
 
 const accountItems = [
   { icon: Shield, label: 'Admin', path: '/admin' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
   { icon: LogOut, label: 'Logout', path: '/logout' },
 ];
 

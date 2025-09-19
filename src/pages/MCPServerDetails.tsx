@@ -73,11 +73,11 @@ const MCPServerDetails = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/tools')}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Settings
+            Back to Tools
           </Button>
         </div>
 

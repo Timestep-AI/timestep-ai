@@ -18,7 +18,7 @@ import Tools from "./pages/Tools";
 import Tool from "./pages/Tool";
 import Traces from "./pages/Traces";
 import TracePage from "./pages/Trace";
-import Settings from "./pages/Settings";
+
 import MCPServerDetails from "./pages/MCPServerDetails";
 import ModelProviderDetails from "./pages/ModelProviderDetails";
 import Logout from "./pages/Logout";
@@ -47,9 +47,7 @@ const App = () => (
               <Route path="/tools/:id" element={<AuthGuard><Tool /></AuthGuard>} />
               <Route path="/traces" element={<AuthGuard><Traces /></AuthGuard>} />
               <Route path="/traces/:id" element={<AuthGuard><TracePage /></AuthGuard>} />
-              <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
               <Route path="/tool_providers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
-              <Route path="/settings/mcp_servers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
               <Route path="/model_providers/:id" element={<AuthGuard><ModelProviderDetails /></AuthGuard>} />
               <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
               <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
