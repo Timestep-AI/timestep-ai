@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Play, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { Loader2, Play, CheckCircle, XCircle } from 'lucide-react';
 import { Tool } from '@/types/tool';
 import { toolsService } from '@/services/toolsService';
 
@@ -88,79 +88,6 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
       setError(err instanceof Error ? err.message : 'Failed to call tool');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const parseWeatherAlerts = (text: string) => {
-    const alerts = text.split(/---\n?/).filter(alert => alert.trim().length > 0);
-    
-    return alerts.map((alert, index) => {
-      const lines = alert.trim().split('\n');
-      const alertData: any = { id: index };
-      
-      // Parse each line for alert data
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        if (line.startsWith('Event: ')) {
-          alertData.event = line.replace('Event: ', '');
-        } else if (line.startsWith('Area: ')) {
-          alertData.area = line.replace('Area: ', '');
-        } else if (line.startsWith('Severity: ')) {
-          alertData.severity = line.replace('Severity: ', '');
-        } else if (line.startsWith('Description: ')) {
-          // Find the description content - everything after "Description: " until "Instructions:"
-          const descriptionStart = i;
-          let descriptionEnd = lines.length;
-          
-          for (let j = i + 1; j < lines.length; j++) {
-            if (lines[j].startsWith('Instructions: ')) {
-              descriptionEnd = j;
-              break;
-            }
-          }
-          
-          // Combine description lines
-          const descLines = [lines[i].replace('Description: ', '')];
-          for (let j = descriptionStart + 1; j < descriptionEnd; j++) {
-            if (lines[j].trim()) {
-              descLines.push(lines[j]);
-            }
-          }
-          alertData.description = descLines.join('\n').trim();
-          
-        } else if (line.startsWith('Instructions: ')) {
-          // Get all remaining lines as instructions
-          const instructionLines = [line.replace('Instructions: ', '')];
-          for (let j = i + 1; j < lines.length; j++) {
-            if (lines[j].trim()) {
-              instructionLines.push(lines[j]);
-            }
-          }
-          alertData.instructions = instructionLines.join('\n').trim();
-          break; // Instructions are typically at the end
-        }
-      }
-      
-      return alertData;
-    }).filter(alert => alert.event); // Only return alerts with an event
-  };
-
-  const getSeverityIcon = (severity: string) => {
-    switch (severity?.toLowerCase()) {
-      case 'severe': return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'moderate': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'minor': return <Info className="w-4 h-4 text-blue-500" />;
-      default: return <Info className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity?.toLowerCase()) {
-      case 'severe': return 'destructive';
-      case 'moderate': return 'secondary';
-      case 'minor': return 'outline';
-      default: return 'outline';
     }
   };
 
@@ -362,48 +289,9 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
                   </TabsList>
                   
                   <TabsContent value="formatted" className="mt-4">
-                    {tool.name === 'get-alerts' ? (
-                      <div className="space-y-4">
-                        {parseWeatherAlerts(result).map((alert) => (
-                          <Card key={alert.id} className="border-l-4 border-l-primary">
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                  {getSeverityIcon(alert.severity)}
-                                  {alert.event}
-                                </CardTitle>
-                                {alert.severity && (
-                                  <Badge variant={getSeverityColor(alert.severity) as any}>
-                                    {alert.severity}
-                                  </Badge>
-                                )}
-                              </div>
-                              {alert.area && (
-                                <p className="text-sm text-muted-foreground">{alert.area}</p>
-                              )}
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              {alert.description && (
-                                <div>
-                                  <h4 className="font-medium text-sm mb-1">Description</h4>
-                                  <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
-                                </div>
-                              )}
-                              {alert.instructions && (
-                                <div>
-                                  <h4 className="font-medium text-sm mb-1">Instructions</h4>
-                                  <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
-                        {result}
-                      </pre>
-                    )}
+                    <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
+                      {result}
+                    </pre>
                   </TabsContent>
                   
                   <TabsContent value="raw" className="mt-4">
