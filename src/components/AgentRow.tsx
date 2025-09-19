@@ -54,19 +54,6 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
     </Badge>
   );
 
-  // Show view and delete options
-  const dropdownItems = [
-    {
-      label: 'View Details',
-      onClick: () => navigate(`/agents/${agent.id}`)
-    },
-    {
-      label: 'Delete',
-      onClick: () => onDelete?.(agent),
-      destructive: true
-    }
-  ];
-
   return (
     <CollectionItemRow
       icon={
@@ -82,7 +69,6 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
       metadata={metadata}
       rightContent={rightContent}
       onItemClick={() => navigate(`/agents/${agent.id}`)}
-      dropdownItems={dropdownItems}
     />
   );
 };

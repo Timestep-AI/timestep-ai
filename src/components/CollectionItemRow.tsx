@@ -28,7 +28,7 @@ interface CollectionItemRowProps {
   metadata: MetadataItem[];
   rightContent?: ReactNode;
   onItemClick: () => void;
-  dropdownItems: DropdownItem[];
+  dropdownItems?: DropdownItem[];
 }
 
 export const CollectionItemRow = ({
@@ -88,29 +88,31 @@ export const CollectionItemRow = ({
         <div className="flex items-center justify-between sm:flex-col sm:items-end space-x-2 sm:space-x-0 sm:space-y-1 flex-shrink-0">
           {rightContent}
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-                data-dropdown-trigger
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {dropdownItems.map((item, index) => (
-                <DropdownMenuItem 
-                  key={index}
-                  onClick={item.onClick}
-                  className={item.destructive ? "text-destructive" : ""}
+          {dropdownItems && dropdownItems.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                  data-dropdown-trigger
                 >
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {dropdownItems.map((item, index) => (
+                  <DropdownMenuItem 
+                    key={index}
+                    onClick={item.onClick}
+                    className={item.destructive ? "text-destructive" : ""}
+                  >
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </div>
