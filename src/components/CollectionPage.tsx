@@ -103,9 +103,6 @@ export const CollectionPage = <T,>({
           </Button>
         )}
         
-        <div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">{title}</h1>
-        </div>
         
         <div className="flex items-center justify-between mb-6">
           <div className="relative">
