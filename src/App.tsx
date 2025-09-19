@@ -48,6 +48,7 @@ const App = () => (
               <Route path="/traces" element={<AuthGuard><Traces /></AuthGuard>} />
               <Route path="/traces/:id" element={<AuthGuard><TracePage /></AuthGuard>} />
               <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+              <Route path="/tool_providers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
               <Route path="/settings/mcp_servers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
               <Route path="/model_providers/:id" element={<AuthGuard><ModelProviderDetails /></AuthGuard>} />
               <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
