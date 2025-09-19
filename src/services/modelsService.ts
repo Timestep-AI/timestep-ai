@@ -9,24 +9,7 @@ class ModelsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
-      const apiModels = await response.json();
-      
-      // Map API response to our Model interface
-      const models: Model[] = apiModels.map((apiModel: any) => ({
-        id: apiModel.id,
-        name: apiModel.id, // Use id as name for now
-        description: `Model provided by ${apiModel.owned_by}`,
-        provider: apiModel.owned_by || 'unknown',
-        version: '1.0.0', // Default version
-        contextLength: undefined, // Not provided by API
-        inputPrice: 0, // Default to 0
-        outputPrice: 0, // Default to 0
-        capabilities: [], // Empty capabilities for now
-        status: 'active' as const,
-        createdAt: new Date(apiModel.created * 1000).toISOString(), // Convert Unix timestamp
-        updatedAt: new Date(apiModel.created * 1000).toISOString()
-      }));
-      
+      const models = await response.json();
       return models;
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -43,24 +26,7 @@ class ModelsService {
       if (!response.ok) {
         throw new Error(`Failed to fetch model: ${response.statusText}`);
       }
-      const apiModel = await response.json();
-      
-      // Map API response to our Model interface
-      const model: Model = {
-        id: apiModel.id,
-        name: apiModel.id,
-        description: `Model provided by ${apiModel.owned_by}`,
-        provider: apiModel.owned_by || 'unknown',
-        version: '1.0.0',
-        contextLength: undefined,
-        inputPrice: 0,
-        outputPrice: 0,
-        capabilities: [],
-        status: 'active' as const,
-        createdAt: new Date(apiModel.created * 1000).toISOString(),
-        updatedAt: new Date(apiModel.created * 1000).toISOString()
-      };
-      
+      const model = await response.json();
       return model;
     } catch (error) {
       console.error('Error fetching model:', error);
