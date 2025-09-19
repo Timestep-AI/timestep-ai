@@ -25,9 +25,16 @@ export const Layout = ({ children }: LayoutProps) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarCollapsed(true);
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex flex-1 min-h-0">
         <div className={cn(
           "transition-all duration-300 hidden md:block",
           sidebarCollapsed ? "w-16" : "w-64"
@@ -43,7 +50,7 @@ export const Layout = ({ children }: LayoutProps) => {
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 w-full overflow-y-auto">
+          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 w-full overflow-y-auto pb-20 md:pb-6">
             {children}
           </main>
         </div>
