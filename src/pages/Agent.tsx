@@ -49,6 +49,13 @@ export const Agent = () => {
 
   // Helper function to get tool name by ID
   const getToolName = (toolId: string) => {
+    // Tool IDs are in format: mcp-server-id.tool-name
+    // Extract just the tool name part after the last dot
+    const lastDotIndex = toolId.lastIndexOf('.');
+    if (lastDotIndex !== -1 && lastDotIndex < toolId.length - 1) {
+      return toolId.substring(lastDotIndex + 1);
+    }
+    // Fallback to trying to find in tools list or return the full ID
     const foundTool = allTools.find(t => t.id === toolId);
     return foundTool?.name || toolId;
   };
