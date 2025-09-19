@@ -12,6 +12,7 @@ import { Server, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Settings = () => {
+  // Force module refresh to fix import caching issue
   const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
