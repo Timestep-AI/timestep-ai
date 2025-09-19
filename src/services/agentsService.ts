@@ -5,11 +5,13 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/s
 class AgentsService {
   async getAll(): Promise<Agent[]> {
     try {
+      console.log('AgentsService: Fetching from', `${SERVER_BASE_URL}/agents`);
       const response = await fetch(`${SERVER_BASE_URL}/agents`);
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
       const apiAgents = await response.json();
+      console.log('AgentsService: Raw API response:', apiAgents);
       
       // If empty array, return empty array
       if (!Array.isArray(apiAgents) || apiAgents.length === 0) {
