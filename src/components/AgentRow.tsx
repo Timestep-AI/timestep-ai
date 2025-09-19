@@ -63,7 +63,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
     {
       label: 'Delete',
       onClick: () => onDelete?.(agent),
-      variant: 'destructive' as const
+      destructive: true
     }
   ];
 
