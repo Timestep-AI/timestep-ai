@@ -22,9 +22,10 @@ const ModelProviderDetails = () => {
       
       setLoading(true);
       try {
-        // Fetch provider details
-        const providerData = await modelProvidersService.getById(id);
-        setProvider(providerData);
+        // Fetch all providers and find the one with matching ID
+        const allProviders = await modelProvidersService.getAll();
+        const providerData = allProviders.find(p => p.id === id);
+        setProvider(providerData || null);
 
         // Fetch all models and filter by provider
         if (providerData) {
