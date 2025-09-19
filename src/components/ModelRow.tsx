@@ -53,21 +53,23 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
       <Badge variant="outline" className="text-xs">
         {model.provider}
       </Badge>
-      <div className="flex flex-wrap gap-1 max-w-[120px] sm:max-w-none">
-        {model.capabilities.slice(0, 2).map((capability) => (
-          <Badge 
-            key={capability} 
-            className="bg-info/10 text-info border-info/20 text-xs"
-          >
-            {capability}
-          </Badge>
-        ))}
-        {model.capabilities.length > 2 && (
-          <Badge variant="outline" className="text-xs text-text-tertiary">
-            +{model.capabilities.length - 2}
-          </Badge>
-        )}
-      </div>
+      {model.capabilities && model.capabilities.length > 0 && (
+        <div className="flex flex-wrap gap-1 max-w-[120px] sm:max-w-none">
+          {model.capabilities.slice(0, 2).map((capability) => (
+            <Badge 
+              key={capability} 
+              className="bg-info/10 text-info border-info/20 text-xs"
+            >
+              {capability}
+            </Badge>
+          ))}
+          {model.capabilities.length > 2 && (
+            <Badge variant="outline" className="text-xs text-text-tertiary">
+              +{model.capabilities.length - 2}
+            </Badge>
+          )}
+        </div>
+      )}
     </div>
   );
 
