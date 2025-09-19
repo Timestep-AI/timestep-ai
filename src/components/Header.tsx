@@ -99,7 +99,7 @@ export const Header = ({ onToggleSidebar, sidebarCollapsed }: HeaderProps) => {
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
 
   return (
-    <header className="bg-surface border-b border-muted-foreground/30 px-6 py-3">
+    <header className="bg-surface border-b border-muted-foreground/60 px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button

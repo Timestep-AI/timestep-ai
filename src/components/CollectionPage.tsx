@@ -114,7 +114,7 @@ export const CollectionPage = <T,>({
                 setSearchQuery(e.target.value);
                 onSearch?.(e.target.value);
               }}
-              className="pl-10 w-80 bg-surface border border-muted-foreground/30 text-foreground placeholder:text-muted-foreground"
+              className="pl-10 w-80 bg-surface border border-muted-foreground/60 text-foreground placeholder:text-muted-foreground"
             />
           </div>
           

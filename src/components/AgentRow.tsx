@@ -29,7 +29,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
 
   return (
     <div 
-      className="border border-muted-foreground/60 rounded-xl p-4 hover:border-muted-foreground/80 transition-all duration-200 cursor-pointer bg-card"
+      className="border border-muted-foreground/80 rounded-xl p-4 hover:border-muted-foreground transition-all duration-200 cursor-pointer bg-card"
       onClick={() => navigate(`/agents/${agent.id}`)}
     >
       <div className="flex items-start space-x-3">
@@ -51,7 +51,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
             </div>
             {agent.model && agent.model.trim() ? (
               <Badge 
-                className="bg-primary/10 text-primary border-primary/20 text-xs cursor-pointer hover:bg-primary/20 transition-colors"
+                className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs cursor-pointer hover:bg-cyan-500/20 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   const modelId = agent.model?.replace('/', '-') || '';
