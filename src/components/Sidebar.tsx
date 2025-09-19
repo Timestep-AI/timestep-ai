@@ -6,7 +6,8 @@ import {
   Wrench, 
   Activity,
   LogOut,
-  Settings
+  Settings,
+  Shield
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -24,8 +25,9 @@ const navItems = [
 ];
 
 const accountItems = [
-  { icon: LogOut, label: 'Logout', path: '/logout' },
+  { icon: Shield, label: 'Admin', path: '/admin' },
   { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: LogOut, label: 'Logout', path: '/logout' },
 ];
 
 export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {

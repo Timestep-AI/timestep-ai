@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AuthProvider } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import Agents from "./pages/Agents";
 import Agent from "./pages/Agent";
 import Chats from "./pages/Chats";
@@ -34,6 +35,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
               <Route path="/agents" element={<AuthGuard><Agents /></AuthGuard>} />
               <Route path="/agents/:id" element={<AuthGuard><Agent /></AuthGuard>} />
               <Route path="/chats" element={<AuthGuard><Chats /></AuthGuard>} />
