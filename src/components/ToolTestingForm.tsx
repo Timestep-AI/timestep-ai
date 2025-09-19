@@ -242,7 +242,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Play className="w-5 h-5" />
-          Test Tool
+          Tool Call
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -282,7 +282,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
               ) : (
                 <>
                   <Play className="w-4 h-4 mr-2" />
-                  Test Tool
+                  Call Tool
                 </>
               )}
             </Button>
