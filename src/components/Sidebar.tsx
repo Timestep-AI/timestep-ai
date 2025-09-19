@@ -81,7 +81,7 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
                       isCollapsed && 'justify-center'
                     )}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <Icon className="w-4 h-4 flex-shrink-0 text-white" />
                     {!isCollapsed && (
                       <span className="font-medium">{label}</span>
                     )}
@@ -114,7 +114,7 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
                     isCollapsed && 'justify-center'
                   )}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <Icon className="w-4 h-4 flex-shrink-0 text-white" />
                   {!isCollapsed && (
                     <span className="font-medium">{label}</span>
                   )}
