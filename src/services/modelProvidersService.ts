@@ -1,5 +1,5 @@
 export interface ModelProvider {
-  id: string;
+  id: string; // UUID in database but string in API
   provider: string;
   base_url: string;
   models_url: string;

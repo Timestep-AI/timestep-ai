@@ -1,5 +1,5 @@
 export interface Agent {
-  id: string;
+  id: string; // UUID in database but string in API
   name: string;
   description?: string;
   instructions?: string;
