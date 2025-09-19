@@ -18,8 +18,8 @@ class AgentsService {
       
       // Map server response to our Agent interface
       const agents: Agent[] = apiAgents.map((apiAgent: any) => {
-        const toolCount = apiAgent.toolIds?.length || 0;
-        const handoffCount = apiAgent.handoffIds?.length || 0;
+        const toolCount = apiAgent.tool_ids?.length || 0;
+        const handoffCount = apiAgent.handoff_ids?.length || 0;
         
         const toolText = toolCount === 1 ? 'tool' : 'tools';
         const handoffText = handoffCount === 1 ? 'handoff' : 'handoffs';
@@ -29,14 +29,14 @@ class AgentsService {
           name: apiAgent.name,
           description: `Agent with ${handoffCount} ${handoffText} and ${toolCount} ${toolText}`,
           instructions: apiAgent.instructions || '',
-          handoffIds: apiAgent.handoffIds || [],
-          handoffDescription: apiAgent.handoffDescription || '',
-          createdAt: new Date().toISOString(),
-          model: apiAgent.model || '',
-          modelSettings: apiAgent.modelSettings || {},
+          handoffIds: apiAgent.handoff_ids || [],
+          handoffDescription: apiAgent.handoff_description || '',
+          createdAt: apiAgent.created_at || new Date().toISOString(),
+          model: apiAgent.model,
+          modelSettings: apiAgent.model_settings || {},
           status: 'active' as const,
-          isHandoff: Boolean(apiAgent.handoffDescription), // Agent is a handoff if it has a handoff description
-          toolIds: apiAgent.toolIds || []
+          isHandoff: Boolean(apiAgent.handoff_description), // Agent is a handoff if it has a handoff description
+          toolIds: apiAgent.tool_ids || []
         };
       });
       
