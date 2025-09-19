@@ -6,7 +6,8 @@ import {
   Wrench, 
   Activity,
   LogOut,
-  Server
+  Server,
+  Settings
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -20,6 +21,7 @@ const navItems = [
   { icon: MessageSquare, label: 'Chats', path: '/chats' },
   { icon: Server, label: 'Model Providers', path: '/model_providers' },
   { icon: Cpu, label: 'Models', path: '/models' },
+  { icon: Settings, label: 'Tool Providers', path: '/tool_providers' },
   { icon: Wrench, label: 'Tools', path: '/tools' },
   { icon: Activity, label: 'Traces', path: '/traces' },
 ];
