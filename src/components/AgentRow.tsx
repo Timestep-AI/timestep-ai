@@ -22,6 +22,9 @@ interface AgentRowProps {
 export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
   const navigate = useNavigate();
 
+  // Debug: log the agent data
+  console.log('AgentRow received agent:', agent.name, 'model:', agent.model);
+
   const statusBadge = agent.isHandoff ? (
     <Badge variant="secondary" className="text-xs flex-shrink-0">
       Handoff
@@ -40,8 +43,9 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
       className="bg-info/10 text-info border-info/20 text-xs cursor-pointer hover:bg-info/20 transition-colors"
       onClick={(e) => {
         e.stopPropagation();
-        // Navigate to model page - we'll use the model name as ID for now
-        navigate(`/models/ollama-gpt-oss-20b`);
+        // Navigate to model page using the actual model
+        const modelId = agent.model?.replace('/', '-') || '';
+        navigate(`/models/${modelId}`);
       }}
     >
       <Cpu className="w-3 h-3 mr-1" />
