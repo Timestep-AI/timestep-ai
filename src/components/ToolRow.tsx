@@ -35,9 +35,6 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
         <Server className="w-3 h-3" />
         {tool.serverName}
       </Badge>
-      <span className="text-xs text-text-tertiary px-2 py-1 bg-background-secondary rounded-full">
-        {tool.category}
-      </span>
     </div>
   );
 
