@@ -65,27 +65,63 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
   };
 
   const parseWeatherAlerts = (text: string) => {
-    const alerts = text.split('---\n').filter(alert => alert.trim());
+    console.log('Parsing text:', text); // Debug log
+    
+    // Split by --- but also handle the case where it might be at the end
+    const alerts = text.split(/---\n?/).filter(alert => alert.trim().length > 0);
+    console.log('Split alerts:', alerts.length); // Debug log
+    
     return alerts.map((alert, index) => {
       const lines = alert.trim().split('\n');
-      const alertData: any = {};
+      const alertData: any = { id: index };
       
-      lines.forEach(line => {
-        if (line.startsWith('Event: ')) alertData.event = line.replace('Event: ', '');
-        if (line.startsWith('Area: ')) alertData.area = line.replace('Area: ', '');
-        if (line.startsWith('Severity: ')) alertData.severity = line.replace('Severity: ', '');
-        if (line.startsWith('Description: ')) {
-          const descIndex = lines.indexOf(line);
-          const instructionsIndex = lines.findIndex(l => l.startsWith('Instructions: '));
-          alertData.description = lines.slice(descIndex + 1, instructionsIndex > -1 ? instructionsIndex : undefined).join('\n');
+      // Parse each line for alert data
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line.startsWith('Event: ')) {
+          alertData.event = line.replace('Event: ', '');
+        } else if (line.startsWith('Area: ')) {
+          alertData.area = line.replace('Area: ', '');
+        } else if (line.startsWith('Severity: ')) {
+          alertData.severity = line.replace('Severity: ', '');
+        } else if (line.startsWith('Description: ')) {
+          // Find the description content - everything after "Description: " until "Instructions:"
+          const descriptionStart = i;
+          let descriptionEnd = lines.length;
+          
+          for (let j = i + 1; j < lines.length; j++) {
+            if (lines[j].startsWith('Instructions: ')) {
+              descriptionEnd = j;
+              break;
+            }
+          }
+          
+          // Combine description lines
+          const descLines = [lines[i].replace('Description: ', '')];
+          for (let j = descriptionStart + 1; j < descriptionEnd; j++) {
+            if (lines[j].trim()) {
+              descLines.push(lines[j]);
+            }
+          }
+          alertData.description = descLines.join('\n').trim();
+          
+        } else if (line.startsWith('Instructions: ')) {
+          // Get all remaining lines as instructions
+          const instructionLines = [line.replace('Instructions: ', '')];
+          for (let j = i + 1; j < lines.length; j++) {
+            if (lines[j].trim()) {
+              instructionLines.push(lines[j]);
+            }
+          }
+          alertData.instructions = instructionLines.join('\n').trim();
+          break; // Instructions are typically at the end
         }
-        if (line.startsWith('Instructions: ')) {
-          alertData.instructions = line.replace('Instructions: ', '');
-        }
-      });
+      }
       
-      return { ...alertData, id: index };
-    });
+      console.log('Parsed alert:', alertData); // Debug log
+      return alertData;
+    }).filter(alert => alert.event); // Only return alerts with an event
   };
 
   const getSeverityIcon = (severity: string) => {
@@ -306,38 +342,54 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
                   <TabsContent value="formatted" className="mt-4">
                     {tool.name === 'get-alerts' ? (
                       <div className="space-y-4">
-                        {parseWeatherAlerts(result).map((alert) => (
-                          <Card key={alert.id} className="border-l-4 border-l-primary">
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                  {getSeverityIcon(alert.severity)}
-                                  {alert.event}
-                                </CardTitle>
-                                <Badge variant={getSeverityColor(alert.severity) as any}>
-                                  {alert.severity}
-                                </Badge>
+                        {(() => {
+                          const alerts = parseWeatherAlerts(result);
+                          console.log('Final parsed alerts:', alerts); // Debug log
+                          
+                          if (alerts.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <p>No weather alerts found or unable to parse the response.</p>
+                                <p className="text-xs mt-2">Check the Raw Response tab to see the full data.</p>
                               </div>
-                              {alert.area && (
-                                <p className="text-sm text-muted-foreground">{alert.area}</p>
-                              )}
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              {alert.description && (
-                                <div>
-                                  <h4 className="font-medium text-sm mb-1">Description</h4>
-                                  <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
+                            );
+                          }
+                          
+                          return alerts.map((alert) => (
+                            <Card key={alert.id} className="border-l-4 border-l-primary">
+                              <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-lg flex items-center gap-2">
+                                    {getSeverityIcon(alert.severity)}
+                                    {alert.event || 'Unknown Event'}
+                                  </CardTitle>
+                                  {alert.severity && (
+                                    <Badge variant={getSeverityColor(alert.severity) as any}>
+                                      {alert.severity}
+                                    </Badge>
+                                  )}
                                 </div>
-                              )}
-                              {alert.instructions && (
-                                <div>
-                                  <h4 className="font-medium text-sm mb-1">Instructions</h4>
-                                  <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
+                                {alert.area && (
+                                  <p className="text-sm text-muted-foreground">{alert.area}</p>
+                                )}
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                {alert.description && (
+                                  <div>
+                                    <h4 className="font-medium text-sm mb-1">Description</h4>
+                                    <p className="text-sm whitespace-pre-wrap">{alert.description}</p>
+                                  </div>
+                                )}
+                                {alert.instructions && (
+                                  <div>
+                                    <h4 className="font-medium text-sm mb-1">Instructions</h4>
+                                    <p className="text-sm whitespace-pre-wrap">{alert.instructions}</p>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ));
+                        })()}
                       </div>
                     ) : (
                       <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
