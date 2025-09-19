@@ -19,6 +19,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
   const [inputs, setInputs] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [rawResponse, setRawResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (key: string, value: any) => {
@@ -32,11 +33,15 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setRawResponse(null);
 
     try {
       const response = await toolsService.callTool(tool.id, inputs);
       
-      // Handle different response formats
+      // Store the raw response for the Raw tab
+      setRawResponse(JSON.stringify(response, null, 2));
+      
+      // Handle different response formats for the Formatted tab
       if (typeof response === 'string') {
         try {
           const parsed = JSON.parse(response);
@@ -296,7 +301,7 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
                   
                   <TabsContent value="raw" className="mt-4">
                     <pre className="whitespace-pre-wrap text-sm bg-background-secondary p-3 rounded border overflow-x-auto">
-                      {result}
+                      {rawResponse || 'No response data'}
                     </pre>
                   </TabsContent>
                 </Tabs>
