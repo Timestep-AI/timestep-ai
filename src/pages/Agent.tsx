@@ -99,6 +99,18 @@ export const Agent = () => {
               </div>
             </div>
           )}
+
+          {/* Handoff Description */}
+          {agent.handoffDescription && (
+            <div className="border-t border-border pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Handoff Description</h3>
+              <div className="bg-surface/50 border border-border rounded-lg p-4">
+                <p className="text-sm text-text-primary leading-relaxed">
+                  {agent.handoffDescription}
+                </p>
+              </div>
+            </div>
+          )}
           
           {/* Additional Details */}
           <div className="border-t border-border pt-6">
