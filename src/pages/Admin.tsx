@@ -3,24 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Users, 
   Database, 
-  Activity, 
-  Shield, 
-  Settings, 
-  BarChart3,
-  AlertTriangle,
   CheckCircle
 } from "lucide-react";
 
 const Admin = () => {
-  const recentActivities = [
-    { action: "User registration", user: "alice@example.com", time: "2 minutes ago", status: "success" },
-    { action: "Model deployment", user: "system", time: "15 minutes ago", status: "success" },
-    { action: "Database backup", user: "system", time: "1 hour ago", status: "success" },
-    { action: "Failed login attempt", user: "unknown@attacker.com", time: "2 hours ago", status: "error" },
-  ];
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -38,81 +25,6 @@ const Admin = () => {
               All Systems Operational
             </Badge>
           </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* System Status */}
-          <Card className="bg-surface border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Activity className="w-5 h-5 mr-2" />
-                System Status
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Current status of core system components
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">API Gateway</span>
-                  <Badge className="bg-success/20 text-success border-success/30">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">Database</span>
-                  <Badge className="bg-success/20 text-success border-success/30">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">Authentication</span>
-                  <Badge className="bg-success/20 text-success border-success/30">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">File Storage</span>
-                  <Badge className="bg-warning/20 text-warning border-warning/30">Degraded</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">Model Inference</span>
-                  <Badge className="bg-success/20 text-success border-success/30">Operational</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="bg-surface border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Latest system events and user actions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3 text-sm">
-                    <div className="flex-shrink-0">
-                      {activity.status === 'success' ? (
-                        <CheckCircle className="w-4 h-4 text-success" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-destructive" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-foreground">{activity.action}</p>
-                      <p className="text-muted-foreground truncate">{activity.user}</p>
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {activity.time}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Model Providers Section */}
