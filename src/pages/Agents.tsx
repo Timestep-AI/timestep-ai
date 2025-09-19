@@ -4,6 +4,8 @@ import { AgentRow } from '@/components/AgentRow';
 import { Plus } from 'lucide-react';
 import { Agent } from '@/types/agent';
 import { agentsService } from '@/services/agentsService';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const Agents = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -50,7 +52,30 @@ export const Agents = () => {
   };
 
   const handleDeleteAgent = async (agent: Agent) => {
-    console.log('Delete not implemented - server does not support agent deletion');
+    try {
+      setOperationLoading(true);
+      
+      const { error } = await supabase
+        .from('agents')
+        .delete()
+        .eq('id', agent.id)
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        console.error('Error deleting agent:', error);
+        toast.error('Failed to delete agent');
+        return;
+      }
+
+      // Remove agent from local state
+      setAgents(prevAgents => prevAgents.filter(a => a.id !== agent.id));
+      toast.success('Agent deleted successfully');
+    } catch (error) {
+      console.error('Error deleting agent:', error);
+      toast.error('Failed to delete agent');
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
   return (
