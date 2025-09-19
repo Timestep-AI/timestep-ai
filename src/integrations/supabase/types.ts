@@ -246,19 +246,34 @@ export type Database = {
           agent_id: string
           context_id: string
           created_at: string | null
+          id: string
           task_histories: Json | null
+          task_states: Json | null
+          tasks: Json | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           agent_id: string
           context_id: string
           created_at?: string | null
+          id?: string
           task_histories?: Json | null
+          task_states?: Json | null
+          tasks?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           agent_id?: string
           context_id?: string
           created_at?: string | null
+          id?: string
           task_histories?: Json | null
+          task_states?: Json | null
+          tasks?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
