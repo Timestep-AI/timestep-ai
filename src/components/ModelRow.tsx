@@ -41,7 +41,7 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
     <CollectionItemRow
       icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
       title={model.id}
-      description={`${model.object} from ${model.owned_by}`}
+      description=""
       statusBadge={null}
       metadata={metadata}
       rightContent={rightContent}
