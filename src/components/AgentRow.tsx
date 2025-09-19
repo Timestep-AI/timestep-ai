@@ -35,7 +35,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
     }
   ];
 
-  const rightContent = agent.model ? (
+  const rightContent = agent.model && agent.model.trim() ? (
     <Badge 
       className="bg-info/10 text-info border-info/20 text-xs cursor-pointer hover:bg-info/20 transition-colors"
       onClick={(e) => {
