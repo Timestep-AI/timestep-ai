@@ -5,13 +5,20 @@ import { MCPServer } from '@/types/mcpServer';
 import { mcpServersService } from '@/services/mcpServersService';
 import { ModelProviderRow } from '@/components/ModelProviderRow';
 import { MCPServerRow } from '@/components/MCPServerRow';
+import { EditModelProviderDialog } from '@/components/EditModelProviderDialog';
+import { EditMCPServerDialog } from '@/components/EditMCPServerDialog';
 import { Separator } from '@/components/ui/separator';
 import { Server, Bot } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Settings = () => {
   const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingProvider, setEditingProvider] = useState<ModelProvider | null>(null);
+  const [editingServer, setEditingServer] = useState<MCPServer | null>(null);
+  const [providerDialogOpen, setProviderDialogOpen] = useState(false);
+  const [serverDialogOpen, setServerDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,6 +39,44 @@ const Settings = () => {
 
     fetchData();
   }, []);
+
+  const handleUpdateProvider = async (id: string, updates: Partial<ModelProvider>) => {
+    try {
+      const updatedProvider = await modelProvidersService.update(id, updates);
+      if (updatedProvider) {
+        setModelProviders(providers => 
+          providers.map(p => p.id === id ? updatedProvider : p)
+        );
+      }
+    } catch (error) {
+      console.error('Error updating model provider:', error);
+      throw error;
+    }
+  };
+
+  const handleUpdateServer = async (id: string, updates: Partial<MCPServer>) => {
+    try {
+      const updatedServer = await mcpServersService.update(id, updates);
+      if (updatedServer) {
+        setMcpServers(servers => 
+          servers.map(s => s.id === id ? updatedServer : s)
+        );
+      }
+    } catch (error) {
+      console.error('Error updating MCP server:', error);
+      throw error;
+    }
+  };
+
+  const handleEditProvider = (provider: ModelProvider) => {
+    setEditingProvider(provider);
+    setProviderDialogOpen(true);
+  };
+
+  const handleEditServer = (server: MCPServer) => {
+    setEditingServer(server);
+    setServerDialogOpen(true);
+  };
 
   return (
     <Layout>
@@ -58,7 +103,11 @@ const Settings = () => {
               <div className="space-y-2">
                 {modelProviders.length > 0 ? (
                   modelProviders.map((provider) => (
-                    <ModelProviderRow key={provider.id} provider={provider} />
+                    <ModelProviderRow 
+                      key={provider.id} 
+                      provider={provider} 
+                      onEdit={handleEditProvider}
+                    />
                   ))
                 ) : (
                   <p className="text-text-tertiary text-sm py-4">No model providers configured</p>
@@ -77,7 +126,11 @@ const Settings = () => {
               <div className="space-y-2">
                 {mcpServers.length > 0 ? (
                   mcpServers.map((server) => (
-                    <MCPServerRow key={server.id} server={server} />
+                    <MCPServerRow 
+                      key={server.id} 
+                      server={server} 
+                      onEdit={handleEditServer}
+                    />
                   ))
                 ) : (
                   <p className="text-text-tertiary text-sm py-4">No MCP servers configured</p>
@@ -87,6 +140,20 @@ const Settings = () => {
           </div>
         )}
       </div>
+
+      <EditModelProviderDialog
+        provider={editingProvider}
+        open={providerDialogOpen}
+        onOpenChange={setProviderDialogOpen}
+        onSave={handleUpdateProvider}
+      />
+
+      <EditMCPServerDialog
+        server={editingServer}
+        open={serverDialogOpen}
+        onOpenChange={setServerDialogOpen}
+        onSave={handleUpdateServer}
+      />
     </Layout>
   );
 };

@@ -64,14 +64,22 @@ class ModelProvidersService {
     }
   }
 
-  async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at'>>): Promise<ModelProvider | null> {
+  async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>>): Promise<ModelProvider | null> {
     try {
+      // Map camelCase to expected API format
+      const payload = {
+        provider: updates.provider,
+        baseUrl: updates.base_url,
+        modelsUrl: updates.models_url,
+        apiKey: updates.api_key,
+      };
+      
       const response = await fetch(`${SERVER_BASE_URL}/model_providers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(payload),
       });
       
       if (response.status === 404) {

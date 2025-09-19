@@ -9,10 +9,11 @@ import {
 
 interface MCPServerRowProps {
   server: MCPServer;
+  onEdit?: (server: MCPServer) => void;
   onDelete?: (serverId: string) => void;
 }
 
-export const MCPServerRow = ({ server, onDelete }: MCPServerRowProps) => {
+export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) => {
   const navigate = useNavigate();
 
   const getStatusBadge = (enabled: boolean) => {
@@ -45,7 +46,8 @@ export const MCPServerRow = ({ server, onDelete }: MCPServerRowProps) => {
     {
       label: 'View Details',
       onClick: () => navigate(`/settings/mcp_servers/${server.id}`)
-    }
+    },
+    ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(server) }] : [])
   ];
 
   if (onDelete) {

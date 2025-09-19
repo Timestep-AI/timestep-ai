@@ -4,4 +4,5 @@ export interface MCPServer {
   description: string;
   serverUrl: string;
   enabled: boolean;
+  authToken?: string;
 }

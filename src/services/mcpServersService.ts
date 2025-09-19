@@ -56,14 +56,23 @@ class MCPServersService {
     }
   }
 
-  async update(id: string, updates: Partial<Omit<MCPServer, 'id' | 'createdAt'>>): Promise<MCPServer | null> {
+  async update(id: string, updates: Partial<MCPServer>): Promise<MCPServer | null> {
     try {
+      // Map the updates to the expected API format
+      const payload = {
+        name: updates.name,
+        description: updates.description,
+        serverUrl: updates.serverUrl,
+        enabled: updates.enabled,
+        authToken: updates.authToken,
+      };
+      
       const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(payload),
       });
       
       if (response.status === 404) {
