@@ -29,7 +29,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
 
   return (
     <div 
-      className="border border-muted-foreground/30 rounded-xl p-4 hover:border-muted-foreground/50 transition-all duration-200 cursor-pointer bg-card"
+      className="border border-muted-foreground/80 rounded-xl p-4 hover:border-muted-foreground transition-all duration-200 cursor-pointer bg-card"
       onClick={() => navigate(`/agents/${agent.id}`)}
     >
       <div className="flex items-start space-x-3">
