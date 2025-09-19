@@ -4,8 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { 
   Wrench, 
-  Server,
-  Activity
+  Server
 } from 'lucide-react';
 
 interface ToolRowProps {
@@ -32,10 +31,6 @@ export const ToolRow = ({ tool, onEdit, onDelete }: ToolRowProps) => {
     {
       icon: <Server className="w-3 h-3" />,
       text: tool.serverName
-    },
-    {
-      icon: <Activity className="w-3 h-3" />,
-      text: `ID: ${tool.serverId}`
     }
   ];
 
