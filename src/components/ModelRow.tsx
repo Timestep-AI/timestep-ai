@@ -38,14 +38,14 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
       icon: <Calendar className="w-3 h-3 flex-shrink-0" />,
       text: `Updated: ${new Date(model.updatedAt).toLocaleDateString()}`
     },
-    {
+    ...(model.contextLength ? [{
       icon: <Zap className="w-3 h-3 flex-shrink-0" />,
       text: `${model.contextLength.toLocaleString()} tokens`
-    },
-    {
+    }] : []),
+    ...(model.inputPrice != null && model.outputPrice != null ? [{
       icon: <DollarSign className="w-3 h-3 flex-shrink-0" />,
       text: `${formatPrice(model.inputPrice)}/${formatPrice(model.outputPrice)} per 1M tokens`
-    }
+    }] : [])
   ];
 
   const rightContent = (

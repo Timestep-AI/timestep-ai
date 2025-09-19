@@ -99,46 +99,54 @@ export const Model = () => {
           <div className="border-t border-border pt-6 mb-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Specifications</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-3">
-                <Zap className="w-5 h-5 text-info" />
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">Context Length</label>
-                  <p className="text-text-primary">{model.contextLength.toLocaleString()} tokens</p>
+              {model.contextLength && (
+                <div className="flex items-center space-x-3">
+                  <Zap className="w-5 h-5 text-info" />
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary">Context Length</label>
+                    <p className="text-text-primary">{model.contextLength.toLocaleString()} tokens</p>
+                  </div>
                 </div>
-              </div>
+              )}
               
-              <div className="flex items-center space-x-3">
-                <DollarSign className="w-5 h-5 text-success" />
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">Input Price</label>
-                  <p className="text-text-primary">{formatPrice(model.inputPrice)} / 1M tokens</p>
+              {model.inputPrice != null && (
+                <div className="flex items-center space-x-3">
+                  <DollarSign className="w-5 h-5 text-success" />
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary">Input Price</label>
+                    <p className="text-text-primary">{formatPrice(model.inputPrice)} / 1M tokens</p>
+                  </div>
                 </div>
-              </div>
+              )}
               
-              <div className="flex items-center space-x-3">
-                <DollarSign className="w-5 h-5 text-warning" />
-                <div>
-                  <label className="text-sm font-medium text-text-secondary">Output Price</label>
-                  <p className="text-text-primary">{formatPrice(model.outputPrice)} / 1M tokens</p>
+              {model.outputPrice != null && (
+                <div className="flex items-center space-x-3">
+                  <DollarSign className="w-5 h-5 text-warning" />
+                  <div>
+                    <label className="text-sm font-medium text-text-secondary">Output Price</label>
+                    <p className="text-text-primary">{formatPrice(model.outputPrice)} / 1M tokens</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Capabilities */}
-          <div className="border-t border-border pt-6 mb-6">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">Capabilities</h3>
-            <div className="flex flex-wrap gap-2">
-              {model.capabilities.map((capability) => (
-                <Badge 
-                  key={capability} 
-                  className="bg-info/10 text-info border-info/20"
-                >
-                  {capability}
-                </Badge>
-              ))}
+          {model.capabilities && model.capabilities.length > 0 && (
+            <div className="border-t border-border pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Capabilities</h3>
+              <div className="flex flex-wrap gap-2">
+                {model.capabilities.map((capability) => (
+                  <Badge 
+                    key={capability} 
+                    className="bg-info/10 text-info border-info/20"
+                  >
+                    {capability}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           
           {/* Additional Details */}
           <div className="border-t border-border pt-6">
