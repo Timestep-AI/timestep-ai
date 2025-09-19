@@ -22,7 +22,8 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
 
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
-      <Badge variant="outline" className="text-xs">
+      <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs flex items-center gap-1">
+        <Cpu className="w-3 h-3" />
         {model.owned_by}
       </Badge>
       <span className="text-xs text-text-tertiary">
@@ -41,7 +42,7 @@ export const ModelRow = ({ model, onEdit, onDelete }: ModelRowProps) => {
 
   return (
     <CollectionItemRow
-      icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />}
+      icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
       title={model.id}
       description={`${model.object} from ${model.owned_by}`}
       statusBadge={null}

@@ -51,7 +51,7 @@ export const CollectionItemRow = ({
 
   return (
     <div 
-      className="bg-surface border border-border rounded-lg p-4 hover:bg-surface/80 transition-all duration-200 cursor-pointer"
+      className="border border-muted-foreground/80 rounded-xl p-4 hover:border-muted-foreground transition-all duration-200 cursor-pointer bg-card"
       onClick={handleRowClick}
     >
       <div className="flex items-start space-x-3">

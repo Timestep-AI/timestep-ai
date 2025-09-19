@@ -31,17 +31,17 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
   const getTypeIcon = () => {
     switch (message.type) {
       case 'user':
-        return <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
       case 'assistant':
-        return <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
       case 'system':
-        return <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
       case 'tool_call':
-        return <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
       case 'tool_response':
-        return <Code className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <Code className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
       default:
-        return <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />;
+        return <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-white" />;
     }
   };
 
@@ -126,7 +126,7 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
 
   return (
     <div 
-      className="bg-card border border-border rounded-xl p-3 sm:p-4 hover:bg-surface-elevated transition-all duration-200 group cursor-pointer"
+      className="bg-card border border-muted-foreground/80 rounded-xl p-3 sm:p-4 hover:border-muted-foreground transition-all duration-200 group cursor-pointer"
       onClick={handleRowClick}
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">

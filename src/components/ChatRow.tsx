@@ -63,7 +63,7 @@ export const ChatRow = ({ chat, onEdit, onDelete }: ChatRowProps) => {
 
   return (
     <CollectionItemRow
-      icon={<MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />}
+      icon={<MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
       title={chat.title}
       description={chat.lastMessage}
       statusBadge={getStatusBadge()}
