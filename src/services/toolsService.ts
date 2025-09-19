@@ -137,7 +137,7 @@ export const toolsService = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ args }),
+        body: JSON.stringify({ arguments: args }),
       });
       
       if (!response.ok) {
