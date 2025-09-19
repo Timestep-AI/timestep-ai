@@ -563,19 +563,20 @@ Deno.serve({port}, async (request: Request) => {
 	// Generate base URL for MCP servers from the current request
 	const baseUrl = `${url.protocol}//${url.host}/${functionName}`;
 
-	// Get authenticated user (Supabase handles JWT verification automatically)
+	// Derive user from Authorization header (Bearer JWT)
+	const authHeader = request.headers.get('Authorization') || '';
+	const jwt = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
 	let userId: string | null = null;
-	try {
-		const authHeader = request.headers.get('Authorization');
-		if (authHeader) {
+	if (jwt) {
+		try {
 			const {
 				data: {user},
 				error,
-			} = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+			} = await supabase.auth.getUser(jwt);
 			if (!error && user) userId = user.id as string;
+		} catch (_e) {
+			// ignore; userId stays null
 		}
-	} catch (_e) {
-		// ignore; userId stays null for anonymous requests
 	}
 
 	// Create repositories and executor per request so user scoping is correct
