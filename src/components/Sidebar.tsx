@@ -49,7 +49,7 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
       )}
       
       <div className={cn(
-        "bg-background border-r border-border transition-all duration-300 fixed left-0 top-0 h-full z-50",
+        "bg-background border-r border-muted-foreground/30 transition-all duration-300 fixed left-0 top-0 h-full z-50",
         // On mobile: show/hide based on collapsed state, on desktop: always show with width changes
         isCollapsed 
           ? "w-16 hidden md:block" 
@@ -93,7 +93,7 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
         </nav>
 
         {/* Account Section */}
-        <div className="p-4 border-t border-border pb-20">
+        <div className="p-4 border-t border-muted-foreground/30 pb-20">
           {!isCollapsed && (
             <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
               ACCOUNT

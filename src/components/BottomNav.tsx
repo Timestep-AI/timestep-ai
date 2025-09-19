@@ -27,7 +27,7 @@ export const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 h-16">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-muted-foreground/30 z-50 h-16">
       <div className="flex items-center justify-around h-full py-2">
         {navItems.map(({ icon: Icon, label, path }) => (
           <Link
