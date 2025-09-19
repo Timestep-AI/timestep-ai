@@ -5,8 +5,7 @@ import {
   Cpu, 
   Wrench, 
   Activity,
-  LogOut,
-  Shield
+  LogOut
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -24,7 +23,6 @@ const navItems = [
 ];
 
 const accountItems = [
-  { icon: Shield, label: 'Admin', path: '/admin' },
   { icon: LogOut, label: 'Logout', path: '/logout' },
 ];
 
