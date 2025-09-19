@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Tool } from '@/types/tool';
 import { toolsService } from '@/services/toolsService';
 import { ItemPage } from '@/components/ItemPage';
+import { ToolTestingForm } from '@/components/ToolTestingForm';
 import { Badge } from '@/components/ui/badge';
 import { 
   Wrench, 
@@ -107,6 +108,11 @@ export const ToolPage = () => {
                 <p className="text-text-primary capitalize">{tool.status}</p>
               </div>
             </div>
+          </div>
+
+          {/* Tool Testing */}
+          <div className="border-t border-border pt-6 mt-6">
+            <ToolTestingForm tool={tool} />
           </div>
 
           {/* Input Schema */}
