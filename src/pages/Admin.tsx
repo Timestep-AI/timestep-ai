@@ -14,11 +14,6 @@ import {
 } from "lucide-react";
 
 const Admin = () => {
-  const systemStats = [
-    { label: "API Requests", value: "8.4K", change: "+8%", icon: Activity },
-    { label: "System Health", value: "98.5%", change: "+0.1%", icon: Shield },
-  ];
-
   const recentActivities = [
     { action: "User registration", user: "alice@example.com", time: "2 minutes ago", status: "success" },
     { action: "Model deployment", user: "system", time: "15 minutes ago", status: "success" },
@@ -43,27 +38,6 @@ const Admin = () => {
               All Systems Operational
             </Badge>
           </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {systemStats.map((stat, index) => (
-            <Card key={index} className="bg-surface border-border">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  {stat.label}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
-                <p className="text-xs text-success flex items-center">
-                  <span className="mr-1">↗</span>
-                  {stat.change} from last hour
-                </p>
-              </CardContent>
-            </Card>
-          ))}
         </div>
 
         {/* Main Content Grid */}
