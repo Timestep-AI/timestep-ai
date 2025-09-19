@@ -29,7 +29,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
 
   return (
     <div 
-      className="bg-surface border border-border rounded-lg p-4 hover:bg-surface/80 transition-all duration-200 cursor-pointer"
+      className="bg-surface border border-border rounded-xl p-4 hover:bg-surface/80 transition-all duration-200 cursor-pointer"
       onClick={() => navigate(`/agents/${agent.id}`)}
     >
       <div className="flex items-start space-x-3">
@@ -42,7 +42,7 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-1">
+          <div className="flex items-start justify-between mb-2">
             <div className="flex items-center space-x-2">
               <h3 className="font-semibold text-foreground text-base">
                 {agent.name}
@@ -63,12 +63,8 @@ export const AgentRow = ({ agent, onEdit, onDelete }: AgentRowProps) => {
             ) : null}
           </div>
           
-          <p className="text-sm text-muted-foreground mb-1">
-            {agent.isHandoff ? 'Handoff' : 'AI Agent'}
-          </p>
-          
           {agent.description && (
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-3">
               {agent.description}
             </p>
           )}
