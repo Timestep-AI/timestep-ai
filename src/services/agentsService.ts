@@ -17,19 +17,27 @@ class AgentsService {
       }
       
       // Map server response to our Agent interface
-      const agents: Agent[] = apiAgents.map((apiAgent: any) => ({
-        id: apiAgent.id,
-        name: apiAgent.name,
-        description: `Agent with ${apiAgent.toolIds?.length || 0} tools`,
-        instructions: apiAgent.instructions || '',
-        handoffIds: apiAgent.handoffIds || [],
-        handoffDescription: apiAgent.handoffDescription || '',
-        createdAt: new Date().toISOString(),
-        model: apiAgent.model || '',
-        modelSettings: apiAgent.modelSettings || {},
-        status: 'active' as const,
-        isHandoff: false
-      }));
+      const agents: Agent[] = apiAgents.map((apiAgent: any) => {
+        const toolCount = apiAgent.toolIds?.length || 0;
+        const handoffCount = apiAgent.handoffIds?.length || 0;
+        
+        const toolText = toolCount === 1 ? 'tool' : 'tools';
+        const handoffText = handoffCount === 1 ? 'handoff' : 'handoffs';
+        
+        return {
+          id: apiAgent.id,
+          name: apiAgent.name,
+          description: `Agent with ${handoffCount} ${handoffText} and ${toolCount} ${toolText}`,
+          instructions: apiAgent.instructions || '',
+          handoffIds: apiAgent.handoffIds || [],
+          handoffDescription: apiAgent.handoffDescription || '',
+          createdAt: new Date().toISOString(),
+          model: apiAgent.model || '',
+          modelSettings: apiAgent.modelSettings || {},
+          status: 'active' as const,
+          isHandoff: false
+        };
+      });
       
       return agents;
     } catch (error) {
