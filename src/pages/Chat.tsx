@@ -110,6 +110,7 @@ export const Chat = () => {
 
       // Send to A2A agent
       const a2aMessage = a2aClient.convertToA2AMessage(userMessage);
+      a2aMessage.contextId = id; // Use the chat ID as context ID
       const messageParams = { message: a2aMessage };
 
       toast.info(`Sending message to ${agent?.name || 'agent'}...`);

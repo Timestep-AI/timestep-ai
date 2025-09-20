@@ -1,6 +1,7 @@
 import { MessageSendParams, A2AEvent, AgentCard, A2AMessage, Task, TaskStatusUpdateEvent, TextPart } from '@/types/a2a';
 import { Message } from '@/types/message';
 import { Agent } from '@/types/agent';
+import { supabase } from '@/integrations/supabase/client';
 
 export class A2AClient {
   private serverUrl: string;
@@ -12,108 +13,190 @@ export class A2AClient {
   }
 
   createClientForAgent(agent: Agent): A2AClient {
-    // Create a new client instance for the specific agent
-    // In a real implementation, this might use agent-specific endpoints or configuration
-    const agentServerUrl = this.getAgentServerUrl(agent);
+    // Create a new client instance for the specific agent using the edge function
+    const agentServerUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}`;
     return new A2AClient(agentServerUrl, agent);
   }
 
   private getAgentServerUrl(agent: Agent): string {
-    // In a real implementation, this would return the agent's specific server URL
-    // For now, we'll use the same base URL but could be extended to support per-agent endpoints
-    return this.serverUrl;
+    return `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}`;
   }
 
-  async getAgentCard(): Promise<AgentCard> {
-    // Stub implementation - in a real implementation this would fetch from the server
-    const agentName = this.agent?.name || 'Demo Agent';
+  private async getAuthHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
     return {
-      name: agentName,
-      description: this.agent?.description || 'A demonstration agent for testing A2A protocol',
-      version: '1.0.0',
-      url: this.serverUrl,
-      capabilities: {
-        streaming: true,
-        pushNotifications: false,
-        stateTransitionHistory: false
-      },
-      inputModes: ['text/plain'],
-      outputModes: ['text/plain']
+      'Content-Type': 'application/json',
+      ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
     };
   }
 
+  async getAgentCard(): Promise<AgentCard> {
+    if (!this.agent) {
+      throw new Error('No agent specified for this client');
+    }
+
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.serverUrl}/card`, { 
+        headers 
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get agent card: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting agent card:', error);
+      // Fallback to basic card
+      return {
+        name: this.agent.name,
+        description: this.agent.description || 'AI Agent',
+        version: '1.0.0',
+        url: this.serverUrl,
+        capabilities: {
+          streaming: true,
+          pushNotifications: false,
+          stateTransitionHistory: false
+        },
+        inputModes: ['text/plain'],
+        outputModes: ['text/plain']
+      };
+    }
+  }
+
   async *sendMessageStream(params: MessageSendParams): AsyncGenerator<A2AEvent> {
-    // Stub implementation - simulate streaming response
-    const agentName = this.agent?.name || 'Demo Agent';
-    console.log(`A2A Client: Sending message to ${agentName} via message/stream`, params);
+    if (!this.agent) {
+      throw new Error('No agent specified for this client');
+    }
 
-    // Simulate task creation
-    const taskId = crypto.randomUUID();
-    const contextId = crypto.randomUUID();
+    console.log(`A2A Client: Sending message to ${this.agent.name} via ${this.serverUrl}`, params);
 
-    // Yield initial task object
-    yield {
-      kind: 'task',
-      id: taskId,
-      contextId,
-      status: {
-        state: 'submitted',
-        timestamp: new Date().toISOString()
-      },
-      artifacts: [],
-      history: [params.message],
-      metadata: {}
-    } as Task;
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      // Prepare the request body for the agent
+      const requestBody = {
+        message: params.message,
+        contextId: params.message.contextId || crypto.randomUUID(),
+        stream: true
+      };
 
-    // Yield status update - working
-    yield {
-      kind: 'status-update',
-      taskId,
-      contextId,
-      status: { 
-        state: 'working',
-        timestamp: new Date().toISOString()
-      },
-      final: false
-    } as TaskStatusUpdateEvent;
+      const response = await fetch(`${this.serverUrl}/message/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody)
+      });
 
-    // Simulate some processing time
-    await this.delay(1000);
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.statusText}`);
+      }
 
-    // Yield a response message
-    const responseText = this.agent 
-      ? `Hello! I'm ${this.agent.name}. I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`
-      : `I received your message: "${params.message.parts.find(p => p.kind === 'text')?.text}". This is a stub response from the A2A client.`;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
 
-    yield {
-      messageId: crypto.randomUUID(),
-      kind: 'message',
-      role: 'agent',
-      parts: [{
-        kind: 'text',
-        text: responseText
-      }],
-      taskId,
-      contextId
-    } as A2AMessage;
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-    // Yield final status - completed
-    yield {
-      kind: 'status-update',
-      taskId,
-      contextId,
-      status: { 
-        state: 'completed',
-        timestamp: new Date().toISOString()
-      },
-      final: true
-    } as TaskStatusUpdateEvent;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            
+            try {
+              // Parse server-sent events
+              if (line.startsWith('data: ')) {
+                const data = JSON.parse(line.slice(6));
+                yield data as A2AEvent;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse line:', line, parseError);
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+    } catch (error) {
+      console.error('Error in sendMessageStream:', error);
+      
+      // Fallback to simulated response if edge function fails
+      const taskId = crypto.randomUUID();
+      const contextId = params.message.contextId || crypto.randomUUID();
+
+      // Yield initial task object
+      yield {
+        kind: 'task',
+        id: taskId,
+        contextId,
+        status: {
+          state: 'submitted',
+          timestamp: new Date().toISOString()
+        },
+        artifacts: [],
+        history: [params.message],
+        metadata: {}
+      } as Task;
+
+      // Yield status update - working
+      yield {
+        kind: 'status-update',
+        taskId,
+        contextId,
+        status: { 
+          state: 'working',
+          timestamp: new Date().toISOString()
+        },
+        final: false
+      } as TaskStatusUpdateEvent;
+
+      // Simulate some processing time
+      await this.delay(1000);
+
+      // Yield a response message
+      const textPart = params.message.parts.find(p => p.kind === 'text') as TextPart;
+      const responseText = `Hello! I'm ${this.agent.name}. I received your message: "${textPart?.text}". Note: This is a fallback response as the edge function is not responding properly.`;
+
+      yield {
+        messageId: crypto.randomUUID(),
+        kind: 'message',
+        role: 'agent',
+        parts: [{
+          kind: 'text',
+          text: responseText
+        }],
+        taskId,
+        contextId
+      } as A2AMessage;
+
+      // Yield final status - completed
+      yield {
+        kind: 'status-update',
+        taskId,
+        contextId,
+        status: { 
+          state: 'completed',
+          timestamp: new Date().toISOString()
+        },
+        final: true
+      } as TaskStatusUpdateEvent;
+    }
   }
 
   // Convert our internal Message format to A2A Message format
   convertToA2AMessage(message: Partial<Message>): A2AMessage {
     return {
-      messageId: crypto.randomUUID(),
+      messageId: message.id || crypto.randomUUID(),
       kind: 'message',
       role: message.type === 'user' ? 'user' : 'agent',
       parts: [{
@@ -142,5 +225,5 @@ export class A2AClient {
   }
 }
 
-// Export a singleton instance
-export const a2aClient = new A2AClient('http://localhost:41241');
+// Export a singleton instance with the edge function URL
+export const a2aClient = new A2AClient('https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server');
