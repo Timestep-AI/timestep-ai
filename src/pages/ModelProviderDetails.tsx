@@ -7,7 +7,10 @@ import { modelProvidersService } from '@/services/modelProvidersService';
 import { Model } from '@/types/model';
 import { ModelProvider } from '@/services/modelProvidersService';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, Building2, Globe, CheckCircle, XCircle, Calendar, Cpu, Link } from 'lucide-react';
 
 const ModelProviderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,10 +25,9 @@ const ModelProviderDetails = () => {
       
       setLoading(true);
       try {
-        // Fetch all providers and find the one with matching ID
-        const allProviders = await modelProvidersService.getAll();
-        const providerData = allProviders.find(p => p.id === id);
-        setProvider(providerData || null);
+        // Fetch provider by ID using the service method
+        const providerData = await modelProvidersService.getById(id);
+        setProvider(providerData);
 
         // Fetch all models and filter by provider
         if (providerData) {
@@ -57,14 +59,13 @@ const ModelProviderDetails = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-64 w-full" />
           </div>
         </div>
       </Layout>
@@ -74,21 +75,39 @@ const ModelProviderDetails = () => {
   if (!provider) {
     return (
       <Layout>
-        <div className="p-6">
-          <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-text-primary mb-2">Provider not found</h3>
-            <p className="text-text-secondary">The requested model provider could not be found.</p>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/model_providers')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Model Providers
+            </Button>
           </div>
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Building2 className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Provider not found</h3>
+                <p className="text-text-tertiary">The requested model provider could not be found.</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
   }
 
+  const isConfigured = !!provider.api_key;
+
   return (
     <Layout>
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-6">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="sm"
@@ -100,43 +119,118 @@ const ModelProviderDetails = () => {
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Building2 className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">{provider.provider}</h1>
-            <p className="text-text-secondary">{provider.base_url}</p>
-          </div>
-        </div>
+        {/* Provider Details */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Building2 className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">{provider.provider}</CardTitle>
+                  <CardDescription className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4" />
+                    <span>{provider.base_url}</span>
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge 
+                variant={isConfigured ? 'default' : 'secondary'}
+                className="flex items-center space-x-1"
+              >
+                {isConfigured ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : (
+                  <XCircle className="w-3 h-3" />
+                )}
+                <span>{isConfigured ? 'Active' : 'Inactive'}</span>
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Status
+                </h4>
+                <p className="text-sm">
+                  {isConfigured ? 'API Key Configured' : 'API Key Not Configured'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Models URL
+                </h4>
+                <p className="text-sm flex items-center gap-1">
+                  <Link className="w-3 h-3" />
+                  {provider.models_url || 'Not configured'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Created
+                </h4>
+                <p className="text-sm flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(provider.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Last Updated
+                </h4>
+                <p className="text-sm flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(provider.updated_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {provider.description && (
+              <div className="mt-4 pt-4 border-t">
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Description
+                </h4>
+                <p className="text-sm">{provider.description}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-text-primary mb-2">
-            Models ({models.length})
-          </h2>
-          <p className="text-text-secondary text-sm">
-            All models provided by {provider.provider}
-          </p>
-        </div>
-
-        {models.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-text-primary mb-2">No models found</h3>
-            <p className="text-text-secondary">This provider doesn't have any models available yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {models.map((model) => (
-              <ModelRow
-                key={model.id}
-                model={model}
-                onEdit={handleEditModel}
-                onDelete={handleDeleteModel}
-              />
-            ))}
-          </div>
-        )}
+        {/* Associated Models */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Cpu className="w-5 h-5 mr-2" />
+              Associated Models ({models.length})
+            </CardTitle>
+            <CardDescription>
+              Models provided by {provider.provider}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {models.length === 0 ? (
+              <div className="text-center py-8">
+                <Cpu className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
+                <p className="text-text-tertiary">No models found for this provider</p>
+                <p className="text-sm text-text-tertiary mt-1">
+                  Models will appear here once they're discovered from the provider
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {models.map((model) => (
+                  <ModelRow
+                    key={model.id}
+                    model={model}
+                    onEdit={handleEditModel}
+                    onDelete={handleDeleteModel}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
