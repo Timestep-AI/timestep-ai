@@ -62,6 +62,8 @@ class MCPServersService {
         authToken: updates.authToken,
       };
       
+      console.log('MCPServersService: Updating server with payload:', payload);
+      
       const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
         method: 'PUT',
@@ -69,15 +71,20 @@ class MCPServersService {
         body: JSON.stringify(payload),
       });
       
+      console.log('MCPServersService: Update response status:', response.status);
+      
       if (response.status === 404) {
         return null;
       }
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('MCPServersService: Update failed with response:', errorText);
         throw new Error(`Failed to update MCP server: ${response.statusText}`);
       }
       
       const server = await response.json();
+      console.log('MCPServersService: Update successful, received server:', server);
       return server;
     } catch (error) {
       console.error('Error updating MCP server:', error);

@@ -51,9 +51,16 @@ const MCPServerDetails = () => {
   };
 
   const handleSaveServer = async (id: string, updates: Partial<MCPServer>) => {
-    const updatedServer = await mcpServersService.update(id, updates);
-    if (updatedServer) {
-      setServer(updatedServer);
+    try {
+      console.log('MCPServerDetails: Attempting to save server updates:', updates);
+      const updatedServer = await mcpServersService.update(id, updates);
+      if (updatedServer) {
+        console.log('MCPServerDetails: Server updated successfully:', updatedServer);
+        setServer(updatedServer);
+        setShowEditDialog(false);
+      }
+    } catch (error) {
+      console.error('MCPServerDetails: Failed to save server:', error);
     }
   };
 
