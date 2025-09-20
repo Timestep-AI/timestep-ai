@@ -67,7 +67,37 @@ export const CollectionItemRow = ({
               </h3>
               {statusBadge}
             </div>
-            {rightContent}
+            <div className="flex items-center space-x-2">
+              {rightContent}
+              {dropdownItems && dropdownItems.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild data-dropdown-trigger>
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {dropdownItems.map((item, index) => (
+                      <DropdownMenuItem
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          item.onClick();
+                        }}
+                        className={item.destructive ? "text-destructive" : ""}
+                      >
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
           
           {description && (
