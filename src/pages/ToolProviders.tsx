@@ -4,10 +4,24 @@ import { MCPServerRow } from '@/components/MCPServerRow';
 import { Settings } from 'lucide-react';
 import { MCPServer } from '@/types/mcpServer';
 import { mcpServersService } from '@/services/mcpServersService';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const ToolProviders = () => {
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [operationLoading, setOperationLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serverToDelete, setServerToDelete] = useState<MCPServer | null>(null);
 
   useEffect(() => {
     const loadToolProviders = async () => {
@@ -30,33 +44,77 @@ export const ToolProviders = () => {
   };
 
   const handleDelete = async (serverId: string) => {
+    const server = servers.find(s => s.id === serverId);
+    if (server) {
+      setServerToDelete(server);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!serverToDelete) return;
+    
     try {
-      await mcpServersService.delete(serverId);
-      const updatedServers = await mcpServersService.getAll();
-      setServers(updatedServers);
+      setOperationLoading(true);
+      
+      const success = await mcpServersService.delete(serverToDelete.id);
+      if (success) {
+        setServers(prevServers => prevServers.filter(s => s.id !== serverToDelete.id));
+        toast.success('Tool provider deleted successfully');
+      } else {
+        toast.error('Tool provider not found');
+      }
     } catch (error) {
       console.error('Error deleting tool provider:', error);
+      toast.error('Failed to delete tool provider');
+    } finally {
+      setOperationLoading(false);
+      setDeleteDialogOpen(false);
+      setServerToDelete(null);
     }
   };
 
   return (
-    <CollectionPage
-      title="Tool Providers"
-      items={servers}
-      loading={loading}
-      emptyIcon={<Settings className="text-4xl text-text-tertiary" />}
-      emptyTitle="No tool providers found"
-      emptyDescription="Get started by configuring your first tool provider."
-      searchPlaceholder="Search tool providers..."
-      renderItem={(server) => (
-        <MCPServerRow
-          key={server.id}
-          server={server}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
-    />
+    <>
+      <CollectionPage
+        title="Tool Providers"
+        items={servers}
+        loading={loading}
+        operationLoading={operationLoading}
+        emptyIcon={<Settings className="text-4xl text-text-tertiary" />}
+        emptyTitle="No tool providers found"
+        emptyDescription="Get started by configuring your first tool provider."
+        searchPlaceholder="Search tool providers..."
+        renderItem={(server) => (
+          <MCPServerRow
+            key={server.id}
+            server={server}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        )}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tool Provider</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{serverToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
