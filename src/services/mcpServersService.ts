@@ -86,8 +86,26 @@ class MCPServersService {
   }
 
   async delete(id: string): Promise<boolean> {
-    // Note: Server doesn't support MCP server deletion yet
-    throw new Error('MCP server deletion not implemented in server');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      
+      if (response.status === 404) {
+        return false;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete MCP server: ${response.statusText}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting MCP server:', error);
+      throw error;
+    }
   }
 
   async deleteAll(): Promise<void> {
