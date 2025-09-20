@@ -50,6 +50,7 @@ class ModelProvidersService {
         throw new Error(`Failed to fetch model provider: ${response.statusText}`);
       }
       const provider = await response.json();
+      console.log('Raw provider response:', provider);
       return provider;
     } catch (error) {
       console.error('Error fetching model provider:', error);

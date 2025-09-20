@@ -27,6 +27,7 @@ const ModelProviderDetails = () => {
       try {
         // Fetch provider by ID using the service method
         const providerData = await modelProvidersService.getById(id);
+        console.log('Provider data received:', providerData);
         setProvider(providerData);
 
         // Fetch all models and filter by provider
