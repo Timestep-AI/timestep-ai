@@ -72,7 +72,8 @@ const ModelProviderDetails = () => {
         const updatedProvider = { 
           ...provider, 
           ...savedProvider,
-          apiKey: updates.apiKey // Set this locally since API won't return it
+          apiKey: updates.apiKey, // Set locally since API won't return it
+          apiKeyConfigured: true,
         };
         console.log('Updated provider with API key:', updatedProvider);
         setProvider(updatedProvider);
@@ -136,8 +137,8 @@ const ModelProviderDetails = () => {
     );
   }
 
-  const isConfigured = !!provider.apiKey;
-  console.log('Provider apiKey:', provider.apiKey, 'isConfigured:', isConfigured);
+  const isConfigured = provider.apiKeyConfigured ?? provider.isActive ?? !!provider.apiKey;
+  console.log('Provider flags - apiKeyConfigured:', provider.apiKeyConfigured, 'isActive:', provider.isActive, 'apiKey present:', !!provider.apiKey, '=> isConfigured:', isConfigured);
 
   return (
     <Layout>

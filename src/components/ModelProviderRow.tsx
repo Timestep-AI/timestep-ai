@@ -10,7 +10,7 @@ interface ModelProviderRowProps {
 }
 
 export const ModelProviderRow = ({ provider, onEdit, onDelete }: ModelProviderRowProps) => {
-  const isConfigured = !!provider.apiKey;
+  const isConfigured = provider.apiKeyConfigured ?? provider.isActive ?? Boolean(provider.apiKey);
 
   const metadata = [
     {

@@ -4,6 +4,7 @@ export interface ModelProvider {
   baseUrl: string;
   modelsUrl: string;
   apiKey?: string;
+  apiKeyConfigured?: boolean;
   isActive?: boolean;
   description?: string;
   createdAt: string;
@@ -31,7 +32,19 @@ class ModelProvidersService {
       if (!response.ok) {
         throw new Error(`Failed to fetch model providers: ${response.statusText}`);
       }
-      const providers = await response.json();
+      const items = await response.json();
+      console.log('Raw providers response:', items);
+      const providers: ModelProvider[] = (items || []).map((p: any) => ({
+        id: p.id,
+        provider: p.provider,
+        baseUrl: p.baseUrl ?? p.base_url ?? '',
+        modelsUrl: p.modelsUrl ?? p.models_url ?? '',
+        apiKeyConfigured: p.apiKeyConfigured ?? p.hasApiKey ?? p.isApiKeyConfigured ?? false,
+        isActive: p.isActive ?? p.is_active,
+        description: p.description,
+        createdAt: p.createdAt ?? p.created_at,
+        updatedAt: p.updatedAt ?? p.updated_at,
+      }));
       return providers;
     } catch (error) {
       console.error('Error fetching model providers:', error);
@@ -49,8 +62,20 @@ class ModelProvidersService {
       if (!response.ok) {
         throw new Error(`Failed to fetch model provider: ${response.statusText}`);
       }
-      const provider = await response.json();
-      console.log('Raw provider response:', provider);
+      const p = await response.json();
+      console.log('Raw provider response:', p);
+      const provider: ModelProvider = {
+        id: p.id,
+        provider: p.provider,
+        baseUrl: p.baseUrl ?? p.base_url ?? '',
+        modelsUrl: p.modelsUrl ?? p.models_url ?? '',
+        apiKey: p.apiKey ?? p.api_key,
+        apiKeyConfigured: p.apiKeyConfigured ?? p.hasApiKey ?? p.isApiKeyConfigured ?? (p.apiKey ? true : undefined),
+        isActive: p.isActive ?? p.is_active,
+        description: p.description,
+        createdAt: p.createdAt ?? p.created_at,
+        updatedAt: p.updatedAt ?? p.updated_at,
+      };
       return provider;
     } catch (error) {
       console.error('Error fetching model provider:', error);
