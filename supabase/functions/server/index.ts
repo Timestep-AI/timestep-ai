@@ -13,6 +13,7 @@
  * Access endpoints like: https://YOUR_PROJECT.supabase.co/functions/v1/YOUR_FUNCTION_NAME/agents
  */
 
+
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 // Import everything from timestep library (includes MCP SDK re-exports)
