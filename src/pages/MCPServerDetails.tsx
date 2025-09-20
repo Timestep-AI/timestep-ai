@@ -58,6 +58,18 @@ const MCPServerDetails = () => {
         console.log('MCPServerDetails: Server updated successfully:', updatedServer);
         setServer(updatedServer);
         setShowEditDialog(false);
+        
+        // Also reload the server data to ensure we have the latest from the server
+        setTimeout(async () => {
+          try {
+            const refreshedServer = await mcpServersService.getById(id);
+            if (refreshedServer) {
+              setServer(refreshedServer);
+            }
+          } catch (error) {
+            console.error('Error refreshing server data:', error);
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('MCPServerDetails: Failed to save server:', error);

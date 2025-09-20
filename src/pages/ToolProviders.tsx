@@ -39,6 +39,25 @@ export const ToolProviders = () => {
     loadToolProviders();
   }, []);
 
+  // Refresh data when the window gains focus (user navigates back)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh the data when user comes back to this page
+      const refreshData = async () => {
+        try {
+          const fetchedServers = await mcpServersService.getAll();
+          setServers(fetchedServers);
+        } catch (error) {
+          console.error('Error refreshing tool providers:', error);
+        }
+      };
+      refreshData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   const handleEdit = (server: MCPServer) => {
     console.log('Edit tool provider:', server);
   };
