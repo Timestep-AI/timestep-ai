@@ -229,7 +229,18 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 
 	async list(): Promise<McpServer[]> {
 		if (!this.userId) return [];
-		// Seed defaults only when no servers exist (handled below)
+		// Always upsert defaults for this user
+		try {
+			const {getDefaultMcpServers} = await import(
+				'npm:@timestep-ai/timestep@2025.9.191842'
+			);
+			const defaults = getDefaultMcpServers(this.baseUrl);
+			for (const server of defaults) {
+				await this.save(server);
+			}
+		} catch (e) {
+			console.warn(`Failed to upsert default MCP servers: ${e}`);
+		}
 
 
 		const {data, error} = await this.supabase
