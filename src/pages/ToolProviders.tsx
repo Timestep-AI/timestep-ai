@@ -91,9 +91,15 @@ export const ToolProviders = () => {
       // Refresh the data when user comes back to this page
       const refreshData = async () => {
         try {
-          console.log('ToolProviders: Refreshing data on focus...');
-          const fetchedServers = await mcpServersService.getAll();
-          console.log('ToolProviders: Refreshed servers:', fetchedServers);
+        console.log('ToolProviders: Refreshing data on focus...');
+        const fetchedServers = await mcpServersService.getAll();
+        console.log('ToolProviders: Refreshed servers:', fetchedServers);
+        
+        // Debug: Log the specific server we're interested in
+        const rubeServer = fetchedServers.find(s => s.id === '11111111-1111-1111-1111-111111111111');
+        if (rubeServer) {
+          console.log('ToolProviders: Focus - Rube server from list:', rubeServer);
+        }
           
           // WORKAROUND: If we detect inconsistent data, try to fetch individual servers
           // to get the most up-to-date information
@@ -108,13 +114,20 @@ export const ToolProviders = () => {
               if (individualServer) {
                 console.log('ToolProviders: Focus - Individual server data:', individualServer);
                 
-                // Check if individual server data is also stale
-                if (!individualServer.enabled) {
-                  console.log('ToolProviders: Focus - Individual server data is also stale! This suggests a database persistence issue.');
-                  // For now, let's manually set it to enabled if we know it should be enabled
-                  // This is a temporary workaround until the server-side issue is fixed
-                  console.log('ToolProviders: Focus - Applying temporary workaround - setting enabled to true');
-                  individualServer.enabled = true;
+                // The individual server endpoint is now working correctly after the fix
+                // If it shows enabled: true, we should trust it over the list endpoint
+                if (individualServer.enabled) {
+                  console.log('ToolProviders: Focus - Individual server shows enabled=true, using this as source of truth');
+                } else {
+                  console.log('ToolProviders: Focus - Individual server shows enabled=false, checking for known state...');
+                  // Check if we have a known state for this server
+                  const reliableServer = getReliableServerState(individualServer);
+                  if (reliableServer.enabled !== individualServer.enabled) {
+                    console.log('ToolProviders: Focus - Using known state to correct stale data');
+                    individualServer.enabled = reliableServer.enabled;
+                  } else {
+                    console.log('ToolProviders: Focus - Individual server data appears to be correct');
+                  }
                 }
                 
                 // Replace the inconsistent server data with the individual fetch result
@@ -166,6 +179,12 @@ export const ToolProviders = () => {
         const fetchedServers = await mcpServersService.getAll();
         console.log('ToolProviders: Mount refreshed servers:', fetchedServers);
         
+        // Debug: Log the specific server we're interested in
+        const rubeServer = fetchedServers.find(s => s.id === '11111111-1111-1111-1111-111111111111');
+        if (rubeServer) {
+          console.log('ToolProviders: Mount - Rube server from list:', rubeServer);
+        }
+        
         // WORKAROUND: If we detect inconsistent data, try to fetch individual servers
         // to get the most up-to-date information
         const inconsistentServers = fetchedServers.filter(server => 
@@ -179,18 +198,19 @@ export const ToolProviders = () => {
             if (individualServer) {
               console.log('ToolProviders: Individual server data:', individualServer);
               
-              // Check if individual server data is also stale
-              if (!individualServer.enabled) {
-                console.log('ToolProviders: Individual server data is also stale! This suggests a database persistence issue.');
-                
+              // The individual server endpoint is now working correctly after the fix
+              // If it shows enabled: true, we should trust it over the list endpoint
+              if (individualServer.enabled) {
+                console.log('ToolProviders: Individual server shows enabled=true, using this as source of truth');
+              } else {
+                console.log('ToolProviders: Individual server shows enabled=false, checking for known state...');
                 // Check if we have a known state for this server
                 const reliableServer = getReliableServerState(individualServer);
                 if (reliableServer.enabled !== individualServer.enabled) {
                   console.log('ToolProviders: Using known state to correct stale data');
                   individualServer.enabled = reliableServer.enabled;
                 } else {
-                  // If we don't have a known state, this is a real database issue
-                  console.log('ToolProviders: No known state available - this indicates a real database persistence issue');
+                  console.log('ToolProviders: Individual server data appears to be correct');
                 }
               }
               
