@@ -87,21 +87,15 @@ class MCPServersService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      
-      if (response.status === 404) {
-        return false;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete MCP server: ${response.statusText}`);
-      }
-      
-      return true;
+      // Delete directly via Supabase to ensure the record is actually removed
+      const { data, error } = await supabase
+        .from('mcp_servers')
+        .delete()
+        .eq('id', id)
+        .select('id');
+
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
     } catch (error) {
       console.error('Error deleting MCP server:', error);
       throw error;
