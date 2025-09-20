@@ -8,6 +8,7 @@ import { Tool } from '@/types/tool';
 import { mcpServersService } from '@/services/mcpServersService';
 import { toolsService } from '@/services/toolsService';
 import { ToolRow } from '@/components/ToolRow';
+import { EditMCPServerDialog } from '@/components/EditMCPServerDialog';
 
 const MCPServerDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ const MCPServerDetails = () => {
   const [server, setServer] = useState<MCPServer | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadServerAndTools = async () => {
@@ -45,9 +47,13 @@ const MCPServerDetails = () => {
   }, [id]);
 
   const handleEdit = () => {
-    if (server) {
-      // Navigate to edit page when available
-      console.log('Edit server:', server);
+    setShowEditDialog(true);
+  };
+
+  const handleSaveServer = async (id: string, updates: Partial<MCPServer>) => {
+    const updatedServer = await mcpServersService.update(id, updates);
+    if (updatedServer) {
+      setServer(updatedServer);
     }
   };
 
@@ -156,6 +162,13 @@ const MCPServerDetails = () => {
           </div>
         </>
       )}
+      
+      <EditMCPServerDialog
+        server={server}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSave={handleSaveServer}
+      />
     </ItemPage>
   );
 };
