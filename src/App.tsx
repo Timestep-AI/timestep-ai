@@ -22,11 +22,10 @@ import TracePage from "./pages/Trace";
 
 import MCPServerDetails from "./pages/MCPServerDetails";
 import ModelProviderDetails from "./pages/ModelProviderDetails";
-import AdminModelProviders from "./pages/admin/ModelProviders";
-
-import AdminToolProviders from "./pages/admin/ToolProviders";
-import AdminToolProviderDetails from "./pages/admin/ToolProviderDetails";
-import AdminUserSettings from "./pages/admin/UserSettings";
+import AdminModelProviders from "./pages/AdminModelProviders";
+import AdminToolProviders from "./pages/AdminToolProviders";
+import AdminToolProviderDetails from "./pages/AdminToolProviderDetails";
+import AdminUserSettings from "./pages/AdminUserSettings";
 import Logout from "./pages/Logout";
 
 const queryClient = new QueryClient();
