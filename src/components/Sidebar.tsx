@@ -80,14 +80,7 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
               </div>
             ) : (
               <div className="text-center">
-                <div className="text-xs font-bold text-text-primary mb-1">TA</div>
-                <div className="text-xs text-text-tertiary">
-                  {loading ? (
-                    <Loader2 className="w-3 h-3 animate-spin mx-auto" />
-                  ) : version ? (
-                    version.split('.')[0]
-                  ) : null}
-                </div>
+                {/* Empty space when collapsed */}
               </div>
             )}
           </div>
