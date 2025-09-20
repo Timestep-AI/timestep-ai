@@ -8,7 +8,8 @@ import {
   LogOut,
   Server,
   Settings,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { useVersion } from '@/hooks/useVersion';
@@ -74,7 +75,15 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : version ? (
-                    `v${version}`
+                    <a 
+                      href={`https://www.npmjs.com/package/@timestep-ai/timestep/v/${version}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 hover:text-text-primary transition-colors"
+                    >
+                      v{version}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   ) : null}
                 </div>
               </div>
