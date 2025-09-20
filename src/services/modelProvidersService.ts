@@ -59,11 +59,21 @@ class ModelProvidersService {
 
   async create(providerData: Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>): Promise<ModelProvider> {
     try {
+      // Map snake_case interface to camelCase API format
+      const payload = {
+        provider: providerData.provider,
+        baseUrl: providerData.base_url,
+        modelsUrl: providerData.models_url,
+        apiKey: providerData.api_key,
+        isActive: providerData.is_active,
+        description: providerData.description,
+      };
+      
       const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/model_providers`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(providerData),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -80,12 +90,14 @@ class ModelProvidersService {
 
   async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>>): Promise<ModelProvider | null> {
     try {
-      // Map camelCase to expected API format
+      // Map snake_case interface to camelCase API format
       const payload = {
         provider: updates.provider,
         baseUrl: updates.base_url,
         modelsUrl: updates.models_url,
         apiKey: updates.api_key,
+        isActive: updates.is_active,
+        description: updates.description,
       };
       
       const headers = await getAuthHeaders();
