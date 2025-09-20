@@ -119,7 +119,7 @@ const ModelProviderDetails = () => {
     );
   }
 
-  const isConfigured = !!provider.api_key;
+  const isConfigured = !!provider.apiKey;
 
   return (
     <Layout>
@@ -147,9 +147,9 @@ const ModelProviderDetails = () => {
                 </div>
                 <div>
                   <CardTitle className="text-2xl">{provider.provider}</CardTitle>
-                  <CardDescription className="flex items-center space-x-2">
-                    <Globe className="w-4 h-4" />
-                    <span>{provider.base_url}</span>
+                    <CardDescription className="flex items-center space-x-2">
+                      <Globe className="w-4 h-4" />
+                      <span>{provider.baseUrl}</span>
                   </CardDescription>
                 </div>
               </div>
@@ -193,7 +193,7 @@ const ModelProviderDetails = () => {
                 </h4>
                 <p className="text-sm flex items-center gap-1">
                   <Globe className="w-3 h-3" />
-                  {provider.base_url || 'Not configured'}
+                  {provider.baseUrl || 'Not configured'}
                 </p>
               </div>
               <div>
@@ -202,7 +202,7 @@ const ModelProviderDetails = () => {
                 </h4>
                 <p className="text-sm flex items-center gap-1">
                   <Link className="w-3 h-3" />
-                  {provider.models_url || 'Not configured'}
+                  {provider.modelsUrl || 'Not configured'}
                 </p>
               </div>
               <div>
@@ -211,7 +211,7 @@ const ModelProviderDetails = () => {
                 </h4>
                 <p className="text-sm flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(provider.created_at).toLocaleDateString()}
+                  {new Date(provider.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div>
@@ -220,7 +220,7 @@ const ModelProviderDetails = () => {
                 </h4>
                 <p className="text-sm flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(provider.updated_at).toLocaleDateString()}
+                  {new Date(provider.updatedAt).toLocaleDateString()}
                 </p>
               </div>
             </div>

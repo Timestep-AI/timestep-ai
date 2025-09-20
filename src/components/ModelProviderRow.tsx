@@ -10,12 +10,12 @@ interface ModelProviderRowProps {
 }
 
 export const ModelProviderRow = ({ provider, onEdit, onDelete }: ModelProviderRowProps) => {
-  const isConfigured = !!provider.api_key;
+  const isConfigured = !!provider.apiKey;
 
   const metadata = [
     {
       icon: <Globe className="w-3 h-3 flex-shrink-0" />,
-      text: provider.base_url
+      text: provider.baseUrl
     },
     {
       icon: isConfigured ? <CheckCircle className="w-3 h-3 flex-shrink-0 text-success" /> : <XCircle className="w-3 h-3 flex-shrink-0 text-destructive" />,
@@ -37,7 +37,7 @@ export const ModelProviderRow = ({ provider, onEdit, onDelete }: ModelProviderRo
         {isConfigured ? 'Active' : 'Inactive'}
       </Badge>
       <span className="text-xs text-text-tertiary">
-        {new Date(provider.created_at).toLocaleDateString()}
+        {new Date(provider.createdAt).toLocaleDateString()}
       </span>
     </div>
   );

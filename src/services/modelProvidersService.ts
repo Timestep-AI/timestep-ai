@@ -1,13 +1,13 @@
 export interface ModelProvider {
   id: string; // UUID in database but string in API
   provider: string;
-  base_url: string;
-  models_url: string;
-  api_key?: string;
-  is_active?: boolean;
+  baseUrl: string;
+  modelsUrl: string;
+  apiKey?: string;
+  isActive?: boolean;
   description?: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 import { supabase } from '@/integrations/supabase/client';
@@ -49,22 +49,8 @@ class ModelProvidersService {
       if (!response.ok) {
         throw new Error(`Failed to fetch model provider: ${response.statusText}`);
       }
-      const apiProvider = await response.json();
-      console.log('Raw provider response:', apiProvider);
-      
-      // Map camelCase API response to snake_case interface
-      const provider: ModelProvider = {
-        id: apiProvider.id,
-        provider: apiProvider.provider,
-        base_url: apiProvider.baseUrl || apiProvider.base_url,
-        models_url: apiProvider.modelsUrl || apiProvider.models_url,
-        api_key: apiProvider.apiKey || apiProvider.api_key,
-        is_active: apiProvider.isActive || apiProvider.is_active,
-        description: apiProvider.description,
-        created_at: apiProvider.createdAt || apiProvider.created_at,
-        updated_at: apiProvider.updatedAt || apiProvider.updated_at,
-      };
-      
+      const provider = await response.json();
+      console.log('Raw provider response:', provider);
       return provider;
     } catch (error) {
       console.error('Error fetching model provider:', error);
@@ -72,23 +58,13 @@ class ModelProvidersService {
     }
   }
 
-  async create(providerData: Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>): Promise<ModelProvider> {
+  async create(providerData: Omit<ModelProvider, 'id' | 'createdAt' | 'updatedAt'>): Promise<ModelProvider> {
     try {
-      // Map snake_case interface to camelCase API format
-      const payload = {
-        provider: providerData.provider,
-        baseUrl: providerData.base_url,
-        modelsUrl: providerData.models_url,
-        apiKey: providerData.api_key,
-        isActive: providerData.is_active,
-        description: providerData.description,
-      };
-      
       const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/model_providers`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(providerData),
       });
       
       if (!response.ok) {
@@ -103,23 +79,13 @@ class ModelProvidersService {
     }
   }
 
-  async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'created_at' | 'updated_at'>>): Promise<ModelProvider | null> {
+  async update(id: string, updates: Partial<Omit<ModelProvider, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ModelProvider | null> {
     try {
-      // Map snake_case interface to camelCase API format
-      const payload = {
-        provider: updates.provider,
-        baseUrl: updates.base_url,
-        modelsUrl: updates.models_url,
-        apiKey: updates.api_key,
-        isActive: updates.is_active,
-        description: updates.description,
-      };
-      
       const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/model_providers/${id}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(updates),
       });
       
       if (response.status === 404) {

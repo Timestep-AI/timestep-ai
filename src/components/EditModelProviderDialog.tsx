@@ -22,9 +22,9 @@ export const EditModelProviderDialog = ({
 }: EditModelProviderDialogProps) => {
   const [formData, setFormData] = useState({
     provider: provider?.provider || '',
-    base_url: provider?.base_url || '',
-    models_url: provider?.models_url || '',
-    api_key: '',
+    baseUrl: provider?.baseUrl || '',
+    modelsUrl: provider?.modelsUrl || '',
+    apiKey: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -35,13 +35,13 @@ export const EditModelProviderDialog = ({
     try {
       const updates: Partial<ModelProvider> = {
         provider: formData.provider,
-        base_url: formData.base_url,
-        models_url: formData.models_url,
+        baseUrl: formData.baseUrl,
+        modelsUrl: formData.modelsUrl,
       };
       
       // Only include API key if it was provided
-      if (formData.api_key.trim()) {
-        updates.api_key = formData.api_key;
+      if (formData.apiKey.trim()) {
+        updates.apiKey = formData.apiKey;
       }
 
       await onSave(provider.id, updates);
@@ -60,9 +60,9 @@ export const EditModelProviderDialog = ({
     if (provider) {
       setFormData({
         provider: provider.provider || '',
-        base_url: provider.base_url || '',
-        models_url: provider.models_url || '',
-        api_key: '',
+        baseUrl: provider.baseUrl || '',
+        modelsUrl: provider.modelsUrl || '',
+        apiKey: '',
       });
     }
   }, [provider]);
@@ -84,30 +84,30 @@ export const EditModelProviderDialog = ({
             />
           </div>
           <div>
-            <Label htmlFor="base_url">Base URL</Label>
+            <Label htmlFor="baseUrl">Base URL</Label>
             <Input
-              id="base_url"
-              value={formData.base_url}
-              onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
+              id="baseUrl"
+              value={formData.baseUrl}
+              onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
               placeholder="e.g., https://api.openai.com/v1"
             />
           </div>
           <div>
-            <Label htmlFor="models_url">Models URL</Label>
+            <Label htmlFor="modelsUrl">Models URL</Label>
             <Input
-              id="models_url"
-              value={formData.models_url}
-              onChange={(e) => setFormData({ ...formData, models_url: e.target.value })}
+              id="modelsUrl"
+              value={formData.modelsUrl}
+              onChange={(e) => setFormData({ ...formData, modelsUrl: e.target.value })}
               placeholder="e.g., https://api.openai.com/v1/models"
             />
           </div>
           <div>
-            <Label htmlFor="api_key">API Key</Label>
+            <Label htmlFor="apiKey">API Key</Label>
             <Input
-              id="api_key"
+              id="apiKey"
               type="password"
-              value={formData.api_key}
-              onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+              value={formData.apiKey}
+              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
               placeholder="Leave empty to keep current key"
             />
             <p className="text-sm text-muted-foreground mt-1">
