@@ -34,26 +34,11 @@ export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) =>
 
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
-      <div className="flex items-center space-x-2">
-        <div className="flex items-center space-x-1">
-          <Activity className="w-3 h-3 text-text-tertiary" />
-          <span className="text-xs text-text-tertiary">
-            {server.enabled ? 'Enabled' : 'Disabled'}
-          </span>
-        </div>
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(server.id);
-            }}
-            className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        )}
+      <div className="flex items-center space-x-1">
+        <Activity className="w-3 h-3 text-text-tertiary" />
+        <span className="text-xs text-text-tertiary">
+          {server.enabled ? 'Enabled' : 'Disabled'}
+        </span>
       </div>
       <span className="text-xs text-text-secondary">ID: {server.id.slice(0, 8)}...</span>
     </div>
