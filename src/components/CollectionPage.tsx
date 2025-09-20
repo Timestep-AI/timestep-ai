@@ -118,9 +118,24 @@ export const CollectionPage = <T,>({
             />
           </div>
           
-          <div className="text-sm text-muted-foreground">
-            {filteredItems.length} of {items.length} {items.length !== 1 ? 'items' : 'item'}
+          <div className="flex items-center gap-4">
+            {actionButton}
+            {showDeleteAll && onDeleteAll && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={onDeleteAll}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete All
+              </Button>
+            )}
           </div>
+        </div>
+
+        <div className="text-sm text-muted-foreground mb-4">
+          {filteredItems.length} of {items.length} {items.length !== 1 ? 'items' : 'item'}
         </div>
 
         <div className="space-y-4">
