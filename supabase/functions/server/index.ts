@@ -36,7 +36,7 @@ import {
 	type ModelProvider,
 	type Repository,
 	type RepositoryContainer,
-} from 'npm:@timestep-ai/timestep@2025.9.191842';
+} from 'npm:@timestep-ai/timestep@2025.9.201317';
 
 /**
  * Supabase Agent Repository Implementation
@@ -49,7 +49,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		// Upsert defaults for this user
 		try {
 			const {getDefaultAgents} = await import(
-				'npm:@timestep-ai/timestep@2025.9.191842'
+				'npm:@timestep-ai/timestep@2025.9.201317'
 			);
 			const defaultAgents = getDefaultAgents();
 			for (const agent of defaultAgents) {
@@ -182,6 +182,8 @@ class SupabaseContextRepository implements Repository<Context, string> {
 				context_id: context.contextId,
 				agent_id: context.agentId,
 				task_histories: context.taskHistories,
+				task_states: context.taskStates,
+				tasks: context.tasks,
 				created_at: new Date().toISOString(),
 			},
 		]);
@@ -218,7 +220,7 @@ class SupabaseContextRepository implements Repository<Context, string> {
 }
 
 /**
- * Supabase Model Provider Repository Implementation
+ * Supabase MCP Server Repository Implementation
  */
 class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 	constructor(
@@ -232,7 +234,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		// Always upsert defaults for this user
 		try {
 			const {getDefaultMcpServers} = await import(
-				'npm:@timestep-ai/timestep@2025.9.191842'
+				'npm:@timestep-ai/timestep@2025.9.201317'
 			);
 			const defaults = getDefaultMcpServers(this.baseUrl);
 			for (const server of defaults) {
@@ -249,21 +251,19 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (error) throw new Error(`Failed to list MCP servers: ${error.message}`);
 
 		const servers = (data || []).map((row: any) => {
-			const env = row.env || {};
-			const enabled = row.disabled === true ? false : row.enabled ?? true;
 			return {
 				id: row.id,
 				name: row.name,
 				description: row.description ?? row.name,
-				serverUrl: env.server_url ?? row.server_url ?? '',
-				enabled,
-				authToken: env.auth_token ?? row.auth_token,
+				serverUrl: row.server_url ?? '',
+				enabled: row.enabled ?? true,
+				authToken: row.auth_token,
 			} as McpServer;
 		});
 
 		if (servers.length === 0) {
 			const {getDefaultMcpServers} = await import(
-				'npm:@timestep-ai/timestep@2025.9.191842'
+				'npm:@timestep-ai/timestep@2025.9.201317'
 			);
 			const defaultServers = getDefaultMcpServers(this.baseUrl);
 			try {
@@ -294,41 +294,37 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (error && error.code !== 'PGRST116') {
 			throw new Error(`Failed to load MCP server: ${error.message}`);
 		}
-		
+
 		if (!data) return null;
-		
+
 		// Apply the same transformation logic as the list method
-		const env = data.env || {};
-		const enabled = data.disabled === true ? false : data.enabled ?? true;
 		return {
 			id: data.id,
 			name: data.name,
 			description: data.description ?? data.name,
-			serverUrl: env.server_url ?? data.server_url ?? '',
-			enabled,
-			authToken: env.auth_token ?? data.auth_token,
+			serverUrl: data.server_url ?? '',
+			enabled: data.enabled ?? true,
+			authToken: data.auth_token,
 		} as McpServer;
 	}
 
 	async save(server: McpServer): Promise<void> {
 		if (!this.userId) throw new Error('Unauthenticated: user_id required');
-		// Persist server using snake_case and env JSONB for flexible fields
+		// Persist server using snake_case column mapping
 		const toSave: any = {
 			id: server.id,
 			user_id: this.userId,
 			name: server.name,
 			description: (server as any).description ?? server.name,
-			// keep disabled/enabled compatibility flags
-			disabled: server.enabled === false,
-			enabled: server.enabled !== false,
-			env: {},
+			server_url: (server as any).serverUrl,
+			enabled: server.enabled,
+			auth_token: (server as any).authToken,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.191842'
+			'npm:@timestep-ai/timestep@2025.9.201317'
 		);
-		if ((server as any).serverUrl) {
-			toSave.env.server_url = (server as any).serverUrl;
-		}
+
+		// Encrypt auth token if provided and not already encrypted
 		if ((server as any).authToken !== undefined) {
 			let token = (server as any).authToken as string | undefined;
 			if (token && !isEncryptedSecret(token)) {
@@ -336,7 +332,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 					token = await encryptSecret(token);
 				} catch {}
 			}
-			toSave.env.auth_token = token ?? null;
+			toSave.auth_token = token ?? null;
 		}
 		const {error} = await this.supabase
 			.from('mcp_servers')
@@ -378,7 +374,7 @@ class SupabaseModelProviderRepository
 		// Always upsert defaults for this user
 		try {
 			const {getDefaultModelProviders} = await import(
-				'npm:@timestep-ai/timestep@2025.9.191842'
+				'npm:@timestep-ai/timestep@2025.9.201317'
 			);
 			const defaults = getDefaultModelProviders();
 			for (const p of defaults) {
@@ -431,7 +427,7 @@ class SupabaseModelProviderRepository
 			models_url: (provider as any).modelsUrl ?? (provider as any).models_url,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.191842'
+			'npm:@timestep-ai/timestep@2025.9.201317'
 		);
 		if ((provider as any).apiKey !== undefined) {
 			let key = (provider as any).apiKey as string | undefined;
@@ -860,7 +856,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Get tool information from the MCP server
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.191842'
+					'npm:@timestep-ai/timestep@2025.9.201317'
 				);
 
 				// First, get the list of tools from the server
@@ -962,7 +958,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				const [serverId, toolName] = parts;
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.191842'
+					'npm:@timestep-ai/timestep@2025.9.201317'
 				);
 
 				const result = await handleMcpServerRequest(
@@ -1005,7 +1001,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.191842'
+					'npm:@timestep-ai/timestep@2025.9.201317'
 				);
 
 				if (request.method === 'POST') {
@@ -1048,7 +1044,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// GET request - return full MCP server record
 				const {getMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.191842'
+					'npm:@timestep-ai/timestep@2025.9.201317'
 				);
 				const server = await getMcpServer(serverId, repositories);
 
@@ -1257,10 +1253,10 @@ CREATE TABLE agents (
   name TEXT NOT NULL,
   instructions TEXT NOT NULL,
   handoff_description TEXT,
-  handoff_ids JSONB,
-  tool_ids JSONB NOT NULL,
+  handoff_ids JSONB DEFAULT '[]',
+  tool_ids JSONB NOT NULL DEFAULT '[]',
   model TEXT NOT NULL,
-  model_settings JSONB NOT NULL,
+  model_settings JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (user_id, id)
@@ -1270,8 +1266,11 @@ CREATE TABLE agents (
 CREATE TABLE contexts (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
+  context_id TEXT NOT NULL,
   agent_id UUID NOT NULL,
   task_histories JSONB DEFAULT '{}',
+  task_states JSONB DEFAULT '{}',
+  tasks JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (user_id, id)
@@ -1282,10 +1281,10 @@ CREATE TABLE mcp_servers (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   name TEXT NOT NULL,
-  command TEXT,
-  args JSONB,
-  env JSONB,
-  disabled BOOLEAN DEFAULT FALSE,
+  description TEXT,
+  server_url TEXT,
+  enabled BOOLEAN DEFAULT TRUE,
+  auth_token TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (user_id, id)
@@ -1308,6 +1307,7 @@ CREATE TABLE model_providers (
 CREATE INDEX idx_agents_user_id ON agents(user_id);
 CREATE INDEX idx_agents_name ON agents(name);
 CREATE INDEX idx_contexts_user_id ON contexts(user_id);
+CREATE INDEX idx_contexts_context_id ON contexts(context_id);
 CREATE INDEX idx_contexts_agent_id ON contexts(agent_id);
 CREATE INDEX idx_mcp_servers_user_id ON mcp_servers(user_id);
 CREATE INDEX idx_mcp_servers_name ON mcp_servers(name);
@@ -1319,6 +1319,32 @@ ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contexts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE model_providers ENABLE ROW LEVEL SECURITY;
+
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers to automatically update updated_at columns
+CREATE TRIGGER update_agents_updated_at 
+    BEFORE UPDATE ON agents 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_contexts_updated_at 
+    BEFORE UPDATE ON contexts 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_mcp_servers_updated_at 
+    BEFORE UPDATE ON mcp_servers 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_model_providers_updated_at 
+    BEFORE UPDATE ON model_providers 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create policies for authenticated users (optional)
 -- Basic per-user RLS: require matching user_id
