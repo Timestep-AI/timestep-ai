@@ -49,8 +49,22 @@ class ModelProvidersService {
       if (!response.ok) {
         throw new Error(`Failed to fetch model provider: ${response.statusText}`);
       }
-      const provider = await response.json();
-      console.log('Raw provider response:', provider);
+      const apiProvider = await response.json();
+      console.log('Raw provider response:', apiProvider);
+      
+      // Map camelCase API response to snake_case interface
+      const provider: ModelProvider = {
+        id: apiProvider.id,
+        provider: apiProvider.provider,
+        base_url: apiProvider.baseUrl || apiProvider.base_url,
+        models_url: apiProvider.modelsUrl || apiProvider.models_url,
+        api_key: apiProvider.apiKey || apiProvider.api_key,
+        is_active: apiProvider.isActive || apiProvider.is_active,
+        description: apiProvider.description,
+        created_at: apiProvider.createdAt || apiProvider.created_at,
+        updated_at: apiProvider.updatedAt || apiProvider.updated_at,
+      };
+      
       return provider;
     } catch (error) {
       console.error('Error fetching model provider:', error);
