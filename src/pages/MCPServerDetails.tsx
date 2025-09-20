@@ -54,8 +54,11 @@ const MCPServerDetails = () => {
   const handleDelete = async () => {
     if (!server) return;
     
+    console.log('Delete button clicked, attempting to delete server:', server.id);
+    
     try {
-      await mcpServersService.delete(server.id);
+      const result = await mcpServersService.delete(server.id);
+      console.log('Delete result:', result);
       navigate('/tool_providers');
     } catch (error) {
       console.error('Error deleting server:', error);
