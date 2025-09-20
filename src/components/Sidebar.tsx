@@ -68,9 +68,6 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
           <div className="p-4 pt-6 border-b border-muted-foreground/60">
             {!isCollapsed ? (
               <div className="text-center">
-                <h2 className="text-lg font-bold text-text-primary mb-1">
-                  Timestep AI
-                </h2>
                 <div className="text-sm text-text-tertiary flex items-center justify-center">
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
