@@ -189,6 +189,15 @@ const ModelProviderDetails = () => {
               </div>
               <div>
                 <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
+                  Base URL
+                </h4>
+                <p className="text-sm flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  {provider.base_url || 'Not configured'}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-sm text-text-tertiary uppercase tracking-wide mb-1">
                   Models URL
                 </h4>
                 <p className="text-sm flex items-center gap-1">
