@@ -7,9 +7,11 @@ import {
   Activity,
   LogOut,
   Server,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
+import { useVersion } from '@/hooks/useVersion';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -32,6 +34,7 @@ const accountItems = [
 
 export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
   const location = useLocation();
+  const { version, loading } = useVersion();
 
   const isActive = (path: string) => {
     if (path === '/agents') {
@@ -60,8 +63,37 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
         !isCollapsed && "md:block"
       )}>
         <div className="flex flex-col h-full">
+          {/* Version at top */}
+          <div className="p-4 pt-6 border-b border-muted-foreground/60">
+            {!isCollapsed ? (
+              <div className="text-center">
+                <h2 className="text-lg font-bold text-text-primary mb-1">
+                  Timestep AI
+                </h2>
+                <div className="text-sm text-text-tertiary flex items-center justify-center">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : version ? (
+                    `v${version}`
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="text-xs font-bold text-text-primary mb-1">TA</div>
+                <div className="text-xs text-text-tertiary">
+                  {loading ? (
+                    <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                  ) : version ? (
+                    version.split('.')[0]
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+        
         {/* Main Navigation */}
-        <nav className="flex-1 p-4 pt-16">
+        <nav className="flex-1 p-4 pt-6">
           <div className="mb-6">
             {!isCollapsed && (
               <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
