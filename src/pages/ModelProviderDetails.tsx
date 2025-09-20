@@ -92,11 +92,11 @@ const ModelProviderDetails = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/models')}
+            onClick={() => navigate('/model_providers')}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Models
+            Back to Model Providers
           </Button>
         </div>
 
