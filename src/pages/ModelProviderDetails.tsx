@@ -62,9 +62,11 @@ const ModelProviderDetails = () => {
 
   const handleSaveProvider = async (id: string, updates: Partial<ModelProvider>) => {
     try {
+      console.log('Saving provider updates:', updates);
       await modelProvidersService.update(id, updates);
       // Refresh provider data
       const updatedProvider = await modelProvidersService.getById(id);
+      console.log('Updated provider after save:', updatedProvider);
       setProvider(updatedProvider);
       toast.success('Model provider updated successfully');
     } catch (error) {
@@ -120,6 +122,7 @@ const ModelProviderDetails = () => {
   }
 
   const isConfigured = !!provider.apiKey;
+  console.log('Provider apiKey:', provider.apiKey, 'isConfigured:', isConfigured);
 
   return (
     <Layout>
