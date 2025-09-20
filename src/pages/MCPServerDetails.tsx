@@ -29,7 +29,10 @@ const MCPServerDetails = () => {
         
         setServer(serverData);
         // Filter tools that belong to this MCP server
+        console.log('All tools:', allTools);
+        console.log('Server ID:', id);
         const serverTools = allTools.filter(tool => tool.serverId === id);
+        console.log('Filtered server tools:', serverTools);
         setTools(serverTools);
       } catch (error) {
         console.error('Error loading server and tools:', error);
