@@ -63,11 +63,26 @@ const ModelProviderDetails = () => {
   const handleSaveProvider = async (id: string, updates: Partial<ModelProvider>) => {
     try {
       console.log('Saving provider updates:', updates);
-      await modelProvidersService.update(id, updates);
-      // Refresh provider data
-      const updatedProvider = await modelProvidersService.getById(id);
-      console.log('Updated provider after save:', updatedProvider);
-      setProvider(updatedProvider);
+      const savedProvider = await modelProvidersService.update(id, updates);
+      console.log('Saved provider response:', savedProvider);
+      
+      // If API key was provided in the update, assume it was saved successfully
+      // and update the local state to reflect that
+      if (updates.apiKey && provider) {
+        const updatedProvider = { 
+          ...provider, 
+          ...savedProvider,
+          apiKey: updates.apiKey // Set this locally since API won't return it
+        };
+        console.log('Updated provider with API key:', updatedProvider);
+        setProvider(updatedProvider);
+      } else {
+        // Refresh provider data for other updates
+        const refreshedProvider = await modelProvidersService.getById(id);
+        console.log('Refreshed provider:', refreshedProvider);
+        setProvider(refreshedProvider);
+      }
+      
       toast.success('Model provider updated successfully');
     } catch (error) {
       console.error('Error updating model provider:', error);
