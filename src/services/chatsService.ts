@@ -15,13 +15,19 @@ const getAuthHeaders = async () => {
 class ChatsService {
   async getAll(): Promise<Chat[]> {
     try {
+      console.log('ChatsService: Fetching chats from', `${SERVER_BASE_URL}/chats`);
       const headers = await getAuthHeaders();
+      console.log('ChatsService: Auth headers:', headers);
       const response = await fetch(`${SERVER_BASE_URL}/chats`, { headers });
+      console.log('ChatsService: Response status:', response.status);
       if (!response.ok) {
         throw new Error(`Failed to fetch chats: ${response.statusText}`);
       }
       const result = await response.json();
-      return result.data || [];
+      console.log('ChatsService: Raw response:', result);
+      const chats = result.data || [];
+      console.log('ChatsService: Processed chats:', chats);
+      return chats;
     } catch (error) {
       console.error('Error fetching chats:', error);
       throw error;
@@ -48,18 +54,24 @@ class ChatsService {
 
   async create(request: CreateChatRequest): Promise<Chat> {
     try {
+      console.log('ChatsService: Creating chat with request:', request);
       const headers = await getAuthHeaders();
+      console.log('ChatsService: Create auth headers:', headers);
       const response = await fetch(`${SERVER_BASE_URL}/chats`, {
         method: 'POST',
         headers,
         body: JSON.stringify(request),
       });
       
+      console.log('ChatsService: Create response status:', response.status);
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ChatsService: Create error response:', errorText);
         throw new Error(`Failed to create chat: ${response.statusText}`);
       }
       
       const chat = await response.json();
+      console.log('ChatsService: Created chat:', chat);
       return chat;
     } catch (error) {
       console.error('Error creating chat:', error);
