@@ -96,7 +96,7 @@ export type Database = {
           handoff_ids: Json | null
           id: string
           instructions: string
-          model: string | null
+          model: string
           model_settings: Json
           name: string
           tool_ids: Json | null
@@ -109,7 +109,7 @@ export type Database = {
           handoff_ids?: Json | null
           id?: string
           instructions: string
-          model?: string | null
+          model: string
           model_settings?: Json
           name: string
           tool_ids?: Json | null
@@ -122,7 +122,7 @@ export type Database = {
           handoff_ids?: Json | null
           id?: string
           instructions?: string
-          model?: string | null
+          model?: string
           model_settings?: Json
           name?: string
           tool_ids?: Json | null
@@ -276,38 +276,35 @@ export type Database = {
       }
       mcp_servers: {
         Row: {
+          auth_token: string | null
           created_at: string
           description: string | null
-          disabled: boolean | null
           enabled: boolean | null
-          env: Json | null
           id: string
           name: string
-          status: string
+          server_url: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          auth_token?: string | null
           created_at?: string
           description?: string | null
-          disabled?: boolean | null
           enabled?: boolean | null
-          env?: Json | null
           id?: string
           name: string
-          status?: string
+          server_url?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          auth_token?: string | null
           created_at?: string
           description?: string | null
-          disabled?: boolean | null
           enabled?: boolean | null
-          env?: Json | null
           id?: string
           name?: string
-          status?: string
+          server_url?: string | null
           updated_at?: string
           user_id?: string
         }
