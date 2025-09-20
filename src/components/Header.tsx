@@ -60,23 +60,6 @@ const getBreadcrumbs = (pathname: string, params?: any) => {
   } else if (pathname.startsWith('/traces/') && params?.id) {
     breadcrumbs.push({ text: 'Traces', href: '/traces' });
     breadcrumbs.push({ text: 'Trace', href: `/traces/${params.id}` });
-  } else if (pathname === '/admin/model_providers') {
-    breadcrumbs.push({ text: 'Admin', href: '/admin' });
-    breadcrumbs.push({ text: 'Model Providers', href: '/admin/model_providers' });
-  } else if (pathname.startsWith('/admin/model_providers/') && params?.id) {
-    breadcrumbs.push({ text: 'Admin', href: '/admin' });
-    breadcrumbs.push({ text: 'Model Providers', href: '/admin/model_providers' });
-    breadcrumbs.push({ text: 'Provider Details', href: `/admin/model_providers/${params.id}` });
-  } else if (pathname === '/admin/tool_providers') {
-    breadcrumbs.push({ text: 'Admin', href: '/admin' });
-    breadcrumbs.push({ text: 'Tool Providers', href: '/admin/tool_providers' });
-  } else if (pathname.startsWith('/admin/tool_providers/') && params?.id) {
-    breadcrumbs.push({ text: 'Admin', href: '/admin' });
-    breadcrumbs.push({ text: 'Tool Providers', href: '/admin/tool_providers' });
-    breadcrumbs.push({ text: 'Provider Details', href: `/admin/tool_providers/${params.id}` });
-  } else if (pathname === '/admin/user_settings') {
-    breadcrumbs.push({ text: 'Admin', href: '/admin' });
-    breadcrumbs.push({ text: 'User Settings', href: '/admin/user_settings' });
   } else {
     breadcrumbs.push({ text: 'Dashboard', href: '/' });
   }
