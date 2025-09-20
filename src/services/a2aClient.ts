@@ -129,67 +129,7 @@ export class A2AClient {
 
     } catch (error) {
       console.error('Error in sendMessageStream:', error);
-      
-      // Fallback to simulated response if edge function fails
-      const taskId = crypto.randomUUID();
-      const contextId = params.message.contextId || crypto.randomUUID();
-
-      // Yield initial task object
-      yield {
-        kind: 'task',
-        id: taskId,
-        contextId,
-        status: {
-          state: 'submitted',
-          timestamp: new Date().toISOString()
-        },
-        artifacts: [],
-        history: [params.message],
-        metadata: {}
-      } as Task;
-
-      // Yield status update - working
-      yield {
-        kind: 'status-update',
-        taskId,
-        contextId,
-        status: { 
-          state: 'working',
-          timestamp: new Date().toISOString()
-        },
-        final: false
-      } as TaskStatusUpdateEvent;
-
-      // Simulate some processing time
-      await this.delay(1000);
-
-      // Yield a response message
-      const textPart = params.message.parts.find(p => p.kind === 'text') as TextPart;
-      const responseText = `Hello! I'm ${this.agent.name}. I received your message: "${textPart?.text}". Note: This is a fallback response as the edge function is not responding properly.`;
-
-      yield {
-        messageId: crypto.randomUUID(),
-        kind: 'message',
-        role: 'agent',
-        parts: [{
-          kind: 'text',
-          text: responseText
-        }],
-        taskId,
-        contextId
-      } as A2AMessage;
-
-      // Yield final status - completed
-      yield {
-        kind: 'status-update',
-        taskId,
-        contextId,
-        status: { 
-          state: 'completed',
-          timestamp: new Date().toISOString()
-        },
-        final: true
-      } as TaskStatusUpdateEvent;
+      throw error;
     }
   }
 
