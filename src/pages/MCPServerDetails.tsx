@@ -47,6 +47,7 @@ const MCPServerDetails = () => {
   }, [id]);
 
   const handleEdit = () => {
+    console.log('Edit button clicked - opening dialog');
     setShowEditDialog(true);
   };
 
