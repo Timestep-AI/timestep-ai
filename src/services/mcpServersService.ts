@@ -8,7 +8,6 @@ const getAuthHeaders = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   return {
     'Content-Type': 'application/json',
-    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemJnaGl0YmpyeWZwbXVjZ2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNzU2MTgsImV4cCI6MjA3MTg1MTYxOH0.3Og1JqXFWrd_5eygiqPWm6BcPtjIJidyLQD0dDERkro',
     ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
   };
 };
