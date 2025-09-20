@@ -242,7 +242,6 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			console.warn(`Failed to upsert default MCP servers: ${e}`);
 		}
 
-
 		const {data, error} = await this.supabase
 			.from('mcp_servers')
 			.select('*')
@@ -295,7 +294,20 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (error && error.code !== 'PGRST116') {
 			throw new Error(`Failed to load MCP server: ${error.message}`);
 		}
-		return data || null;
+		
+		if (!data) return null;
+		
+		// Apply the same transformation logic as the list method
+		const env = data.env || {};
+		const enabled = data.disabled === true ? false : data.enabled ?? true;
+		return {
+			id: data.id,
+			name: data.name,
+			description: data.description ?? data.name,
+			serverUrl: env.server_url ?? data.server_url ?? '',
+			enabled,
+			authToken: env.auth_token ?? data.auth_token,
+		} as McpServer;
 	}
 
 	async save(server: McpServer): Promise<void> {

@@ -6,9 +6,14 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/s
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
   const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.access_token) {
+    throw new Error('No valid session found. Please sign in.');
+  }
+  
   return {
     'Content-Type': 'application/json',
-    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+    'Authorization': `Bearer ${session.access_token}`
   };
 };
 
@@ -16,11 +21,14 @@ class MCPServersService {
   async getAll(): Promise<MCPServer[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers`, { headers });
+      // Add cache-busting parameter to ensure we get fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers${cacheBuster}`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch MCP servers: ${response.statusText}`);
       }
       const servers = await response.json();
+      console.log('MCPServersService: getAll raw response:', servers);
       return servers;
     } catch (error) {
       console.error('Error fetching MCP servers:', error);
@@ -31,7 +39,9 @@ class MCPServersService {
   async getById(id: string): Promise<MCPServer | null> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, { headers });
+      // Add cache-busting parameter to ensure we get fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}${cacheBuster}`, { headers });
       if (response.status === 404) {
         return null;
       }
@@ -39,6 +49,7 @@ class MCPServersService {
         throw new Error(`Failed to fetch MCP server: ${response.statusText}`);
       }
       const server = await response.json();
+      console.log('MCPServersService: getById raw response:', server);
       return server;
     } catch (error) {
       console.error('Error fetching MCP server:', error);
@@ -112,6 +123,11 @@ class MCPServersService {
   async deleteAll(): Promise<void> {
     // Note: Server doesn't support batch MCP server deletion yet
     throw new Error('MCP server batch deletion not implemented in server');
+  }
+
+  // Method to refresh a specific server by ID (useful after updates)
+  async refreshById(id: string): Promise<MCPServer | null> {
+    return this.getById(id);
   }
 }
 

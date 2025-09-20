@@ -409,32 +409,39 @@ class MessagesService {
   async createDefaults(): Promise<Message[]> {
     await this.delay(300);
     
-    // Import chatsService to get the actual chat IDs
-    const { chatsService } = await import('@/services/chatsService');
-    const chats = await chatsService.getAll();
-    
-    const clonedDefaults: Message[] = [];
-    
-    // Map default messages to actual chat IDs
-    const defaultKeys = Object.keys(DEFAULT_MESSAGES);
-    chats.forEach((chat, index) => {
-      if (index < defaultKeys.length) {
-        const defaultKey = defaultKeys[index];
-        const defaultMessages = DEFAULT_MESSAGES[defaultKey];
-        
-        defaultMessages.forEach((defaultMessage, msgIndex) => {
-          clonedDefaults.push({
-            ...defaultMessage,
-            id: `cloned-msg-${Date.now()}-${chat.id}-${msgIndex}`,
-            chatId: chat.id, // Use the actual chat ID
-            timestamp: new Date(Date.now() - (defaultMessages.length - msgIndex) * 3600000).toLocaleString(), // Spread messages over time
+    try {
+      // Import chatsService to get the actual chat IDs
+      const { chatsService } = await import('@/services/chatsService');
+      const chats = await chatsService.getAll();
+      
+      const clonedDefaults: Message[] = [];
+      
+      // Map default messages to actual chat IDs
+      const defaultKeys = Object.keys(DEFAULT_MESSAGES);
+      chats.forEach((chat, index) => {
+        if (index < defaultKeys.length) {
+          const defaultKey = defaultKeys[index];
+          const defaultMessages = DEFAULT_MESSAGES[defaultKey];
+          
+          defaultMessages.forEach((defaultMessage, msgIndex) => {
+            clonedDefaults.push({
+              ...defaultMessage,
+              id: `cloned-msg-${Date.now()}-${chat.id}-${msgIndex}`,
+              chatId: chat.id, // Use the actual chat ID
+              timestamp: new Date(Date.now() - (defaultMessages.length - msgIndex) * 3600000).toLocaleString(), // Spread messages over time
+            });
           });
-        });
-      }
-    });
+        }
+      });
 
-    this.messages = [...clonedDefaults];
-    return [...this.messages]; // Return a copy
+      this.messages = [...clonedDefaults];
+      return [...this.messages]; // Return a copy
+    } catch (error) {
+      console.warn('Could not fetch chats for default messages, using empty array:', error);
+      // If we can't fetch chats (e.g., user not authenticated), just use empty array
+      this.messages = [];
+      return [];
+    }
   }
 
   /**

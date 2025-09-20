@@ -60,17 +60,29 @@ const MCPServerDetails = () => {
         setServer(updatedServer);
         setShowEditDialog(false);
         
-        // Also reload the server data to ensure we have the latest from the server
+        // Dispatch event to notify other components of the successful update
+        const updateEvent = new CustomEvent('serverUpdated', {
+          detail: { serverId: id, enabled: updatedServer.enabled }
+        });
+        window.dispatchEvent(updateEvent);
+        console.log('MCPServerDetails: Dispatched server update event');
+        
+        // Show success message
+        console.log('Server updated successfully, navigating back to tool providers...');
+        
+        // Navigate back to the tool providers page to see the updated status
+        // Add a longer delay to ensure the database has been updated
         setTimeout(async () => {
+          // Force refresh the server data before navigating to ensure we have the latest
           try {
+            console.log('MCPServerDetails: Refreshing server data before navigation...');
             const refreshedServer = await mcpServersService.getById(id);
-            if (refreshedServer) {
-              setServer(refreshedServer);
-            }
+            console.log('MCPServerDetails: Refreshed server data:', refreshedServer);
           } catch (error) {
-            console.error('Error refreshing server data:', error);
+            console.error('MCPServerDetails: Error refreshing server data:', error);
           }
-        }, 100);
+          navigate('/tool_providers');
+        }, 2000);
       }
     } catch (error) {
       console.error('MCPServerDetails: Failed to save server:', error);

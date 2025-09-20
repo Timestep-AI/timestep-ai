@@ -33,7 +33,12 @@ const App = () => (
         <div className="min-h-screen bg-background">
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/agents" element={<AuthGuard><Agents /></AuthGuard>} />

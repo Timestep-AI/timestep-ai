@@ -6,9 +6,14 @@ const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/s
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
   const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.access_token) {
+    throw new Error('No valid session found. Please sign in.');
+  }
+  
   return {
     'Content-Type': 'application/json',
-    ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+    'Authorization': `Bearer ${session.access_token}`
   };
 };
 
