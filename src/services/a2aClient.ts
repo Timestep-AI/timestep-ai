@@ -18,10 +18,6 @@ export class A2AClient {
     return new A2AClient(agentServerUrl, agent);
   }
 
-  private getAgentServerUrl(agent: Agent): string {
-    return `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}`;
-  }
-
   private async getAuthHeaders() {
     const { data: { session } } = await supabase.auth.getSession();
     return {
@@ -70,17 +66,25 @@ export class A2AClient {
       throw new Error('No agent specified for this client');
     }
 
-    console.log(`A2A Client: Sending message to ${this.agent.name} via ${this.serverUrl}`, params);
+    console.log(`A2A Client: Sending message to ${this.agent.name} via ${this.serverUrl}`);
+    console.log('Message params:', params);
 
     try {
       const headers = await this.getAuthHeaders();
       
-      // Prepare the request body for the agent
+      // Prepare the request body in the proper A2A format
       const requestBody = {
-        message: params.message,
-        contextId: params.message.contextId || crypto.randomUUID(),
-        stream: true
+        message: {
+          messageId: params.message.messageId || crypto.randomUUID(),
+          kind: 'message',
+          role: 'user',
+          parts: params.message.parts,
+          contextId: params.message.contextId
+        },
+        contextId: params.message.contextId
       };
+
+      console.log('A2A Request Body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`${this.serverUrl}/message/stream`, {
         method: 'POST',
@@ -89,21 +93,26 @@ export class A2AClient {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to send message: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('A2A Response Error:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to send message: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body reader available');
+      if (!response.body) {
+        throw new Error('No response body available');
       }
 
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
 
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log('A2A Stream completed');
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
@@ -113,13 +122,25 @@ export class A2AClient {
             if (line.trim() === '') continue;
             
             try {
-              // Parse server-sent events
+              let event: any;
+              
+              // Handle Server-Sent Events format
               if (line.startsWith('data: ')) {
-                const data = JSON.parse(line.slice(6));
-                yield data as A2AEvent;
+                const dataStr = line.slice(6);
+                if (dataStr === '[DONE]') {
+                  console.log('A2A Stream done signal received');
+                  continue;
+                }
+                event = JSON.parse(dataStr);
+              } else {
+                // Handle raw JSON
+                event = JSON.parse(line);
               }
+              
+              console.log('A2A Event received:', event);
+              yield event as A2AEvent;
             } catch (parseError) {
-              console.warn('Failed to parse line:', line, parseError);
+              console.warn('Failed to parse SSE line:', line, parseError);
             }
           }
         }
@@ -142,7 +163,8 @@ export class A2AClient {
       parts: [{
         kind: 'text',
         text: message.content || ''
-      }]
+      }],
+      contextId: crypto.randomUUID()
     };
   }
 
@@ -158,10 +180,6 @@ export class A2AClient {
       type: a2aMessage.role === 'user' ? 'user' : 'assistant',
       status: 'sent'
     };
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

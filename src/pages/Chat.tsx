@@ -8,6 +8,7 @@ import { MessageCircle, Calendar, Users, Hash, Send, Bot } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
 import { Message } from '@/types/message';
 import { Agent } from '@/types/agent';
+import { Task, TaskStatusUpdateEvent } from '@/types/a2a';
 import { chatsService } from '@/services/chatsService';
 import { messagesService } from '@/services/messagesService';
 import { agentsService } from '@/services/agentsService';
@@ -120,11 +121,16 @@ export const Chat = () => {
 
       // Process A2A response stream
       const stream = clientForAgent.sendMessageStream(messageParams);
+      
+      let currentAgentMessage = '';
+      let hasReceivedAgentMessage = false;
+      
       for await (const event of stream) {
         console.log('A2A Event:', event);
         
+        // Handle different A2A event types
         if (event.kind === 'message' && 'role' in event && event.role === 'agent') {
-          // Convert A2A response to our message format and save
+          // Handle agent message responses
           const agentMessage = a2aClient.convertFromA2AMessage(event, id);
           await messagesService.create({
             chatId: id,
@@ -137,10 +143,27 @@ export const Chat = () => {
           // Refresh messages list
           const refreshedMessages = await messagesService.getByChatId(id);
           setMessages(refreshedMessages);
+          hasReceivedAgentMessage = true;
+        } else if (event.kind === 'status-update') {
+          // Handle status updates
+          const statusEvent = event as TaskStatusUpdateEvent;
+          console.log(`Task ${statusEvent.taskId} status: ${statusEvent.status.state}`);
+          
+          if (statusEvent.status.state === 'completed' && statusEvent.final) {
+            console.log('Task completed');
+          }
+        } else if (event.kind === 'task') {
+          // Handle task creation
+          const task = event as Task;
+          console.log(`Task created: ${task.id}`);
         }
       }
 
-      toast.success('Message sent successfully!');
+      if (hasReceivedAgentMessage) {
+        toast.success('Message sent successfully!');
+      } else {
+        toast.warning('No response received from agent');
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
