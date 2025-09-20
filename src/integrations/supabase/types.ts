@@ -205,42 +205,6 @@ export type Database = {
           },
         ]
       }
-      chats: {
-        Row: {
-          agent_id: string | null
-          created_at: string | null
-          id: string
-          messages: Json | null
-          model_id: string | null
-          title: string
-          type: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          created_at?: string | null
-          id?: string
-          messages?: Json | null
-          model_id?: string | null
-          title: string
-          type: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          created_at?: string | null
-          id?: string
-          messages?: Json | null
-          model_id?: string | null
-          title?: string
-          type?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       contexts: {
         Row: {
           agent_id: string
