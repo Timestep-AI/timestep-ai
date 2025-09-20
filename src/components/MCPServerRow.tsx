@@ -1,10 +1,12 @@
 import { MCPServer } from '@/types/mcpServer';
 import { CollectionItemRow } from '@/components/CollectionItemRow';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { 
   Server, 
-  Activity
+  Activity,
+  Trash2
 } from 'lucide-react';
 
 interface MCPServerRowProps {
@@ -32,31 +34,30 @@ export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) =>
 
   const rightContent = (
     <div className="flex flex-col items-end space-y-1">
-      <div className="flex items-center space-x-1">
-        <Activity className="w-3 h-3 text-text-tertiary" />
-        <span className="text-xs text-text-tertiary">
-          {server.enabled ? 'Enabled' : 'Disabled'}
-        </span>
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          <Activity className="w-3 h-3 text-text-tertiary" />
+          <span className="text-xs text-text-tertiary">
+            {server.enabled ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(server.id);
+            }}
+            className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        )}
       </div>
       <span className="text-xs text-text-secondary">ID: {server.id.slice(0, 8)}...</span>
     </div>
   );
-
-  const dropdownItems = [
-    {
-      label: 'View Details',
-      onClick: () => navigate(`/tool_providers/${server.id}`)
-    },
-    ...(onEdit ? [{ label: 'Edit', onClick: () => onEdit(server) }] : [])
-  ];
-
-  if (onDelete) {
-    dropdownItems.push({
-      label: 'Delete',
-      onClick: () => onDelete(server.id),
-      destructive: true
-    } as any);
-  }
 
   return (
     <CollectionItemRow
@@ -67,7 +68,6 @@ export const MCPServerRow = ({ server, onEdit, onDelete }: MCPServerRowProps) =>
       metadata={metadata}
       rightContent={rightContent}
       onItemClick={() => navigate(`/tool_providers/${server.id}`)}
-      dropdownItems={dropdownItems}
     />
   );
 };
