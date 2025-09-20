@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { ModelRow } from '@/components/ModelRow';
+import { EditModelProviderDialog } from '@/components/EditModelProviderDialog';
 import { modelsService } from '@/services/modelsService';
 import { modelProvidersService } from '@/services/modelProvidersService';
 import { Model } from '@/types/model';
@@ -10,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Building2, Globe, CheckCircle, XCircle, Calendar, Cpu, Link } from 'lucide-react';
+import { ArrowLeft, Building2, Globe, CheckCircle, XCircle, Calendar, Cpu, Link, Edit } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ModelProviderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +20,7 @@ const ModelProviderDetails = () => {
   const [models, setModels] = useState<Model[]>([]);
   const [provider, setProvider] = useState<ModelProvider | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchProviderAndModels = async () => {
@@ -55,6 +58,20 @@ const ModelProviderDetails = () => {
 
   const handleDeleteModel = async (model: Model) => {
     console.log('Delete not supported - models come from model providers');
+  };
+
+  const handleSaveProvider = async (id: string, updates: Partial<ModelProvider>) => {
+    try {
+      await modelProvidersService.update(id, updates);
+      // Refresh provider data
+      const updatedProvider = await modelProvidersService.getById(id);
+      setProvider(updatedProvider);
+      toast.success('Model provider updated successfully');
+    } catch (error) {
+      console.error('Error updating model provider:', error);
+      toast.error('Failed to update model provider');
+      throw error;
+    }
   };
 
   if (loading) {
@@ -136,17 +153,28 @@ const ModelProviderDetails = () => {
                   </CardDescription>
                 </div>
               </div>
-              <Badge 
-                variant={isConfigured ? 'default' : 'secondary'}
-                className="flex items-center space-x-1"
-              >
-                {isConfigured ? (
-                  <CheckCircle className="w-3 h-3" />
-                ) : (
-                  <XCircle className="w-3 h-3" />
-                )}
-                <span>{isConfigured ? 'Active' : 'Inactive'}</span>
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge 
+                  variant={isConfigured ? 'default' : 'secondary'}
+                  className="flex items-center space-x-1"
+                >
+                  {isConfigured ? (
+                    <CheckCircle className="w-3 h-3" />
+                  ) : (
+                    <XCircle className="w-3 h-3" />
+                  )}
+                  <span>{isConfigured ? 'Active' : 'Inactive'}</span>
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditDialogOpen(true)}
+                  className="flex items-center space-x-1"
+                >
+                  <Edit className="w-3 h-3" />
+                  <span>Edit</span>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -233,6 +261,13 @@ const ModelProviderDetails = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <EditModelProviderDialog
+        provider={provider}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleSaveProvider}
+      />
     </Layout>
   );
 };
