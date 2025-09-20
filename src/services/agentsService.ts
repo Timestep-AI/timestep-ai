@@ -56,15 +56,36 @@ class AgentsService {
 
   async getById(id: string): Promise<Agent | null> {
     try {
+      console.log('AgentsService: Fetching agent by ID:', id);
       const headers = await getAuthHeaders();
       const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, { headers });
       if (response.status === 404) {
+        console.log('AgentsService: Agent not found:', id);
         return null;
       }
       if (!response.ok) {
         throw new Error(`Failed to fetch agent: ${response.statusText}`);
       }
-      const agent = await response.json();
+      const apiAgent = await response.json();
+      console.log('AgentsService: Raw agent response:', apiAgent);
+      
+      // Map server response to our Agent interface
+      const agent: Agent = {
+        id: apiAgent.id,
+        name: apiAgent.name,
+        description: apiAgent.handoff_description || 'AI Agent',
+        instructions: apiAgent.instructions || '',
+        handoffIds: apiAgent.handoff_ids || [],
+        handoffDescription: apiAgent.handoff_description || '',
+        createdAt: apiAgent.created_at || new Date().toISOString(),
+        model: apiAgent.model,
+        modelSettings: apiAgent.model_settings || {},
+        status: 'active' as const,
+        isHandoff: Boolean(apiAgent.handoff_description),
+        toolIds: apiAgent.tool_ids || []
+      };
+      
+      console.log('AgentsService: Mapped agent:', agent);
       return agent;
     } catch (error) {
       console.error('Error fetching agent:', error);

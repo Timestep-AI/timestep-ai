@@ -13,8 +13,11 @@ export class A2AClient {
   }
 
   createClientForAgent(agent: Agent): A2AClient {
+    console.log('Creating A2A client for agent:', agent);
+    console.log('Agent ID:', agent.id);
     // Create a new client instance for the specific agent using the edge function
     const agentServerUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}`;
+    console.log('Agent server URL:', agentServerUrl);
     return new A2AClient(agentServerUrl, agent);
   }
 

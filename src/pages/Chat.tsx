@@ -43,8 +43,12 @@ export const Chat = () => {
 
         // Load agent information
         if (foundChat?.agentId) {
+          console.log('Loading agent with ID:', foundChat.agentId);
           const agentInfo = await agentsService.getById(foundChat.agentId);
+          console.log('Loaded agent:', agentInfo);
           setAgent(agentInfo);
+        } else {
+          console.log('No agentId found in chat:', foundChat);
         }
       } catch (error) {
         console.error('Error loading chat and messages:', error);
