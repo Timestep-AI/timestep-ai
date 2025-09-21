@@ -340,16 +340,30 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			.eq('user_id', this.userId);
 		if (error) throw new Error(`Failed to list MCP servers: ${error.message}`);
 
-		const servers = (data || []).map((row: any) => {
+		// Decrypt auth tokens if needed
+		const {isEncryptedSecret, decryptSecret} = await import(
+			'npm:@timestep-ai/timestep@2025.9.211249'
+		);
+
+		const servers = await Promise.all((data || []).map(async (row: any) => {
+			let authToken = row.auth_token;
+			if (authToken && isEncryptedSecret(authToken)) {
+				try {
+					authToken = await decryptSecret(authToken);
+				} catch (e) {
+					console.warn(`Failed to decrypt auth token for MCP server ${row.name}: ${e}`);
+					authToken = null;
+				}
+			}
 			return {
 				id: row.id,
 				name: row.name,
 				description: row.description ?? row.name,
 				server_url: row.server_url ?? '',
 				enabled: row.enabled ?? true,
-				auth_token: row.auth_token,
+				auth_token: authToken,
 			} as McpServer;
-		});
+		}));
 
 		return servers;
 	}
@@ -367,6 +381,21 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 
 		if (!data) return null;
 
+		// Decrypt auth token if needed
+		const {isEncryptedSecret, decryptSecret} = await import(
+			'npm:@timestep-ai/timestep@2025.9.211249'
+		);
+
+		let authToken = data.auth_token;
+		if (authToken && isEncryptedSecret(authToken)) {
+			try {
+				authToken = await decryptSecret(authToken);
+			} catch (e) {
+				console.warn(`Failed to decrypt auth token for MCP server ${data.name}: ${e}`);
+				authToken = null;
+			}
+		}
+
 		// Apply the same transformation logic as the list method
 		return {
 			id: data.id,
@@ -374,7 +403,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			description: data.description ?? data.name,
 			server_url: data.server_url ?? '',
 			enabled: data.enabled ?? true,
-			auth_token: data.auth_token,
+			auth_token: authToken,
 		} as McpServer;
 	}
 
@@ -478,12 +507,28 @@ class SupabaseModelProviderRepository
 		if (error)
 			throw new Error(`Failed to list model providers: ${error.message}`);
 
-		const providers = (data || []).map((row: any) => ({
+		// Decrypt API keys if needed
+		const {isEncryptedSecret, decryptSecret} = await import(
+			'npm:@timestep-ai/timestep@2025.9.211249'
+		);
+
+		const providers = await Promise.all((data || []).map(async (row: any) => {
+			let apiKey = row.api_key;
+			if (apiKey && isEncryptedSecret(apiKey)) {
+				try {
+					apiKey = await decryptSecret(apiKey);
+				} catch (e) {
+					console.warn(`Failed to decrypt API key for provider ${row.provider}: ${e}`);
+					apiKey = null;
+				}
+			}
+			return {
 			id: row.id,
 			provider: row.provider,
-			api_key: row.api_key,
-			base_url: row.base_url,
-			models_url: row.models_url,
+				api_key: apiKey,
+				base_url: row.base_url,
+				models_url: row.models_url,
+			};
 		}));
 
 		return providers;
@@ -499,7 +544,29 @@ class SupabaseModelProviderRepository
 		if (error && error.code !== 'PGRST116') {
 			throw new Error(`Failed to load model provider: ${error.message}`);
 		}
-		return data || null;
+
+		if (!data) return null;
+
+		// Decrypt API key if needed
+		const {isEncryptedSecret, decryptSecret} = await import(
+			'npm:@timestep-ai/timestep@2025.9.211249'
+		);
+
+		let apiKey = data.api_key;
+		if (apiKey && isEncryptedSecret(apiKey)) {
+			try {
+				apiKey = await decryptSecret(apiKey);
+			} catch (e) {
+				console.warn(`Failed to decrypt API key for provider ${data.provider}: ${e}`);
+				apiKey = null;
+			}
+		}
+
+		// Return decrypted data
+		return {
+			...data,
+			api_key: apiKey,
+		};
 	}
 
 	async save(provider: ModelProvider): Promise<void> {
@@ -1607,9 +1674,9 @@ Deno.serve({port}, async (request: Request) => {
 							);
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
-								taskStore,
-								agentExecutor,
-								port,
+					taskStore,
+					agentExecutor,
+					port,
 								repositories as any,
 							);
 
@@ -1680,7 +1747,7 @@ Deno.serve({port}, async (request: Request) => {
 							});
 
 							responseEnded = true;
-						} catch (error) {
+			} catch (error) {
 							console.error(
 								`🔍 Error setting up stream for agent ${agentId}:`,
 								error,
@@ -1750,8 +1817,8 @@ Deno.serve({port}, async (request: Request) => {
 					console.error(
 						`❌ No response data captured from handleAgentRequest for agent ${agentId}`,
 					);
-					return new Response(
-						JSON.stringify({
+				return new Response(
+					JSON.stringify({
 							error: 'Agent request failed',
 							message: 'No response data captured from agent handler',
 							agentId: agentId,
