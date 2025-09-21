@@ -1245,6 +1245,47 @@ Deno.serve({port}, async (request: Request) => {
 				set: () => mockRes,
 				type: () => mockRes,
 				vary: () => mockRes,
+				// Add missing Express response methods that A2A might need
+				write: (data: any) => {
+					console.log(`🔍 MockRes.write called with data:`, data);
+					if (responseData === null) {
+						responseData = '';
+					}
+					responseData += data;
+					return true;
+				},
+				writeHead: (statusCode: number, statusMessage?: string, headers?: any) => {
+					console.log(`🔍 MockRes.writeHead called with status: ${statusCode}, message: ${statusMessage}, headers:`, headers);
+					responseStatus = statusCode;
+					if (headers) {
+						Object.assign(responseHeaders, headers);
+					}
+					return mockRes;
+				},
+				finished: false,
+				writable: true,
+				writableEnded: false,
+				writableFinished: false,
+				writableHighWaterMark: 16384,
+				writableLength: 0,
+				writableObjectMode: false,
+				writableCorked: 0,
+				destroyed: false,
+				readable: false,
+				readableEnded: false,
+				readableFlowing: null,
+				readableHighWaterMark: 16384,
+				readableLength: 0,
+				readableObjectMode: false,
+				readableAborted: false,
+				readableDidRead: false,
+				readableEncoding: null,
+				readablePaused: false,
+				readablePipes: [],
+				readablePipesCount: 0,
+				readableReadable: false,
+				readableResumeScheduled: false,
+				readableDestroyed: false,
 			} as any;
 
 			const mockNext = () => {};
@@ -1287,6 +1328,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Use handleAgentRequest directly like server.ts does
 				// This handles all A2A endpoints including agent card and chat streaming
+				console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
 				await handleAgentRequest(
 					mockReq,
 					mockRes,
@@ -1298,6 +1340,7 @@ Deno.serve({port}, async (request: Request) => {
 				);
 
 				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
+				console.log(`🔍 Response status: ${responseStatus}, headers:`, responseHeaders);
 
 				// If no response data was captured, fail fast - no fallbacks
 				if (!responseData && !responseEnded) {
