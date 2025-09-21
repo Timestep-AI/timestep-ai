@@ -95,19 +95,52 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (checkError)
 			throw new Error(`Failed to check existing agents: ${checkError.message}`);
 
-		// Only create defaults if no agents exist
-		if (!existingData || existingData.length === 0) {
-			try {
-				const {getDefaultAgents} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211249'
-				);
-				const defaultAgents = getDefaultAgents();
-				for (const agent of defaultAgents) {
-					await this.save(agent);
+		// Always ensure default agents exist and are up-to-date
+		try {
+			const {getDefaultAgents} = await import(
+				'npm:@timestep-ai/timestep@2025.9.211249'
+			);
+			const defaultAgents = getDefaultAgents();
+
+			// Get existing agents to compare
+			const {data: existingAgents, error: listError} = await this.supabase
+				.from('agents')
+				.select('*')
+				.eq('user_id', this.userId);
+
+			if (listError) {
+				console.warn(`Failed to list existing agents: ${listError.message}`);
+			} else {
+				// Update or create each default agent
+				for (const defaultAgent of defaultAgents) {
+					const existingAgent = existingAgents?.find(a => a.id === defaultAgent.id);
+
+					if (!existingAgent) {
+						// Create new default agent
+						await this.save(defaultAgent);
+						console.log(`Created default agent: ${defaultAgent.name}`);
+					} else {
+						// Check if agent needs updating
+						const needsUpdate =
+							existingAgent.name !== defaultAgent.name ||
+							existingAgent.instructions !== defaultAgent.instructions ||
+							JSON.stringify(existingAgent.tool_ids || []) !== JSON.stringify(defaultAgent.toolIds || []) ||
+							JSON.stringify(existingAgent.handoff_ids || []) !== JSON.stringify(defaultAgent.handoffIds || []);
+
+						if (needsUpdate) {
+							// Update existing agent with new defaults
+							const updatedAgent = {
+								...defaultAgent,
+								id: existingAgent.id, // Keep the existing ID
+							};
+							await this.save(updatedAgent);
+							console.log(`Updated agent: ${defaultAgent.name}`);
+						}
+					}
 				}
-			} catch (saveError) {
-				console.warn(`Failed to create default agents: ${saveError}`);
 			}
+		} catch (saveError) {
+			console.warn(`Failed to ensure default agents: ${saveError}`);
 		}
 
 		const {data, error} = await this.supabase
