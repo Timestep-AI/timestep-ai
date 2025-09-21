@@ -20,7 +20,6 @@ import {
 	Context,
 	TimestepAIAgentExecutor,
 	getModelProvider,
-	handleAgentMessage,
 	maskSecret,
 	getVersion,
 	handleAgentRequest,
@@ -1547,32 +1546,56 @@ Deno.serve({port}, async (request: Request) => {
 					responseEnded = true;
 				} else {
 					console.log(`🔍 Handling A2A request: ${cleanPath}`);
-					// Use handleAgentMessage directly for messaging
-					console.log(`🔍 Calling handleAgentMessage for agent ${agentId}`);
-					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
+					// Handle JSON-RPC message/stream request
+					console.log(`🔍 Processing JSON-RPC request for agent ${agentId}`);
 					console.log(`🔍 Request body:`, mockReq.body);
 
-					// Add error handling to catch any issues
-					try {
-						const response = await handleAgentMessage(
-							agentId,
-							mockReq.body,
-							taskStore,
-							agentExecutor,
-							repositories as any,
-							port,
-						);
+					// Simple JSON-RPC response for message/stream
+					const jsonRpcRequest = mockReq.body;
+					if (jsonRpcRequest.method === 'message/stream') {
+						// Create a simple streaming response
+						const response = {
+							jsonrpc: '2.0',
+							id: jsonRpcRequest.id,
+							result: {
+								stream: {
+									kind: 'message',
+									message: {
+										messageId: 'response-' + Date.now(),
+										kind: 'message',
+										role: 'agent',
+										parts: [
+											{
+												kind: 'text',
+												text: 'Hello! I received your message: "' + jsonRpcRequest.params.message.parts[0].text + '"\n\nThis is a placeholder response from the Supabase Edge Function. The agent logic needs to be properly implemented.',
+											},
+										],
+									},
+								},
+							},
+						};
 
-						console.log(`🔍 Agent message response:`, response);
+						console.log(`🔍 JSON-RPC response:`, response);
 
 						// Set response data
 						responseData = response;
 						responseStatus = 200;
 						responseHeaders['Content-Type'] = 'application/json';
 						responseEnded = true;
-					} catch (error) {
-						console.error(`🔍 Error in handleAgentMessage for agent ${agentId}:`, error);
-						throw error;
+					} else {
+						// Unknown method
+						const errorResponse = {
+							jsonrpc: '2.0',
+							id: jsonRpcRequest.id,
+							error: {
+								code: -32601,
+								message: 'Method not found',
+							},
+						};
+						responseData = errorResponse;
+						responseStatus = 200;
+						responseHeaders['Content-Type'] = 'application/json';
+						responseEnded = true;
 					}
 				}
 
