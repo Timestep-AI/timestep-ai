@@ -75,6 +75,13 @@ class AgentsService {
       const apiAgent = await response.json();
       console.log('AgentsService: Raw agent response:', apiAgent);
       
+      // Check if the response is a JSON-RPC error
+      if (apiAgent && typeof apiAgent === 'object' && 'jsonrpc' in apiAgent && 'error' in apiAgent) {
+        console.error('AgentsService: Server returned JSON-RPC error:', apiAgent.error);
+        console.error('AgentsService: Full error response:', JSON.stringify(apiAgent, null, 2));
+        throw new Error(`Server error: ${apiAgent.error.message || 'Unknown error'}`);
+      }
+      
       // Check if the response is just {success: true} instead of agent data
       if (apiAgent && typeof apiAgent === 'object' && 'success' in apiAgent && !('id' in apiAgent)) {
         console.error('AgentsService: Server returned success response instead of agent data:', apiAgent);

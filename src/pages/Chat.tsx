@@ -8,12 +8,14 @@ import { MessageCircle, Calendar, Users, Hash, Send, Bot } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
 import { Message } from '@/types/message';
 import { Agent } from '@/types/agent';
-import { Task, TaskStatusUpdateEvent } from '@/types/a2a';
+import { Task, TaskStatusUpdateEvent, TaskArtifactUpdateEvent, TextPart, PendingToolCall } from '@/types/a2a';
 import { chatsService } from '@/services/chatsService';
 import { messagesService } from '@/services/messagesService';
 import { agentsService } from '@/services/agentsService';
+import { supabase } from '@/integrations/supabase/client';
 import { MessageRow } from '@/components/MessageRow';
-import { a2aClient, A2AClient } from '@/services/a2aClient';
+import { ToolCallApproval } from '@/components/ToolCallApproval';
+import { A2AClient } from '@/services/a2aClient';
 import { toast } from 'sonner';
 
 export const Chat = () => {
@@ -25,6 +27,9 @@ export const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingToolCall, setPendingToolCall] = useState<PendingToolCall | null>(null);
+  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
+  const [currentContextId, setCurrentContextId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const loadChatAndMessages = async () => {
@@ -41,11 +46,23 @@ export const Chat = () => {
         setChat(foundChat || null);
         setMessages(chatMessages);
 
-        // Load agent information
+        // Load agent information - create basic agent object from agentId
         if (foundChat?.agentId) {
-          console.log('Chat: Loading agent with ID:', foundChat.agentId);
-          const agentInfo = await agentsService.getById(foundChat.agentId);
-          console.log('Chat: Loaded agent:', agentInfo);
+          console.log('Chat: Using agent ID:', foundChat.agentId);
+          // Create a basic agent object - the A2A client will handle the agent card fetching
+          const agentInfo: Agent = {
+            id: foundChat.agentId,
+            name: 'Agent', // Will be updated when we fetch the agent card
+            description: 'AI Agent',
+            instructions: '',
+            model: 'gpt-4',
+            toolIds: [],
+            handoffIds: [],
+            createdAt: new Date().toISOString(),
+            status: 'active',
+            isHandoff: false
+          };
+          console.log('Chat: Created agent object:', agentInfo);
           setAgent(agentInfo);
         } else {
           console.log('Chat: No agentId found in chat:', foundChat);
@@ -114,20 +131,24 @@ export const Chat = () => {
       setNewMessage('');
 
       // Send to A2A agent
-      const a2aMessage = a2aClient.convertToA2AMessage(userMessage);
+      const a2aMessage = A2AClient.convertToA2AMessage(userMessage);
       a2aMessage.contextId = id; // Use the chat ID as context ID
       const messageParams = { message: a2aMessage };
 
       toast.info(`Sending message to ${agent?.name || 'agent'}...`);
 
       // Create agent-specific client if available
+      console.log('Agent object:', agent);
+      console.log('Agent ID:', agent?.id);
       if (!agent || !agent.id) {
         throw new Error('No agent or agent ID available');
       }
 
-      // Create agent card URL following the working example pattern
+      // Create agent card URL - the A2A SDK expects the full agent card URL
       const agentCardUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}/.well-known/agent-card.json`;
-      const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl, agent);
+      
+      // Initialize client for agent (auth handled internally)
+      const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl);
 
       // Process A2A response stream
       const stream = clientForAgent.sendMessageStream(messageParams);
@@ -139,34 +160,139 @@ export const Chat = () => {
         console.log('A2A Event:', event);
         
         // Handle different A2A event types
-        if (event.kind === 'message' && 'role' in event && event.role === 'agent') {
-          // Handle agent message responses
-          const agentMessage = a2aClient.convertFromA2AMessage(event, id);
-          await messagesService.create({
-            chatId: id,
-            content: agentMessage.content!,
-            sender: agentMessage.sender!,
-            type: agentMessage.type!,
-            status: agentMessage.status!
-          });
-
-          // Refresh messages list
-          const refreshedMessages = await messagesService.getByChatId(id);
-          setMessages(refreshedMessages);
-          hasReceivedAgentMessage = true;
-        } else if (event.kind === 'status-update') {
-          // Handle status updates
+        if (event.kind === 'status-update') {
           const statusEvent = event as TaskStatusUpdateEvent;
           console.log(`Task ${statusEvent.taskId} status: ${statusEvent.status.state}`);
           
+          // Update current task and context IDs
+          if (statusEvent.taskId && statusEvent.taskId !== currentTaskId) {
+            setCurrentTaskId(statusEvent.taskId);
+          }
+          if (statusEvent.contextId && statusEvent.contextId !== currentContextId) {
+            setCurrentContextId(statusEvent.contextId);
+          }
+          
+          // Handle status message content
+          if (statusEvent.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id);
+            await messagesService.create({
+              chatId: id,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+            hasReceivedAgentMessage = true;
+
+            // Check if this is a tool call approval request from status message
+            if (statusEvent.status.state === 'input-required' && statusEvent.status.message.parts) {
+              for (const p of statusEvent.status.message.parts) {
+                if (p.kind === 'text' && typeof p.text === 'string') {
+                  const m = p.text.match(/Human approval required for tool execution: (.+)/);
+                  if (m) {
+                    const callText = m[1];
+                    const tm = callText.match(/^(\w+)\((.*)\)$/);
+                    if (tm) {
+                      const toolName = tm[1];
+                      let parameters: Record<string, any> = {};
+                      try {
+                        parameters = tm[2] ? JSON.parse(tm[2]) : {};
+                      } catch (_) {
+                        parameters = {};
+                      }
+                      // Always set pending tool call for new approval requests
+                      setPendingToolCall({
+                        id: `call_${Date.now()}`,
+                        name: toolName,
+                        parameters,
+                        artifactId: `tool-call-${Date.now()}`,
+                        description: 'Tool execution requires human approval'
+                      });
+                      toast.info('Tool call requires approval');
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
           if (statusEvent.status.state === 'completed' && statusEvent.final) {
             console.log('Task completed');
+            setCurrentTaskId(undefined); // Clear task ID when completed
+          }
+        } else if (event.kind === 'artifact-update') {
+          const artifactEvent = event as TaskArtifactUpdateEvent;
+          console.log(`Artifact received: ${artifactEvent.artifact.name || 'unnamed'}`);
+          
+          // Handle tool call artifacts
+          const isToolCallArtifact = artifactEvent.artifact.parts.some(
+            part => part.kind === 'data' && 
+            part.data && 
+            typeof part.data === 'object' && 
+            part.data['toolCall']
+          );
+          
+          if (isToolCallArtifact) {
+            // Extract tool call information from the artifact
+            const toolCallData = artifactEvent.artifact.parts.find(
+              part => part.kind === 'data' && part.data && typeof part.data === 'object' && part.data['toolCall']
+            );
+            
+            if (toolCallData && toolCallData.kind === 'data') {
+              const toolCall = toolCallData.data.toolCall;
+              // Always set pending tool call for new approval requests
+              setPendingToolCall({
+                id: toolCall.id || `call_${Date.now()}`,
+                name: toolCall.name || 'Unknown Tool',
+                parameters: toolCall.parameters || {},
+                artifactId: artifactEvent.artifact.artifactId,
+                description: artifactEvent.artifact.name || 'Tool execution request'
+              });
+              toast.info('Tool call requires approval');
+            }
+          } else {
+            // Handle other artifacts as messages
+          const textParts = artifactEvent.artifact.parts.filter(p => p.kind === 'text') as TextPart[];
+            if (textParts.length > 0) {
+              const content = textParts.map(p => p.text).join('\n');
+              await messagesService.create({
+                chatId: id,
+                content,
+                sender: 'Agent',
+                type: 'assistant',
+                status: 'sent'
+              });
+              hasReceivedAgentMessage = true;
+            }
           }
         } else if (event.kind === 'task') {
-          // Handle task creation
           const task = event as Task;
           console.log(`Task created: ${task.id}`);
+          
+          if (task.id !== currentTaskId) {
+            setCurrentTaskId(task.id);
+          }
+          if (task.contextId && task.contextId !== currentContextId) {
+            setCurrentContextId(task.contextId);
+          }
+          
+          if (task.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id);
+            await messagesService.create({
+              chatId: id,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+            hasReceivedAgentMessage = true;
+          }
         }
+        
+        // Refresh messages list after each event
+        const refreshedMessages = await messagesService.getByChatId(id);
+        setMessages(refreshedMessages);
       }
 
       if (hasReceivedAgentMessage) {
@@ -186,6 +312,303 @@ export const Chat = () => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleToolCallApprove = async (reason?: string) => {
+    if (!pendingToolCall || !agent) return;
+
+    try {
+      setSending(true);
+
+      // Store the current tool call ID before processing
+      const currentToolCallId = pendingToolCall.id;
+
+      // Use the new static method for creating client
+      const clientForAgent = await A2AClient.fromAgentId(agent.id);
+
+      // Create tool call response message
+      const toolResponse = A2AClient.createToolCallResponse(
+        pendingToolCall.id,
+        pendingToolCall.artifactId,
+        'approve',
+        reason,
+        `Tool call approved by user${reason ? `: ${reason}` : ''}`,
+        currentContextId,
+        currentTaskId
+      );
+
+      // Clear current pending request immediately to allow subsequent approvals to surface
+      setPendingToolCall(null);
+
+      // Send the response
+      const messageParams = { message: toolResponse };
+      const stream = clientForAgent.sendMessageStream(messageParams);
+
+      // Process the response stream
+      for await (const event of stream) {
+        console.log('Tool call response event:', event);
+        // Handle the response similar to regular messages
+        if (event.kind === 'status-update') {
+          const statusEvent = event as TaskStatusUpdateEvent;
+          if (statusEvent.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id!);
+            await messagesService.create({
+              chatId: id!,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+
+            // Surface next approval request from status text if present
+            if (statusEvent.status.state === 'input-required' && statusEvent.status.message.parts) {
+              for (const p of statusEvent.status.message.parts) {
+                if (p.kind === 'text' && typeof p.text === 'string') {
+                  const m = p.text.match(/Human approval required for tool execution: (.+)/);
+                  if (m) {
+                    const callText = m[1];
+                    const tm = callText.match(/^(\w+)\((.*)\)$/);
+                    if (tm) {
+                      const toolName = tm[1];
+                      let parameters: Record<string, any> = {};
+                      try {
+                        parameters = tm[2] ? JSON.parse(tm[2]) : {};
+                      } catch (_) {
+                        parameters = {};
+                      }
+                      setPendingToolCall({
+                        id: `call_${Date.now()}`,
+                        name: toolName,
+                        parameters,
+                        artifactId: `tool-call-${Date.now()}`,
+                        description: 'Tool execution requires human approval'
+                      });
+                      toast.info('Tool call requires approval');
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } else if (event.kind === 'artifact-update') {
+          const artifactEvent = event as TaskArtifactUpdateEvent;
+          const isToolCallArtifact = artifactEvent.artifact.parts.some(
+            part => part.kind === 'data' &&
+              part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
+          );
+          if (isToolCallArtifact) {
+            const toolCallData = artifactEvent.artifact.parts.find(
+              part => part.kind === 'data' && part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
+            );
+            if (toolCallData && toolCallData.kind === 'data') {
+              const toolCall = (toolCallData.data as any).toolCall;
+              setPendingToolCall({
+                id: toolCall.id || crypto.randomUUID(),
+                name: toolCall.name || 'Unknown Tool',
+                parameters: toolCall.parameters || {},
+                artifactId: artifactEvent.artifact.artifactId,
+                description: artifactEvent.artifact.name || 'Tool execution request'
+              });
+              toast.info('Tool call requires approval');
+            }
+          }
+        } else if (event.kind === 'task') {
+          const task = event as Task;
+          console.log(`Tool call response task: ${task.id}`);
+
+          if (task.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
+            await messagesService.create({
+              chatId: id!,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+          }
+        }
+      }
+
+      // Only clear pending tool call if no new one was set during processing
+      // (i.e., if the current pending tool call is still the one we processed)
+      setPendingToolCall(prev => {
+        // If a new tool call was set during processing, keep it
+        if (prev && prev.id !== currentToolCallId) {
+          return prev;
+        }
+        // Otherwise, clear it
+        return null;
+      });
+      const refreshedMessages = await messagesService.getByChatId(id!);
+      setMessages(refreshedMessages);
+
+      toast.success('Tool call approved');
+    } catch (error) {
+      console.error('Error approving tool call:', error);
+      toast.error('Failed to approve tool call');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleToolCallReject = async (reason?: string) => {
+    if (!pendingToolCall || !agent) return;
+
+    try {
+      setSending(true);
+
+      // Store the current tool call ID before processing
+      const currentToolCallId = pendingToolCall.id;
+
+      // Use the new static method for creating client
+      const clientForAgent = await A2AClient.fromAgentId(agent.id);
+
+      // Create tool call response message
+      const toolResponse = A2AClient.createToolCallResponse(
+        pendingToolCall.id,
+        pendingToolCall.artifactId,
+        'reject',
+        reason,
+        `Tool call rejected by user${reason ? `: ${reason}` : ''}`,
+        currentContextId,
+        currentTaskId
+      );
+
+      // Clear current pending request immediately to allow subsequent approvals to surface
+      setPendingToolCall(null);
+
+      // Send the response
+      const messageParams = { message: toolResponse };
+      const stream = clientForAgent.sendMessageStream(messageParams);
+
+      // Process the response stream
+      for await (const event of stream) {
+        console.log('Tool call response event:', event);
+        // Handle the response similar to regular messages
+        if (event.kind === 'status-update') {
+          const statusEvent = event as TaskStatusUpdateEvent;
+          if (statusEvent.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id!);
+            await messagesService.create({
+              chatId: id!,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+
+            // Surface next approval request from status text if present
+            if (statusEvent.status.state === 'input-required' && statusEvent.status.message.parts) {
+              for (const p of statusEvent.status.message.parts) {
+                if (p.kind === 'text' && typeof p.text === 'string') {
+                  const m = p.text.match(/Human approval required for tool execution: (.+)/);
+                  if (m) {
+                    const callText = m[1];
+                    const tm = callText.match(/^(\w+)\((.*)\)$/);
+                    if (tm) {
+                      const toolName = tm[1];
+                      let parameters: Record<string, any> = {};
+                      try {
+                        parameters = tm[2] ? JSON.parse(tm[2]) : {};
+                      } catch (_) {
+                        parameters = {};
+                      }
+                      setPendingToolCall({
+                        id: `call_${Date.now()}`,
+                        name: toolName,
+                        parameters,
+                        artifactId: `tool-call-${Date.now()}`,
+                        description: 'Tool execution requires human approval'
+                      });
+                      toast.info('Tool call requires approval');
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } else if (event.kind === 'artifact-update') {
+          const artifactEvent = event as TaskArtifactUpdateEvent;
+          const isToolCallArtifact = artifactEvent.artifact.parts.some(
+            part => part.kind === 'data' &&
+              part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
+          );
+          if (isToolCallArtifact) {
+            const toolCallData = artifactEvent.artifact.parts.find(
+              part => part.kind === 'data' && part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
+            );
+            if (toolCallData && toolCallData.kind === 'data') {
+              const toolCall = (toolCallData.data as any).toolCall;
+              setPendingToolCall({
+                id: toolCall.id || crypto.randomUUID(),
+                name: toolCall.name || 'Unknown Tool',
+                parameters: toolCall.parameters || {},
+                artifactId: artifactEvent.artifact.artifactId,
+                description: artifactEvent.artifact.name || 'Tool execution request'
+              });
+              toast.info('Tool call requires approval');
+            }
+          }
+        } else if (event.kind === 'task') {
+          const task = event as Task;
+          console.log(`Tool call response task: ${task.id}`);
+
+          if (task.status.message) {
+            const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
+            await messagesService.create({
+              chatId: id!,
+              content: agentMessage.content!,
+              sender: agentMessage.sender!,
+              type: agentMessage.type!,
+              status: agentMessage.status!
+            });
+          }
+        }
+      }
+
+      // Only clear pending tool call if no new one was set during processing
+      // (i.e., if the current pending tool call is still the one we processed)
+      setPendingToolCall(prev => {
+        // If a new tool call was set during processing, keep it
+        if (prev && prev.id !== currentToolCallId) {
+          return prev;
+        }
+        // Otherwise, clear it
+        return null;
+      });
+      const refreshedMessages = await messagesService.getByChatId(id!);
+      setMessages(refreshedMessages);
+
+      toast.success('Tool call rejected');
+    } catch (error) {
+      console.error('Error rejecting tool call:', error);
+      toast.error('Failed to reject tool call');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleToolCallModify = (paramName: string, value: any) => {
+    if (!pendingToolCall) return;
+
+    setPendingToolCall({
+      ...pendingToolCall,
+      parameters: {
+        ...pendingToolCall.parameters,
+        [paramName]: value
+      }
+    });
+
+    toast.info(`Modified parameter ${paramName} to ${value}`);
+  };
+
+  const handleShowParams = () => {
+    if (pendingToolCall) {
+      console.log('Current tool call parameters:', pendingToolCall.parameters);
+      toast.info('Parameters logged to console');
     }
   };
 
@@ -269,6 +692,18 @@ export const Chat = () => {
                   />
                 ))}
               </div>
+            )}
+
+            {/* Tool Call Approval */}
+            {pendingToolCall && (
+              <ToolCallApproval
+                toolCall={pendingToolCall}
+                onApprove={handleToolCallApprove}
+                onReject={handleToolCallReject}
+                onModify={handleToolCallModify}
+                onShowParams={handleShowParams}
+                isVisible={!!pendingToolCall}
+              />
             )}
 
             {/* Message Input */}

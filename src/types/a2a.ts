@@ -47,6 +47,7 @@ export interface MessageSendParams {
   message: A2AMessage;
   configuration?: MessageSendConfiguration;
   metadata?: { [key: string]: any };
+  headers?: { [key: string]: string };
 }
 
 export type TaskState = 
@@ -118,4 +119,13 @@ export interface AgentCard {
   url?: string;
   inputModes?: string[];
   outputModes?: string[];
+}
+
+// UI-friendly representation of a pending tool call that requires approval
+export interface PendingToolCall {
+  id: string;
+  name: string;
+  parameters: Record<string, any>;
+  artifactId: string;
+  description?: string;
 }
