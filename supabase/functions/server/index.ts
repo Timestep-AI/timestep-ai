@@ -383,10 +383,14 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 
 		if (!hasBuiltinServer) {
 			try {
-				const {getBuiltinMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
-				);
-				const builtinServer = getBuiltinMcpServer(this.baseUrl);
+				// For the built-in server, don't set a serverUrl - it's handled internally
+				const builtinServer = {
+					id: '00000000-0000-0000-0000-000000000000',
+					name: 'Built-in MCP Server',
+					description: 'Built-in MCP server providing weather data, document tools, and thinking capabilities',
+					serverUrl: '', // Empty for built-in server - handled internally
+					enabled: true,
+				};
 				console.log(`🔌 Creating built-in MCP server:`, builtinServer);
 				await this.save(builtinServer);
 				console.log(`🔌 Created built-in MCP server in database`);
@@ -443,11 +447,13 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 						authToken = null;
 					}
 				}
+				// For built-in server, don't set serverUrl - it's handled internally
+				const isBuiltin = row.id === '00000000-0000-0000-0000-000000000000';
 				return {
 					id: row.id,
 					name: row.name,
 					description: row.description ?? row.name,
-					serverUrl: row.server_url ?? '',
+					serverUrl: isBuiltin ? '' : (row.server_url ?? ''),
 					enabled: row.enabled ?? true,
 					authToken: authToken,
 				};
@@ -488,11 +494,13 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		}
 
 		// Apply the same transformation logic as the list method
+		// For built-in server, don't set serverUrl - it's handled internally
+		const isBuiltin = data.id === '00000000-0000-0000-0000-000000000000';
 		return {
 			id: data.id,
 			name: data.name,
 			description: data.description ?? data.name,
-			serverUrl: data.server_url ?? '',
+			serverUrl: isBuiltin ? '' : (data.server_url ?? ''),
 			enabled: data.enabled ?? true,
 			authToken: authToken,
 		};
