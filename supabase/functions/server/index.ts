@@ -1778,7 +1778,7 @@ Deno.serve({port}, async (request: Request) => {
 							const timestepModule = await import(
 								'npm:@timestep-ai/timestep@2025.9.211334'
 							);
-							const isAgentAvailable = timestepModule.default.isAgentAvailable;
+							const isAgentAvailable = timestepModule.isAgentAvailable;
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1846,7 +1846,7 @@ Deno.serve({port}, async (request: Request) => {
 							const timestepModule = await import(
 								'npm:@timestep-ai/timestep@2025.9.211334'
 							);
-							const createAgentRequestHandler = timestepModule.default.createAgentRequestHandler;
+							const createAgentRequestHandler = timestepModule.createAgentRequestHandler;
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
 								taskStore,
