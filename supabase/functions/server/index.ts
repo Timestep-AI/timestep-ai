@@ -36,7 +36,7 @@ import {
 	type ModelProvider,
 	type Repository,
 	type RepositoryContainer,
-} from 'npm:@timestep-ai/timestep@2025.9.201422';
+} from 'npm:@timestep-ai/timestep@2025.9.211013';
 
 /**
  * Custom getAgentCard function for Supabase Edge Function
@@ -47,7 +47,7 @@ async function getAgentCardForSupabase(
 	baseUrl: string,
 	repositories: RepositoryContainer,
 ): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.201422');
+	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211013');
 	const agent = await getAgent(agentId, repositories as any);
 	if (!agent) {
 		throw new Error(`Agent with ID ${agentId} not found`);
@@ -90,15 +90,21 @@ async function createAgentRequestHandlerForSupabase(
 	agentExecutor: any,
 	repositories: RepositoryContainer,
 ): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.201422');
+	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211013');
 	const agent = await getAgent(agentId, repositories as any);
 	if (!agent) {
 		throw new Error(`Agent with ID ${agentId} not found`);
 	}
 
-	const agentCard = await getAgentCardForSupabase(agentId, baseUrl, repositories as any);
+	const agentCard = await getAgentCardForSupabase(
+		agentId,
+		baseUrl,
+		repositories as any,
+	);
 
-	const {ContextAwareRequestHandler} = await import('npm:@timestep-ai/timestep@2025.9.201422');
+	const {ContextAwareRequestHandler} = await import(
+		'npm:@timestep-ai/timestep@2025.9.211013'
+	);
 	return new ContextAwareRequestHandler(
 		agentId,
 		agentCard,
@@ -130,7 +136,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultAgents} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 				const defaultAgents = getDefaultAgents();
 				for (const agent of defaultAgents) {
@@ -330,7 +336,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultMcpServers} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 				const defaults = getDefaultMcpServers(this.baseUrl);
 				for (const server of defaults) {
@@ -400,7 +406,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			enabled: server.enabled,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.201422'
+			'npm:@timestep-ai/timestep@2025.9.211013'
 		);
 
 		// Handle auth token - encrypt if provided, set to null if not
@@ -469,7 +475,7 @@ class SupabaseModelProviderRepository
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultModelProviders} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 				const defaults = getDefaultModelProviders();
 				for (const p of defaults) {
@@ -523,7 +529,7 @@ class SupabaseModelProviderRepository
 			models_url: (provider as any).modelsUrl ?? (provider as any).models_url,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.201422'
+			'npm:@timestep-ai/timestep@2025.9.211013'
 		);
 		if ((provider as any).apiKey !== undefined) {
 			let key = (provider as any).apiKey as string | undefined;
@@ -667,7 +673,7 @@ Deno.serve({port}, async (request: Request) => {
 
 	// Generate base URL for MCP servers from the current request
 	const baseUrl = `${url.protocol}//${url.host}/${functionName}`;
-	
+
 	// Generate agent base URL for agent cards (without the /functions/v1/ prefix)
 	const agentBaseUrl = `${url.protocol}//${url.host}/${functionName}`;
 
@@ -882,7 +888,10 @@ Deno.serve({port}, async (request: Request) => {
 
 			if (request.method === 'GET') {
 				try {
-					const provider = await getModelProvider(providerId, repositories as any);
+					const provider = await getModelProvider(
+						providerId,
+						repositories as any,
+					);
 					if (!provider) {
 						return new Response(
 							JSON.stringify({
@@ -955,7 +964,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Get tool information from the MCP server
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 
 				// First, get the list of tools from the server
@@ -982,7 +991,8 @@ Deno.serve({port}, async (request: Request) => {
 				}
 
 				// Find the specific tool
-				const tools = ('result' in listResponse && listResponse.result?.tools) || [];
+				const tools =
+					('result' in listResponse && listResponse.result?.tools) || [];
 				const tool = tools.find((t: any) => t.name === toolName);
 
 				if (!tool) {
@@ -1057,7 +1067,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				const [serverId, toolName] = parts;
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 
 				const result = await handleMcpServerRequest(
@@ -1100,7 +1110,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 
 				if (request.method === 'POST') {
@@ -1143,7 +1153,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// GET request - return full MCP server record
 				const {getMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.201422'
+					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
 				const server = await getMcpServer(serverId, repositories as any);
 
@@ -1199,10 +1209,12 @@ Deno.serve({port}, async (request: Request) => {
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
 			const agentId = agentMatch[1];
-			
+
 			try {
 				// Check if agent exists
-				const {isAgentAvailable} = await import('npm:@timestep-ai/timestep@2025.9.201422');
+				const {isAgentAvailable} = await import(
+					'npm:@timestep-ai/timestep@2025.9.211013'
+				);
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1250,8 +1262,7 @@ Deno.serve({port}, async (request: Request) => {
 					acceptsEncodings: () => false,
 					acceptsLanguages: () => false,
 					range: () => undefined,
-					param: (name: string) =>
-						name === 'agentId' ? agentId : undefined,
+					param: (name: string) => (name === 'agentId' ? agentId : undefined),
 					is: () => false,
 					protocol: 'https',
 					secure: true,
@@ -1362,7 +1373,9 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Return the actual response from the A2A Express app
 				return new Response(
-					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+					typeof responseData === 'string'
+						? responseData
+						: JSON.stringify(responseData),
 					{
 						status: responseStatus,
 						headers: responseHeaders,
