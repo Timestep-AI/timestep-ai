@@ -634,11 +634,19 @@ Deno.serve({port}, async (request: Request) => {
 		cleanPath = apiParts.length > 0 ? '/' + apiParts.join('/') : '/';
 	}
 
-	// Generate base URL for MCP servers from the current request
-	const baseUrl = `${url.protocol}//${url.host}/${functionName}`;
+    // Respect original protocol behind the proxy (prefer https on Supabase)
+    const forwardedProto =
+        request.headers.get('x-forwarded-proto') ||
+        request.headers.get('X-Forwarded-Proto');
+    const inferredProto =
+        forwardedProto || (url.hostname.endsWith('.supabase.co') ? 'https' : url.protocol.replace(':', ''));
+    const scheme = inferredProto.endsWith(':') ? inferredProto : `${inferredProto}:`;
 
-	// Generate agent base URL for agent cards (without the /functions/v1/ prefix)
-	const agentBaseUrl = `${url.protocol}//${url.host}/${functionName}`;
+    // Generate base URL for MCP servers from the current request
+    const baseUrl = `${scheme}//${url.host}/${functionName}`;
+
+    // Generate agent base URL for agent cards (without the /functions/v1/ prefix)
+    const agentBaseUrl = `${scheme}//${url.host}/${functionName}`;
 
 	// Derive user from Authorization header (Bearer JWT)
 	const authHeader = request.headers.get('Authorization') || '';
@@ -1175,11 +1183,17 @@ Deno.serve({port}, async (request: Request) => {
 			console.log(`🔍 Agent route matched! agentId: ${agentMatch[1]}`);
 			const agentId = agentMatch[1];
 
+			// Compute sub-path for the agent app (strip /agents/{agentId} prefix)
+			const agentPrefix = `/agents/${agentId}`;
+			const agentSubPath = cleanPath.startsWith(agentPrefix)
+				? cleanPath.slice(agentPrefix.length) || '/'
+				: cleanPath;
+
 			// Create a mock Express-style request object that satisfies the Request interface
 			const mockReq = {
 				method: request.method,
-				path: cleanPath,
-				originalUrl: cleanPath + url.search,
+				path: agentSubPath,
+				originalUrl: agentSubPath + url.search,
 				params: {agentId: agentId},
 				body:
 					request.method !== 'GET'
@@ -1207,7 +1221,7 @@ Deno.serve({port}, async (request: Request) => {
 				xhr: false,
 				route: undefined,
 				signedCookies: {},
-				url: cleanPath + url.search,
+				url: agentSubPath + url.search,
 				baseUrl: '',
 				app: {} as any,
 				res: {} as any,
@@ -1223,6 +1237,36 @@ Deno.serve({port}, async (request: Request) => {
 			let responseHeaders: Record<string, string> = {...headers};
 			let isStreaming = false;
 			let responseEnded = false;
+			let stream: ReadableStream<Uint8Array> | null = null;
+			let streamController:
+				| ReadableStreamDefaultController<Uint8Array>
+				| null = null;
+			let responseResolved = false;
+			let responseResolve:
+				| ((r: {type: 'stream' | 'body'; status: number; headers: Record<string, string>}) => void)
+				| null = null;
+			const responsePromise = new Promise<{
+				type: 'stream' | 'body';
+				status: number;
+				headers: Record<string, string>;
+			}>((resolve) => {
+				responseResolve = (r) => {
+					if (!responseResolved) {
+						responseResolved = true;
+						resolve(r);
+					}
+				};
+			});
+
+			const ensureStream = () => {
+				if (!stream) {
+					stream = new ReadableStream<Uint8Array | string>({
+						start(controller) {
+							streamController = controller;
+						},
+					});
+				}
+			};
 
 			const mockRes = {
 				status: (code: number) => {
@@ -1248,6 +1292,9 @@ Deno.serve({port}, async (request: Request) => {
 						responseData = data;
 					}
 					responseEnded = true;
+					if (streamController) {
+						try { streamController.close(); } catch {}
+					}
 					return mockRes;
 				},
 				setHeader: (name: string, value: string) => {
@@ -1259,6 +1306,7 @@ Deno.serve({port}, async (request: Request) => {
 						value.includes('text/event-stream')
 					) {
 						isStreaming = true;
+						ensureStream();
 					}
 					return mockRes;
 				},
@@ -1275,23 +1323,66 @@ Deno.serve({port}, async (request: Request) => {
 				download: () => mockRes,
 				format: () => mockRes,
 				get: () => undefined,
-				header: () => mockRes,
+				header: (name?: any, value?: any) => {
+					if (typeof name === 'string' && typeof value === 'string') {
+						return (mockRes as any).setHeader(name, value);
+					}
+					if (name && typeof name === 'object') {
+						for (const [k, v] of Object.entries(name)) {
+							(mockRes as any).setHeader(k, String(v));
+						}
+					}
+					return mockRes;
+				},
 				links: () => mockRes,
 				location: () => mockRes,
 				redirect: () => mockRes,
 				render: () => mockRes,
 				sendFile: () => mockRes,
 				sendStatus: () => mockRes,
-				set: () => mockRes,
-				type: () => mockRes,
+				set: (name: any, value?: any) => {
+					if (typeof name === 'string' && typeof value === 'string') {
+						return (mockRes as any).setHeader(name, value);
+					}
+					if (name && typeof name === 'object') {
+						for (const [k, v] of Object.entries(name)) {
+							(mockRes as any).setHeader(k, String(v));
+						}
+					}
+					return mockRes;
+				},
+				type: (mime: string) => {
+					if (mime) {
+						(mockRes as any).setHeader('Content-Type', mime);
+					}
+					return mockRes;
+				},
 				vary: () => mockRes,
 				// Add missing Express response methods that A2A might need
+				flushHeaders: () => {
+					console.log('🔍 MockRes.flushHeaders called');
+					return mockRes;
+				},
+				flush: () => {
+					console.log('🔍 MockRes.flush called');
+					return mockRes;
+				},
+				on: (_event: string, _handler: (...args: any[]) => void) => {
+					// No-op bridge for event listeners
+					return mockRes;
+				},
 				write: (data: any) => {
 					console.log(`🔍 MockRes.write called with data:`, data);
 					if (responseData === null) {
 						responseData = '';
 					}
-					responseData += data;
+					const enc = new TextEncoder();
+					const chunkUint8 =
+						data instanceof Uint8Array ? data : enc.encode(typeof data === 'string' ? data : String(data));
+					responseData += new TextDecoder().decode(chunkUint8);
+					if (streamController) {
+						streamController.enqueue(chunkUint8);
+					}
 					return true;
 				},
 				writeHead: (statusCode: number, statusMessage?: string, headers?: any) => {
@@ -1299,6 +1390,12 @@ Deno.serve({port}, async (request: Request) => {
 					responseStatus = statusCode;
 					if (headers) {
 						Object.assign(responseHeaders, headers);
+						const ct = Object.entries(headers).find(([k]) => k.toLowerCase() === 'content-type');
+						if (ct && typeof ct[1] === 'string' && ct[1].includes('text/event-stream')) {
+							isStreaming = true;
+							ensureStream();
+							if (responseResolve) responseResolve({type: 'stream', status: responseStatus, headers: responseHeaders});
+						}
 					}
 					return mockRes;
 				},
@@ -1433,6 +1530,27 @@ Deno.serve({port}, async (request: Request) => {
 				console.log(`🔍 Response status: ${responseStatus}, headers:`, responseHeaders);
 				console.log(`🔍 Is streaming: ${isStreaming}`);
 
+				// If streaming, return a streaming Response and bypass default JSON header
+				if (isStreaming && stream) {
+					const sseHeaders: Record<string, string> = {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						Connection: 'keep-alive',
+						...Object.fromEntries(
+							Object.entries(responseHeaders).filter(
+								([k]) => k.toLowerCase() !== 'content-type',
+							),
+						),
+					};
+					console.log('🔍 Returning SSE stream with headers:', sseHeaders);
+					// Mark as ended for non-stream return paths
+					responseEnded = true;
+					return new Response(stream as any, {
+						status: responseStatus,
+						headers: sseHeaders,
+					});
+				}
+
 				// If no response data was captured, fail fast - no fallbacks
 				if (!responseData && !responseEnded) {
 					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
@@ -1447,11 +1565,21 @@ Deno.serve({port}, async (request: Request) => {
 				}
 
 				// Return the response from handleAgentRequest
+				// Avoid forcing JSON header if upstream set something else
+				const finalHeaders = {
+					...responseHeaders,
+				};
+				// If upstream intended streaming but didn't call writeHead earlier, infer from headers
+				const ctHeader = Object.entries(finalHeaders).find(([k]) => k.toLowerCase() === 'content-type');
+				if (!isStreaming && ctHeader && typeof ctHeader[1] === 'string' && ctHeader[1].includes('text/event-stream') && stream) {
+					console.log('🔍 Upstream indicated SSE via headers; returning stream');
+					return new Response(stream as any, {status: responseStatus, headers: finalHeaders});
+				}
 				return new Response(
 					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
 					{
 						status: responseStatus,
-						headers: responseHeaders,
+						headers: finalHeaders,
 					},
 				);
 			} catch (error) {
