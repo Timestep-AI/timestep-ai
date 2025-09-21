@@ -20,6 +20,7 @@ import {
 	Context,
 	TimestepAIAgentExecutor,
 	getModelProvider,
+	handleAgentMessage,
 	maskSecret,
 	getVersion,
 	handleAgentRequest,
@@ -1524,13 +1525,7 @@ Deno.serve({port}, async (request: Request) => {
 				// For Supabase, the agent base URL should point to the function URL
 				const supabaseAgentBaseUrl = agentBaseUrl.replace('/server', '/functions/v1/server');
 
-				// Use handleAgentRequest middleware directly
-				const requestHandler = handleAgentRequest(
-					taskStore,
-					agentExecutor,
-					port,
-					repositories as any,
-				);
+				// Use handleAgentMessage directly for messaging
 
 				// Check if this is an agent card request - handle it separately
 				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
@@ -1552,16 +1547,31 @@ Deno.serve({port}, async (request: Request) => {
 					responseEnded = true;
 				} else {
 					console.log(`🔍 Handling A2A request: ${cleanPath}`);
-					// Use handleAgentRequest middleware for messaging
-					console.log(`🔍 Calling handleAgentRequest for agent ${agentId}`);
+					// Use handleAgentMessage directly for messaging
+					console.log(`🔍 Calling handleAgentMessage for agent ${agentId}`);
 					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
-					console.log(`🔍 Request params:`, mockReq.params);
+					console.log(`🔍 Request body:`, mockReq.body);
 
 					// Add error handling to catch any issues
 					try {
-						await requestHandler(mockReq, mockRes, mockNext);
+						const response = await handleAgentMessage(
+							agentId,
+							mockReq.body,
+							taskStore,
+							agentExecutor,
+							repositories as any,
+							port,
+						);
+
+						console.log(`🔍 Agent message response:`, response);
+
+						// Set response data
+						responseData = response;
+						responseStatus = 200;
+						responseHeaders['Content-Type'] = 'application/json';
+						responseEnded = true;
 					} catch (error) {
-						console.error(`🔍 Error in handleAgentRequest for agent ${agentId}:`, error);
+						console.error(`🔍 Error in handleAgentMessage for agent ${agentId}:`, error);
 						throw error;
 					}
 				}
