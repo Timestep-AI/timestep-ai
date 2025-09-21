@@ -195,15 +195,7 @@ export type Database = {
           user_id?: string
           version?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "artifacts_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       contexts: {
         Row: {
@@ -454,15 +446,7 @@ export type Database = {
           user_id?: string
           webhook_url?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "push_notification_configs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       spans: {
         Row: {
@@ -586,13 +570,6 @@ export type Database = {
             referencedRelation: "artifacts"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "task_artifact_events_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
         ]
       }
       task_status_events: {
@@ -626,58 +603,32 @@ export type Database = {
           task_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "task_status_events_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tasks: {
         Row: {
-          agent_id: string
-          completed_at: string | null
-          context_id: string
           created_at: string | null
           id: string
-          initiator: string
-          metadata: Json | null
-          reference_task_ids: string[] | null
-          status: string
+          task_data: Json
+          task_id: string
           updated_at: string | null
           user_id: string
-          webhook_url: string | null
         }
         Insert: {
-          agent_id: string
-          completed_at?: string | null
-          context_id: string
           created_at?: string | null
           id?: string
-          initiator?: string
-          metadata?: Json | null
-          reference_task_ids?: string[] | null
-          status?: string
+          task_data: Json
+          task_id: string
           updated_at?: string | null
           user_id: string
-          webhook_url?: string | null
         }
         Update: {
-          agent_id?: string
-          completed_at?: string | null
-          context_id?: string
           created_at?: string | null
           id?: string
-          initiator?: string
-          metadata?: Json | null
-          reference_task_ids?: string[] | null
-          status?: string
+          task_data?: Json
+          task_id?: string
           updated_at?: string | null
           user_id?: string
-          webhook_url?: string | null
         }
         Relationships: []
       }
