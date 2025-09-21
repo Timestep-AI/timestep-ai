@@ -36,7 +36,7 @@ import {
 	type ModelProvider,
 	type Repository,
 	type RepositoryContainer,
-} from 'npm:@timestep-ai/timestep@2025.9.211041';
+} from 'npm:@timestep-ai/timestep@2025.9.211249';
 
 // Custom function to get agent card with correct Supabase base URL
 async function getAgentCardForSupabase(
@@ -44,7 +44,7 @@ async function getAgentCardForSupabase(
 	baseUrl: string,
 	repositories: any,
 ): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211041');
+	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211249');
 	const agent = await getAgent(agentId, repositories);
 	if (!agent) {
 		throw new Error(`Agent ${agentId} not found`);
@@ -52,25 +52,25 @@ async function getAgentCardForSupabase(
 
 	// Create agent card with correct base URL
 	const agentCard = {
-		capabilities: agent.capabilities || {streaming: true},
-		defaultInputModes: agent.defaultInputModes || ['text'],
-		defaultOutputModes: agent.defaultOutputModes || ['text'],
-		description: agent.description || 'A helpful AI agent',
-		name: agent.name || 'AI Agent',
-		preferredTransport: agent.preferredTransport || 'JSONRPC',
-		protocolVersion: agent.protocolVersion || '0.3.0',
-		skills: agent.skills && agent.skills.length > 0 ? agent.skills : [
+		capabilities: {streaming: true},
+		defaultInputModes: ['text'],
+		defaultOutputModes: ['text'],
+		description: `A helpful AI agent powered by ${agent.name}`,
+		name: agent.name,
+		preferredTransport: 'JSONRPC',
+		protocolVersion: '0.3.0',
+		skills: [
 			{
 				id: 'hello_world',
 				name: 'Returns hello world',
 				description: 'just returns hello world',
 				examples: ['hi', 'hello world'],
-				tags: ['hello world']
-			}
+				tags: ['hello world'],
+			},
 		],
-		supportsAuthenticatedExtendedCard: agent.supportsAuthenticatedExtendedCard || false,
+		supportsAuthenticatedExtendedCard: true,
 		url: `${baseUrl}/agents/${agentId}/`,
-		version: agent.version || '1.0.0',
+		version: '1.0.0',
 	};
 
 	return agentCard;
@@ -99,7 +99,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultAgents} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const defaultAgents = getDefaultAgents();
 				for (const agent of defaultAgents) {
@@ -299,7 +299,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultMcpServers} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const defaults = getDefaultMcpServers(this.baseUrl);
 				for (const server of defaults) {
@@ -369,7 +369,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			enabled: server.enabled,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211041'
+			'npm:@timestep-ai/timestep@2025.9.211249'
 		);
 
 		// Handle auth token - encrypt if provided, set to null if not
@@ -438,7 +438,7 @@ class SupabaseModelProviderRepository
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultModelProviders} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const defaults = getDefaultModelProviders();
 				for (const p of defaults) {
@@ -492,7 +492,7 @@ class SupabaseModelProviderRepository
 			models_url: (provider as any).modelsUrl ?? (provider as any).models_url,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211041'
+			'npm:@timestep-ai/timestep@2025.9.211249'
 		);
 		if ((provider as any).apiKey !== undefined) {
 			let key = (provider as any).apiKey as string | undefined;
@@ -634,19 +634,24 @@ Deno.serve({port}, async (request: Request) => {
 		cleanPath = apiParts.length > 0 ? '/' + apiParts.join('/') : '/';
 	}
 
-    // Respect original protocol behind the proxy (prefer https on Supabase)
-    const forwardedProto =
-        request.headers.get('x-forwarded-proto') ||
-        request.headers.get('X-Forwarded-Proto');
-    const inferredProto =
-        forwardedProto || (url.hostname.endsWith('.supabase.co') ? 'https' : url.protocol.replace(':', ''));
-    const scheme = inferredProto.endsWith(':') ? inferredProto : `${inferredProto}:`;
+	// Respect original protocol behind the proxy (prefer https on Supabase)
+	const forwardedProto =
+		request.headers.get('x-forwarded-proto') ||
+		request.headers.get('X-Forwarded-Proto');
+	const inferredProto =
+		forwardedProto ||
+		(url.hostname.endsWith('.supabase.co')
+			? 'https'
+			: url.protocol.replace(':', ''));
+	const scheme = inferredProto.endsWith(':')
+		? inferredProto
+		: `${inferredProto}:`;
 
-    // Generate base URL for MCP servers from the current request
-    const baseUrl = `${scheme}//${url.host}/${functionName}`;
+	// Generate base URL for MCP servers from the current request
+	const baseUrl = `${scheme}//${url.host}/${functionName}`;
 
-    // Generate agent base URL for agent cards (without the /functions/v1/ prefix)
-    const agentBaseUrl = `${scheme}//${url.host}/${functionName}`;
+	// Generate agent base URL for agent cards (without the /functions/v1/ prefix)
+	const agentBaseUrl = `${scheme}//${url.host}/${functionName}`;
 
 	// Derive user from Authorization header (Bearer JWT)
 	const authHeader = request.headers.get('Authorization') || '';
@@ -935,7 +940,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Get tool information from the MCP server
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 
 				// First, get the list of tools from the server
@@ -1038,7 +1043,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				const [serverId, toolName] = parts;
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 
 				const result = await handleMcpServerRequest(
@@ -1081,7 +1086,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 
 				if (request.method === 'POST') {
@@ -1124,7 +1129,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// GET request - return full MCP server record
 				const {getMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const server = await getMcpServer(serverId, repositories as any);
 
@@ -1179,9 +1184,13 @@ Deno.serve({port}, async (request: Request) => {
 		// Handle dynamic agent routes - proxy to A2A Express app like server.ts
 		console.log(`🔍 Checking if path matches agent route: ${cleanPath}`);
 		// Check for both /agents/... and /server/agents/... patterns (Supabase function URL structure)
-		const agentMatch = cleanPath.match(/^\/(?:server\/)?agents\/([^\/]+)(?:\/.*)?$/);
+		const agentMatch = cleanPath.match(
+			/^\/(?:server\/)?agents\/([^\/]+)(?:\/.*)?$/,
+		);
 		if (agentMatch) {
-			console.log(`🔍 Agent route matched! agentId: ${agentMatch[1]}, full path: ${cleanPath}`);
+			console.log(
+				`🔍 Agent route matched! agentId: ${agentMatch[1]}, full path: ${cleanPath}`,
+			);
 			const agentId = agentMatch[1];
 
 			// Compute sub-path for the agent app (strip /agents/{agentId} prefix, accounting for optional /server prefix)
@@ -1199,7 +1208,9 @@ Deno.serve({port}, async (request: Request) => {
 				// Fallback
 				agentSubPath = cleanPath;
 			}
-			console.log(`🔍 Agent prefixes checked: ${agentPrefix}, ${serverAgentPrefix}, subPath: ${agentSubPath}`);
+			console.log(
+				`🔍 Agent prefixes checked: ${agentPrefix}, ${serverAgentPrefix}, subPath: ${agentSubPath}`,
+			);
 
 			// Create a mock Express-style request object that satisfies the Request interface
 			// Get the request body as text for compatibility
@@ -1221,9 +1232,7 @@ Deno.serve({port}, async (request: Request) => {
 				originalUrl: agentSubPath + url.search,
 				params: {agentId: agentId},
 				body:
-					request.method !== 'GET'
-						? JSON.parse(requestBodyText || '{}')
-						: {},
+					request.method !== 'GET' ? JSON.parse(requestBodyText || '{}') : {},
 				headers: Object.fromEntries(Array.from(request.headers.entries())),
 				// Add required Express Request methods as stubs
 				get: (name: string) => request.headers.get(name),
@@ -1288,19 +1297,22 @@ Deno.serve({port}, async (request: Request) => {
 			let isStreaming = false;
 			let responseEnded = false;
 			let stream: ReadableStream<Uint8Array> | null = null;
-			let streamController:
-				| ReadableStreamDefaultController<Uint8Array>
-				| null = null;
+			let streamController: ReadableStreamDefaultController<Uint8Array> | null =
+				null;
 			let responseResolved = false;
 			let responseResolve:
-				| ((r: {type: 'stream' | 'body'; status: number; headers: Record<string, string>}) => void)
+				| ((r: {
+						type: 'stream' | 'body';
+						status: number;
+						headers: Record<string, string>;
+				  }) => void)
 				| null = null;
 			const responsePromise = new Promise<{
 				type: 'stream' | 'body';
 				status: number;
 				headers: Record<string, string>;
-			}>((resolve) => {
-				responseResolve = (r) => {
+			}>(resolve => {
+				responseResolve = r => {
 					if (!responseResolved) {
 						responseResolved = true;
 						resolve(r);
@@ -1343,7 +1355,9 @@ Deno.serve({port}, async (request: Request) => {
 					}
 					responseEnded = true;
 					if (streamController) {
-						try { streamController.close(); } catch {}
+						try {
+							streamController.close();
+						} catch {}
 					}
 					return mockRes;
 				},
@@ -1428,23 +1442,43 @@ Deno.serve({port}, async (request: Request) => {
 					}
 					const enc = new TextEncoder();
 					const chunkUint8 =
-						data instanceof Uint8Array ? data : enc.encode(typeof data === 'string' ? data : String(data));
+						data instanceof Uint8Array
+							? data
+							: enc.encode(typeof data === 'string' ? data : String(data));
 					responseData += new TextDecoder().decode(chunkUint8);
 					if (streamController) {
 						streamController.enqueue(chunkUint8);
 					}
 					return true;
 				},
-				writeHead: (statusCode: number, statusMessage?: string, headers?: any) => {
-					console.log(`🔍 MockRes.writeHead called with status: ${statusCode}, message: ${statusMessage}, headers:`, headers);
+				writeHead: (
+					statusCode: number,
+					statusMessage?: string,
+					headers?: any,
+				) => {
+					console.log(
+						`🔍 MockRes.writeHead called with status: ${statusCode}, message: ${statusMessage}, headers:`,
+						headers,
+					);
 					responseStatus = statusCode;
 					if (headers) {
 						Object.assign(responseHeaders, headers);
-						const ct = Object.entries(headers).find(([k]) => k.toLowerCase() === 'content-type');
-						if (ct && typeof ct[1] === 'string' && ct[1].includes('text/event-stream')) {
+						const ct = Object.entries(headers).find(
+							([k]) => k.toLowerCase() === 'content-type',
+						);
+						if (
+							ct &&
+							typeof ct[1] === 'string' &&
+							ct[1].includes('text/event-stream')
+						) {
 							isStreaming = true;
 							ensureStream();
-							if (responseResolve) responseResolve({type: 'stream', status: responseStatus, headers: responseHeaders});
+							if (responseResolve)
+								responseResolve({
+									type: 'stream',
+									status: responseStatus,
+									headers: responseHeaders,
+								});
 						}
 					}
 					return mockRes;
@@ -1477,17 +1511,6 @@ Deno.serve({port}, async (request: Request) => {
 				[Symbol.iterator]: function* () {
 					yield* [];
 				},
-				// Proxy to catch any method calls we haven't explicitly defined
-				get(target: any, prop: string | symbol) {
-					if (typeof prop === 'string' && !(prop in mockRes)) {
-						console.log(`🔍 MockRes.${prop} called (undefined method)`);
-						return (...args: any[]) => {
-							console.log(`🔍 MockRes.${prop} called with args:`, args);
-							return mockRes;
-						};
-					}
-					return target[prop];
-				},
 			} as any;
 
 			const mockNext = (err?: any) => {
@@ -1500,7 +1523,7 @@ Deno.serve({port}, async (request: Request) => {
 			try {
 				// Check if agent exists first
 				const {isAgentAvailable} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
@@ -1522,23 +1545,26 @@ Deno.serve({port}, async (request: Request) => {
 					: 80;
 
 				// For Supabase, the agent base URL should point to the function URL
-				const supabaseAgentBaseUrl = agentBaseUrl.replace('/server', '/functions/v1/server');
+				const supabaseAgentBaseUrl = agentBaseUrl.replace(
+					'/server',
+					'/functions/v1/server',
+				);
 
 				// Use handleAgentMessage directly for messaging
 
 				// Check if this is an agent card request - handle it separately
 				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
 					console.log(`🔍 Handling agent card request directly`);
-					
+
 					// Get the agent card directly
 					const agentCard = await getAgentCardForSupabase(
 						agentId,
 						supabaseAgentBaseUrl,
 						repositories as any,
 					);
-					
+
 					console.log(`🔍 Agent card generated:`, agentCard);
-					
+
 					// Set response data directly
 					responseData = agentCard;
 					responseStatus = 200;
@@ -1556,7 +1582,7 @@ Deno.serve({port}, async (request: Request) => {
 						try {
 							// Create the request handler for this agent
 							const {createAgentRequestHandler} = await import(
-								'npm:@timestep-ai/timestep@2025.9.211041'
+								'npm:@timestep-ai/timestep@2025.9.211249'
 							);
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
@@ -1574,8 +1600,10 @@ Deno.serve({port}, async (request: Request) => {
 							responseHeaders['Cache-Control'] = 'no-cache';
 							responseHeaders['Connection'] = 'keep-alive';
 							responseHeaders['Access-Control-Allow-Origin'] = '*';
-							responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-							responseHeaders['Access-Control-Allow-Headers'] = 'authorization, x-client-info, apikey, content-type';
+							responseHeaders['Access-Control-Allow-Methods'] =
+								'GET, POST, PUT, DELETE, OPTIONS';
+							responseHeaders['Access-Control-Allow-Headers'] =
+								'authorization, x-client-info, apikey, content-type';
 
 							// Start the streaming response
 							responseStatus = 200;
@@ -1585,10 +1613,14 @@ Deno.serve({port}, async (request: Request) => {
 							stream = new ReadableStream<Uint8Array>({
 								async start(controller) {
 									try {
-										console.log(`🔍 Starting message stream for agent ${agentId}`);
+										console.log(
+											`🔍 Starting message stream for agent ${agentId}`,
+										);
 
 										// Call sendMessageStream and iterate over the events
-										for await (const event of requestHandler.sendMessageStream(messageParams)) {
+										for await (const event of requestHandler.sendMessageStream(
+											messageParams,
+										)) {
 											console.log(`🔍 Stream event:`, event);
 
 											// Format as SSE data (just the event object, not wrapped in JSON-RPC)
@@ -1600,10 +1632,16 @@ Deno.serve({port}, async (request: Request) => {
 										console.log(`🔍 Stream completed for agent ${agentId}`);
 										controller.close();
 									} catch (error) {
-										console.error(`🔍 Error in stream for agent ${agentId}:`, error);
+										console.error(
+											`🔍 Error in stream for agent ${agentId}:`,
+											error,
+										);
 										const errorEvent = {
 											kind: 'error',
-											message: error instanceof Error ? error.message : 'Unknown error',
+											message:
+												error instanceof Error
+													? error.message
+													: 'Unknown error',
 											agentId: agentId,
 										};
 										const sseData = `data: ${JSON.stringify(errorEvent)}\n\n`;
@@ -1616,14 +1654,18 @@ Deno.serve({port}, async (request: Request) => {
 
 							responseEnded = true;
 						} catch (error) {
-							console.error(`🔍 Error setting up stream for agent ${agentId}:`, error);
+							console.error(
+								`🔍 Error setting up stream for agent ${agentId}:`,
+								error,
+							);
 							const errorResponse = {
 								jsonrpc: '2.0',
 								id: jsonRpcRequest.id,
 								error: {
 									code: -32603,
 									message: 'Internal error',
-									data: error instanceof Error ? error.message : 'Unknown error',
+									data:
+										error instanceof Error ? error.message : 'Unknown error',
 								},
 							};
 							responseData = errorResponse;
@@ -1649,7 +1691,10 @@ Deno.serve({port}, async (request: Request) => {
 				}
 
 				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
-				console.log(`🔍 Response status: ${responseStatus}, headers:`, responseHeaders);
+				console.log(
+					`🔍 Response status: ${responseStatus}, headers:`,
+					responseHeaders,
+				);
 				console.log(`🔍 Is streaming: ${isStreaming}`);
 
 				// If streaming, return a streaming Response and bypass default JSON header
@@ -1675,7 +1720,9 @@ Deno.serve({port}, async (request: Request) => {
 
 				// If no response data was captured, fail fast - no fallbacks
 				if (!responseData && !responseEnded) {
-					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
+					console.error(
+						`❌ No response data captured from handleAgentRequest for agent ${agentId}`,
+					);
 					return new Response(
 						JSON.stringify({
 							error: 'Agent request failed',
@@ -1692,13 +1739,28 @@ Deno.serve({port}, async (request: Request) => {
 					...responseHeaders,
 				};
 				// If upstream intended streaming but didn't call writeHead earlier, infer from headers
-				const ctHeader = Object.entries(finalHeaders).find(([k]) => k.toLowerCase() === 'content-type');
-				if (!isStreaming && ctHeader && typeof ctHeader[1] === 'string' && ctHeader[1].includes('text/event-stream') && stream) {
-					console.log('🔍 Upstream indicated SSE via headers; returning stream');
-					return new Response(stream as any, {status: responseStatus, headers: finalHeaders});
+				const ctHeader = Object.entries(finalHeaders).find(
+					([k]) => k.toLowerCase() === 'content-type',
+				);
+				if (
+					!isStreaming &&
+					ctHeader &&
+					typeof ctHeader[1] === 'string' &&
+					ctHeader[1].includes('text/event-stream') &&
+					stream
+				) {
+					console.log(
+						'🔍 Upstream indicated SSE via headers; returning stream',
+					);
+					return new Response(stream as any, {
+						status: responseStatus,
+						headers: finalHeaders,
+					});
 				}
 				return new Response(
-					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+					typeof responseData === 'string'
+						? responseData
+						: JSON.stringify(responseData),
 					{
 						status: responseStatus,
 						headers: finalHeaders,
@@ -1717,7 +1779,9 @@ Deno.serve({port}, async (request: Request) => {
 			}
 		}
 
-		console.log(`🔍 No route matched for path: ${cleanPath}, method: ${request.method}`);
+		console.log(
+			`🔍 No route matched for path: ${cleanPath}, method: ${request.method}`,
+		);
 		return new Response('Not found', {status: 404, headers});
 	} catch (error) {
 		console.error('Error in Supabase Edge Function:', error);
