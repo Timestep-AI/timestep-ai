@@ -1202,6 +1202,19 @@ Deno.serve({port}, async (request: Request) => {
 			console.log(`🔍 Agent prefixes checked: ${agentPrefix}, ${serverAgentPrefix}, subPath: ${agentSubPath}`);
 
 			// Create a mock Express-style request object that satisfies the Request interface
+			// Get the request body as text for compatibility
+			let requestBodyText = '';
+			let requestBody: Uint8Array | null = null;
+			if (request.method !== 'GET') {
+				try {
+					requestBodyText = await request.text();
+					requestBody = new TextEncoder().encode(requestBodyText);
+				} catch (e) {
+					requestBodyText = '';
+					requestBody = new Uint8Array(0);
+				}
+			}
+
 			const mockReq = {
 				method: request.method,
 				path: agentSubPath,
@@ -1209,7 +1222,7 @@ Deno.serve({port}, async (request: Request) => {
 				params: {agentId: agentId},
 				body:
 					request.method !== 'GET'
-						? await request.json().catch(() => ({}))
+						? JSON.parse(requestBodyText || '{}')
 						: {},
 				headers: Object.fromEntries(Array.from(request.headers.entries())),
 				// Add required Express Request methods as stubs
@@ -1241,6 +1254,31 @@ Deno.serve({port}, async (request: Request) => {
 				query: Object.fromEntries(url.searchParams),
 				cookies: {},
 				secret: undefined,
+				// Add stream properties for Express compatibility
+				readable: true,
+				readableHighWaterMark: 16384,
+				readableLength: requestBody ? requestBody.length : 0,
+				_buffer: requestBody,
+				destroyed: false,
+				// Mock pipe method
+				pipe: (destination: any) => {
+					if (requestBody) {
+						destination.write(requestBody);
+					}
+					destination.end();
+					return destination;
+				},
+				// Mock on method for event listeners
+				on: (event: string, listener: Function) => {
+					// No-op for basic compatibility
+					return mockReq;
+				},
+				// Add pipes property that was causing the error
+				pipes: [],
+				// Add other stream properties
+				readableFlowing: null,
+				readableEnded: false,
+				readablePaused: false,
 			} as any;
 
 			// Create a proper response handler that captures the response
