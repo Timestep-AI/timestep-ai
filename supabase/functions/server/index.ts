@@ -316,19 +316,40 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 				`Failed to check existing MCP servers: ${checkError.message}`,
 			);
 
-		// Only create defaults if no MCP servers exist
+		// Always ensure the built-in MCP server exists, regardless of other servers
+		const builtinServerId = '00000000-0000-0000-0000-000000000000';
+		const hasBuiltinServer = existingData?.some((server: any) => server.id === builtinServerId);
+
+		if (!hasBuiltinServer) {
+			try {
+				const {getBuiltinMcpServer} = await import(
+					'npm:@timestep-ai/timestep@2025.9.211249'
+				);
+				const builtinServer = getBuiltinMcpServer(this.baseUrl);
+				await this.save(builtinServer);
+				console.log(`🔌 Created built-in MCP server in database`);
+			} catch (e) {
+				console.warn(`Failed to create built-in MCP server: ${e}`);
+			}
+		}
+
+		// Create other defaults only if no MCP servers exist at all
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultMcpServers} = await import(
 					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const defaults = getDefaultMcpServers(this.baseUrl);
-				for (const server of defaults) {
+				// Skip the built-in server since we already handled it above
+				const otherDefaults = defaults.filter(server => server.id !== builtinServerId);
+				for (const server of otherDefaults) {
 					await this.save(server);
 				}
-				console.log(
-					`🔌 Created ${defaults.length} default MCP servers in database`,
-				);
+				if (otherDefaults.length > 0) {
+					console.log(
+						`🔌 Created ${otherDefaults.length} additional default MCP servers in database`,
+					);
+				}
 			} catch (e) {
 				console.warn(`Failed to create default MCP servers: ${e}`);
 			}
