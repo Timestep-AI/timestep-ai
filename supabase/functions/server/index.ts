@@ -38,6 +38,36 @@ import {
 	type RepositoryContainer,
 } from 'npm:@timestep-ai/timestep@2025.9.211041';
 
+// Custom function to get agent card with correct Supabase base URL
+async function getAgentCardForSupabase(
+	agentId: string,
+	baseUrl: string,
+	repositories: any,
+): Promise<any> {
+	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211041');
+	const agent = await getAgent(agentId, repositories);
+	if (!agent) {
+		throw new Error(`Agent ${agentId} not found`);
+	}
+
+	// Create agent card with correct base URL
+	const agentCard = {
+		capabilities: agent.capabilities || {streaming: true},
+		defaultInputModes: agent.defaultInputModes || ['text'],
+		defaultOutputModes: agent.defaultOutputModes || ['text'],
+		description: agent.description || 'A helpful AI agent',
+		name: agent.name || 'AI Agent',
+		preferredTransport: agent.preferredTransport || 'JSONRPC',
+		protocolVersion: agent.protocolVersion || '0.3.0',
+		skills: agent.skills || [],
+		supportsAuthenticatedExtendedCard: agent.supportsAuthenticatedExtendedCard || false,
+		url: `${baseUrl}/agents/${agentId}/`,
+		version: agent.version || '1.0.0',
+	};
+
+	return agentCard;
+}
+
 /**
  * Supabase Agent Repository Implementation
  */
