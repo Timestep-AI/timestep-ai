@@ -1180,7 +1180,7 @@ Deno.serve({port}, async (request: Request) => {
 		console.log(`🔍 Checking if path matches agent route: ${cleanPath}`);
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
-			console.log(`🔍 Agent route matched! agentId: ${agentMatch[1]}`);
+			console.log(`🔍 Agent route matched! agentId: ${agentMatch[1]}, full path: ${cleanPath}`);
 			const agentId = agentMatch[1];
 
 			// Compute sub-path for the agent app (strip /agents/{agentId} prefix)
@@ -1188,6 +1188,7 @@ Deno.serve({port}, async (request: Request) => {
 			const agentSubPath = cleanPath.startsWith(agentPrefix)
 				? cleanPath.slice(agentPrefix.length) || '/'
 				: cleanPath;
+			console.log(`🔍 Agent prefix: ${agentPrefix}, subPath: ${agentSubPath}`);
 
 			// Create a mock Express-style request object that satisfies the Request interface
 			const mockReq = {
