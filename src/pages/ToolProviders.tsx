@@ -23,53 +23,9 @@ export const ToolProviders = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serverToDelete, setServerToDelete] = useState<MCPServer | null>(null);
   
-  // Track known server states to help with workarounds
-  const [knownServerStates, setKnownServerStates] = useState<Record<string, { enabled: boolean; lastUpdated: number }>>({});
 
-  // Function to update known server state (with localStorage persistence)
-  const updateKnownServerState = (serverId: string, enabled: boolean) => {
-    const newState = { enabled, lastUpdated: Date.now() };
-    setKnownServerStates(prev => ({
-      ...prev,
-      [serverId]: newState
-    }));
-    
-    // Also persist to localStorage for cross-page communication
-    try {
-      const stored = JSON.parse(localStorage.getItem('knownServerStates') || '{}');
-      stored[serverId] = newState;
-      localStorage.setItem('knownServerStates', JSON.stringify(stored));
-      console.log(`ToolProviders: Stored known state for ${serverId}: enabled=${enabled}`);
-    } catch (error) {
-      console.error('ToolProviders: Error storing known state:', error);
-    }
-  };
-
-  // Function to load known server states from localStorage
-  const loadKnownServerStates = () => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('knownServerStates') || '{}');
-      setKnownServerStates(stored);
-      console.log('ToolProviders: Loaded known states from localStorage:', stored);
-    } catch (error) {
-      console.error('ToolProviders: Error loading known states:', error);
-    }
-  };
-
-  // Function to get the most reliable server state
-  const getReliableServerState = (server: MCPServer): MCPServer => {
-    const knownState = knownServerStates[server.id];
-    if (knownState && (Date.now() - knownState.lastUpdated) < 30000) { // 30 seconds
-      console.log(`ToolProviders: Using known state for ${server.name}: enabled=${knownState.enabled}`);
-      return { ...server, enabled: knownState.enabled };
-    }
-    return server;
-  };
 
   useEffect(() => {
-    // Load known states from localStorage on mount
-    loadKnownServerStates();
-    
     const loadToolProviders = async () => {
       try {
         setLoading(true);
@@ -101,47 +57,7 @@ export const ToolProviders = () => {
           console.log('ToolProviders: Focus - Rube server from list:', rubeServer);
         }
           
-          // WORKAROUND: If we detect inconsistent data, try to fetch individual servers
-          // to get the most up-to-date information
-          const inconsistentServers = fetchedServers.filter(server => 
-            server.id === '11111111-1111-1111-1111-111111111111' && !server.enabled
-          );
-          
-          if (inconsistentServers.length > 0) {
-            console.log('ToolProviders: Focus - Detected inconsistent data, fetching individual server data...');
-            try {
-              const individualServer = await mcpServersService.getById('11111111-1111-1111-1111-111111111111');
-              if (individualServer) {
-                console.log('ToolProviders: Focus - Individual server data:', individualServer);
-                
-                // The individual server endpoint is now working correctly after the fix
-                // If it shows enabled: true, we should trust it over the list endpoint
-                if (individualServer.enabled) {
-                  console.log('ToolProviders: Focus - Individual server shows enabled=true, using this as source of truth');
-                } else {
-                  console.log('ToolProviders: Focus - Individual server shows enabled=false, checking for known state...');
-                  // Check if we have a known state for this server
-                  const reliableServer = getReliableServerState(individualServer);
-                  if (reliableServer.enabled !== individualServer.enabled) {
-                    console.log('ToolProviders: Focus - Using known state to correct stale data');
-                    individualServer.enabled = reliableServer.enabled;
-                  } else {
-                    console.log('ToolProviders: Focus - Individual server data appears to be correct');
-                  }
-                }
-                
-                // Replace the inconsistent server data with the individual fetch result
-                const updatedServers = fetchedServers.map(server => 
-                  server.id === '11111111-1111-1111-1111-111111111111' ? individualServer : server
-                );
-                console.log('ToolProviders: Focus - Updated servers with individual data:', updatedServers);
-                setServers(updatedServers);
-                return;
-              }
-            } catch (error) {
-              console.error('ToolProviders: Focus - Error fetching individual server data:', error);
-            }
-          }
+          // Data should now be consistent between list and individual endpoints
           
           // Log each server's enabled status for debugging
           fetchedServers.forEach((server, index) => {
@@ -159,17 +75,6 @@ export const ToolProviders = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Listen for successful server updates from other components
-  useEffect(() => {
-    const handleServerUpdate = (event: CustomEvent) => {
-      const { serverId, enabled } = event.detail;
-      console.log(`ToolProviders: Received server update notification: ${serverId} -> enabled=${enabled}`);
-      updateKnownServerState(serverId, enabled);
-    };
-
-    window.addEventListener('serverUpdated', handleServerUpdate as EventListener);
-    return () => window.removeEventListener('serverUpdated', handleServerUpdate as EventListener);
-  }, []);
 
   // Also refresh when the component mounts (in case user navigated back)
   useEffect(() => {
@@ -185,47 +90,7 @@ export const ToolProviders = () => {
           console.log('ToolProviders: Mount - Rube server from list:', rubeServer);
         }
         
-        // WORKAROUND: If we detect inconsistent data, try to fetch individual servers
-        // to get the most up-to-date information
-        const inconsistentServers = fetchedServers.filter(server => 
-          server.id === '11111111-1111-1111-1111-111111111111' && !server.enabled
-        );
-        
-        if (inconsistentServers.length > 0) {
-          console.log('ToolProviders: Detected inconsistent data, fetching individual server data...');
-          try {
-            const individualServer = await mcpServersService.getById('11111111-1111-1111-1111-111111111111');
-            if (individualServer) {
-              console.log('ToolProviders: Individual server data:', individualServer);
-              
-              // The individual server endpoint is now working correctly after the fix
-              // If it shows enabled: true, we should trust it over the list endpoint
-              if (individualServer.enabled) {
-                console.log('ToolProviders: Individual server shows enabled=true, using this as source of truth');
-              } else {
-                console.log('ToolProviders: Individual server shows enabled=false, checking for known state...');
-                // Check if we have a known state for this server
-                const reliableServer = getReliableServerState(individualServer);
-                if (reliableServer.enabled !== individualServer.enabled) {
-                  console.log('ToolProviders: Using known state to correct stale data');
-                  individualServer.enabled = reliableServer.enabled;
-                } else {
-                  console.log('ToolProviders: Individual server data appears to be correct');
-                }
-              }
-              
-              // Replace the inconsistent server data with the individual fetch result
-              const updatedServers = fetchedServers.map(server => 
-                server.id === '11111111-1111-1111-1111-111111111111' ? individualServer : server
-              );
-              console.log('ToolProviders: Updated servers with individual data:', updatedServers);
-              setServers(updatedServers);
-              return;
-            }
-          } catch (error) {
-            console.error('ToolProviders: Error fetching individual server data:', error);
-          }
-        }
+        // Data should now be consistent between list and individual endpoints
         
         // Log each server's enabled status for debugging
         fetchedServers.forEach((server, index) => {

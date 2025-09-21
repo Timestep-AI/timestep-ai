@@ -58,7 +58,13 @@ class AgentsService {
     try {
       console.log('AgentsService: Fetching agent by ID:', id);
       const headers = await getAuthHeaders();
+      console.log('AgentsService: Request URL:', `${SERVER_BASE_URL}/agents/${id}`);
+      console.log('AgentsService: Request headers:', headers);
+      
       const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, { headers });
+      console.log('AgentsService: Response status:', response.status);
+      console.log('AgentsService: Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (response.status === 404) {
         console.log('AgentsService: Agent not found:', id);
         return null;
@@ -68,6 +74,12 @@ class AgentsService {
       }
       const apiAgent = await response.json();
       console.log('AgentsService: Raw agent response:', apiAgent);
+      
+      // Check if the response is just {success: true} instead of agent data
+      if (apiAgent && typeof apiAgent === 'object' && 'success' in apiAgent && !('id' in apiAgent)) {
+        console.error('AgentsService: Server returned success response instead of agent data:', apiAgent);
+        throw new Error('Server returned success response instead of agent data');
+      }
       
       // Map server response to our Agent interface
       const agent: Agent = {

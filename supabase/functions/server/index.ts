@@ -1169,11 +1169,17 @@ Deno.serve({port}, async (request: Request) => {
 				secret: undefined,
 			} as any;
 
-			// Create a mock response object
+			// Create a mock response object that captures the response data
+			let responseData: any = null;
+			let statusCode = 200;
+			
 			const mockRes = {
-				status: (code: number) => ({json: (data: any) => data}),
-				json: (data: any) => data,
-				send: (data: any) => data,
+				status: (code: number) => {
+					statusCode = code;
+					return {json: (data: any) => { responseData = data; return data; }};
+				},
+				json: (data: any) => { responseData = data; return data; },
+				send: (data: any) => { responseData = data; return data; },
 				end: () => {},
 				setHeader: () => {},
 				getHeader: () => undefined,
@@ -1210,10 +1216,20 @@ Deno.serve({port}, async (request: Request) => {
 					port,
 					repositories,
 				);
-				return new Response(JSON.stringify({success: true}), {
-					status: 200,
-					headers,
-				});
+				
+				// Return the actual response data from handleAgentRequest
+				if (responseData !== null) {
+					return new Response(JSON.stringify(responseData), {
+						status: statusCode,
+						headers: {...headers, 'Content-Type': 'application/json'},
+					});
+				} else {
+					// Fallback if no response data was captured
+					return new Response(JSON.stringify({success: true}), {
+						status: 200,
+						headers,
+					});
+				}
 			} catch (error) {
 				console.error('Error in agent request handler:', error);
 				return new Response(

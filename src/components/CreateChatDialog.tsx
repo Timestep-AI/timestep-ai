@@ -29,10 +29,16 @@ export const CreateChatDialog = ({ onChatCreated }: CreateChatDialogProps) => {
     const loadAgents = async () => {
       try {
         const fetchedAgents = await agentsService.getAll();
+        console.log('CreateChatDialog: Loaded agents:', fetchedAgents);
         setAgents(fetchedAgents);
         // Auto-select first agent if available
-        if (fetchedAgents.length > 0 && !formData.agentId) {
-          setFormData(prev => ({ ...prev, agentId: fetchedAgents[0].id }));
+        if (fetchedAgents.length > 0) {
+          console.log('CreateChatDialog: Auto-selecting first agent:', fetchedAgents[0]);
+          setFormData(prev => {
+            const newFormData = { ...prev, agentId: fetchedAgents[0].id };
+            console.log('CreateChatDialog: Auto-selected form data:', newFormData);
+            return newFormData;
+          });
         }
       } catch (error) {
         console.error('Error loading agents:', error);
@@ -43,10 +49,12 @@ export const CreateChatDialog = ({ onChatCreated }: CreateChatDialogProps) => {
     if (open) {
       loadAgents();
     }
-  }, [open, formData.agentId]);
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('CreateChatDialog: Submitting form with data:', formData);
     
     if (!formData.title.trim()) {
       toast.error('Please enter a chat title');
@@ -58,16 +66,19 @@ export const CreateChatDialog = ({ onChatCreated }: CreateChatDialogProps) => {
       return;
     }
 
+    console.log('CreateChatDialog: Form validation passed, creating chat...');
     setLoading(true);
     try {
       // Create the chat through the chats service
-      await chatsService.create(formData);
+      console.log('CreateChatDialog: Calling chatsService.create with:', formData);
+      const createdChat = await chatsService.create(formData);
+      console.log('CreateChatDialog: Chat created successfully:', createdChat);
       toast.success('Chat created successfully');
       setOpen(false);
       setFormData({ title: '', agentId: '', status: 'active' });
       onChatCreated();
     } catch (error) {
-      console.error('Error creating chat:', error);
+      console.error('CreateChatDialog: Error creating chat:', error);
       toast.error('Failed to create chat');
     } finally {
       setLoading(false);
@@ -113,18 +124,28 @@ export const CreateChatDialog = ({ onChatCreated }: CreateChatDialogProps) => {
               <Label htmlFor="agent">Agent</Label>
               <Select 
                 value={formData.agentId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, agentId: value }))}
+                onValueChange={(value) => {
+                  console.log('CreateChatDialog: Agent selected:', value);
+                  setFormData(prev => {
+                    const newFormData = { ...prev, agentId: value };
+                    console.log('CreateChatDialog: Updated form data:', newFormData);
+                    return newFormData;
+                  });
+                }}
                 disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select an agent..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {agents.map((agent) => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
+                  {agents.map((agent) => {
+                    console.log('CreateChatDialog: Rendering agent option:', agent);
+                    return (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name || 'Unnamed Agent'} ({agent.id})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

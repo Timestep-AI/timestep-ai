@@ -29,7 +29,28 @@ class MCPServersService {
       }
       const servers = await response.json();
       console.log('MCPServersService: getAll raw response:', servers);
-      return servers;
+      
+      // Debug: Log the specific server we're interested in
+      const rubeServer = servers.find((s: any) => s.id === '11111111-1111-1111-1111-111111111111');
+      if (rubeServer) {
+        console.log('MCPServersService: getAll - Rube server raw data:', rubeServer);
+        console.log('MCPServersService: getAll - Rube server enabled:', rubeServer.enabled);
+        console.log('MCPServersService: getAll - Rube server hasAuthToken:', rubeServer.hasAuthToken);
+      }
+      
+      // Transform the response to match our MCPServer interface
+      const transformedServers = servers.map((server: any) => ({
+        id: server.id,
+        name: server.name,
+        description: server.description,
+        serverUrl: server.serverUrl,
+        enabled: server.enabled,
+        authToken: server.hasAuthToken ? '***MASKED***' : undefined, // Don't expose real tokens
+        createdAt: server.createdAt,
+        updatedAt: server.updatedAt,
+      }));
+      
+      return transformedServers;
     } catch (error) {
       console.error('Error fetching MCP servers:', error);
       throw error;
@@ -50,7 +71,27 @@ class MCPServersService {
       }
       const server = await response.json();
       console.log('MCPServersService: getById raw response:', server);
-      return server;
+      
+      // Debug: Log the specific server we're interested in
+      if (server.id === '11111111-1111-1111-1111-111111111111') {
+        console.log('MCPServersService: getById - Rube server raw data:', server);
+        console.log('MCPServersService: getById - Rube server enabled:', server.enabled);
+        console.log('MCPServersService: getById - Rube server hasAuthToken:', server.hasAuthToken);
+      }
+      
+      // Transform the response to match our MCPServer interface
+      const transformedServer = {
+        id: server.id,
+        name: server.name,
+        description: server.description,
+        serverUrl: server.serverUrl,
+        enabled: server.enabled,
+        authToken: server.hasAuthToken ? '***MASKED***' : undefined, // Don't expose real tokens
+        createdAt: server.createdAt,
+        updatedAt: server.updatedAt,
+      };
+      
+      return transformedServer;
     } catch (error) {
       console.error('Error fetching MCP server:', error);
       throw error;
@@ -73,10 +114,9 @@ class MCPServersService {
         authToken: updates.authToken,
       };
       
-      console.log('MCPServersService: Updating server with payload:', payload);
-      
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}`, {
+      const url = `${SERVER_BASE_URL}/mcp_servers/${id}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers,
         body: JSON.stringify(payload),
@@ -96,7 +136,20 @@ class MCPServersService {
       
       const server = await response.json();
       console.log('MCPServersService: Update successful, received server:', server);
-      return server;
+      
+      // Transform the response to match our MCPServer interface
+      const transformedServer = {
+        id: server.id,
+        name: server.name,
+        description: server.description,
+        serverUrl: server.serverUrl,
+        enabled: server.enabled,
+        authToken: server.authToken ? '***MASKED***' : undefined, // Don't expose real tokens
+        createdAt: server.createdAt,
+        updatedAt: server.updatedAt,
+      };
+      
+      return transformedServer;
     } catch (error) {
       console.error('Error updating MCP server:', error);
       throw error;

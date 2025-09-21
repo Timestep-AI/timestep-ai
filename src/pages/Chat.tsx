@@ -13,7 +13,7 @@ import { chatsService } from '@/services/chatsService';
 import { messagesService } from '@/services/messagesService';
 import { agentsService } from '@/services/agentsService';
 import { MessageRow } from '@/components/MessageRow';
-import { a2aClient } from '@/services/a2aClient';
+import { a2aClient, A2AClient } from '@/services/a2aClient';
 import { toast } from 'sonner';
 
 export const Chat = () => {
@@ -43,12 +43,12 @@ export const Chat = () => {
 
         // Load agent information
         if (foundChat?.agentId) {
-          console.log('Loading agent with ID:', foundChat.agentId);
+          console.log('Chat: Loading agent with ID:', foundChat.agentId);
           const agentInfo = await agentsService.getById(foundChat.agentId);
-          console.log('Loaded agent:', agentInfo);
+          console.log('Chat: Loaded agent:', agentInfo);
           setAgent(agentInfo);
         } else {
-          console.log('No agentId found in chat:', foundChat);
+          console.log('Chat: No agentId found in chat:', foundChat);
         }
       } catch (error) {
         console.error('Error loading chat and messages:', error);
@@ -120,8 +120,14 @@ export const Chat = () => {
 
       toast.info(`Sending message to ${agent?.name || 'agent'}...`);
 
-      // Use agent-specific client if available
-      const clientForAgent = agent ? a2aClient.createClientForAgent(agent) : a2aClient;
+      // Create agent-specific client if available
+      if (!agent || !agent.id) {
+        throw new Error('No agent or agent ID available');
+      }
+
+      // Create agent card URL following the working example pattern
+      const agentCardUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}/.well-known/agent-card.json`;
+      const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl, agent);
 
       // Process A2A response stream
       const stream = clientForAgent.sendMessageStream(messageParams);
