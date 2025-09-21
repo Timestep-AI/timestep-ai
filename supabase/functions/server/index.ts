@@ -1724,10 +1724,11 @@ Deno.serve({port}, async (request: Request) => {
 			};
 
 			try {
-				// Check if agent exists first
-				const {isAgentAvailable} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
-				);
+							// Check if agent exists first
+							const timestepModule = await import(
+								'npm:@timestep-ai/timestep@2025.9.211334'
+							);
+							const isAgentAvailable = timestepModule.isAgentAvailable;
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1783,10 +1784,16 @@ Deno.serve({port}, async (request: Request) => {
 					if (jsonRpcRequest.method === 'message/stream') {
 						// Use the actual A2A SDK streaming logic
 						try {
+							// Debug: Log agent details before creating request handler
+							console.log(`🔍 Creating request handler for agent: ${agentId}`);
+							console.log(`🔍 Available agents:`, (await repositories.agents.list()).map(a => ({ id: a.id, name: a.name, toolIds: a.toolIds, handoffIds: a.handoffIds })));
+							console.log(`🔍 Available MCP servers:`, (await repositories.mcpServers.list()).map(s => ({ id: s.id, name: s.name, enabled: s.enabled, serverUrl: s.serverUrl })));
+							
 							// Create the request handler for this agent
-							const {createAgentRequestHandler} = await import(
+							const timestepModule = await import(
 								'npm:@timestep-ai/timestep@2025.9.211334'
 							);
+							const createAgentRequestHandler = timestepModule.createAgentRequestHandler;
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
 								taskStore,
