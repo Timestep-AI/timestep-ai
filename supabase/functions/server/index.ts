@@ -1184,128 +1184,168 @@ Deno.serve({port}, async (request: Request) => {
 			let responseStatus = 200;
 			let responseHeaders: Record<string, string> = {...headers};
 			let isStreaming = false;
+			let responseEnded = false;
 
 			const mockRes = {
 				status: (code: number) => {
+					console.log(`🔍 MockRes.status called with code: ${code}`);
 					responseStatus = code;
-					return {
-						json: (data: any) => {
-							responseData = data;
-							return data;
-						},
-						send: (data: any) => {
-							responseData = data;
-							return data;
-						},
-						end: () => {},
-						setHeader: (name: string, value: string) => {
-							responseHeaders[name] = value;
-							// Detect streaming responses
-							if (name.toLowerCase() === 'content-type' && value.includes('text/event-stream')) {
-								isStreaming = true;
-							}
-						},
-						getHeader: (name: string) => responseHeaders[name],
-						removeHeader: (name: string) => {
-							delete responseHeaders[name];
-						},
-						locals: {},
-						append: () => {},
-						attachment: () => {},
-						cookie: () => {},
-						clearCookie: () => {},
-						download: () => {},
-						format: () => {},
-						get: () => undefined,
-						header: () => {},
-						links: () => {},
-						location: () => {},
-						redirect: () => {},
-						render: () => {},
-						sendFile: () => {},
-						sendStatus: () => {},
-						set: () => {},
-						type: () => {},
-						vary: () => {},
-					};
+					return mockRes; // Return self for chaining
 				},
 				json: (data: any) => {
+					console.log(`🔍 MockRes.json called with data:`, data);
 					responseData = data;
-					return data;
+					responseEnded = true;
+					return mockRes;
 				},
 				send: (data: any) => {
+					console.log(`🔍 MockRes.send called with data:`, data);
 					responseData = data;
-					return data;
+					responseEnded = true;
+					return mockRes;
 				},
-				end: () => {},
+				end: (data?: any) => {
+					console.log(`🔍 MockRes.end called with data:`, data);
+					if (data !== undefined) {
+						responseData = data;
+					}
+					responseEnded = true;
+					return mockRes;
+				},
 				setHeader: (name: string, value: string) => {
+					console.log(`🔍 MockRes.setHeader called: ${name} = ${value}`);
 					responseHeaders[name] = value;
 					// Detect streaming responses
 					if (name.toLowerCase() === 'content-type' && value.includes('text/event-stream')) {
 						isStreaming = true;
 					}
+					return mockRes;
 				},
 				getHeader: (name: string) => responseHeaders[name],
 				removeHeader: (name: string) => {
 					delete responseHeaders[name];
+					return mockRes;
 				},
 				locals: {},
-				append: () => {},
-				attachment: () => {},
-				cookie: () => {},
-				clearCookie: () => {},
-				download: () => {},
-				format: () => {},
+				append: () => mockRes,
+				attachment: () => mockRes,
+				cookie: () => mockRes,
+				clearCookie: () => mockRes,
+				download: () => mockRes,
+				format: () => mockRes,
 				get: () => undefined,
-				header: () => {},
-				links: () => {},
-				location: () => {},
-				redirect: () => {},
-				render: () => {},
-				sendFile: () => {},
-				sendStatus: () => {},
-				set: () => {},
-				type: () => {},
-				vary: () => {},
+				header: () => mockRes,
+				links: () => mockRes,
+				location: () => mockRes,
+				redirect: () => mockRes,
+				render: () => mockRes,
+				sendFile: () => mockRes,
+				sendStatus: () => mockRes,
+				set: () => mockRes,
+				type: () => mockRes,
+				vary: () => mockRes,
 			} as any;
 
 			const mockNext = () => {};
 
 			try {
-				// Use the original handleAgentRequest function exactly like server.ts
+				// Check if agent exists first
+				const {isAgentAvailable} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				if (!(await isAgentAvailable(agentId, repositories as any))) {
+					console.log(`❌ Agent ${agentId} not found`);
+					return new Response(
+						JSON.stringify({
+							error: 'Agent not found',
+							agentId: agentId,
+						}),
+						{status: 404, headers},
+					);
+				}
+
 				// Extract port from the base URL for agent card generation
 				const urlObj = new URL(agentBaseUrl);
 				const port = urlObj.port ? parseInt(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
-				
-				await handleAgentRequest(
-					mockReq,
-					mockRes,
-					mockNext,
+
+				// Create request handler directly
+				const {createAgentRequestHandler} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				const requestHandler = await createAgentRequestHandler(
+					agentId,
 					taskStore,
 					agentExecutor,
 					port,
 					repositories as any,
 				);
 
-				// If no response data was captured, fail fast - no fallbacks
-				if (!responseData) {
-					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
-					return new Response(
-						JSON.stringify({
-							error: 'Agent request failed',
-							message: 'No response data captured from agent handler',
-							agentId: agentId,
-						}),
-						{status: 500, headers},
-					);
+				// Handle specific routes directly
+				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
+					// Get agent card directly
+					const agentCard = await requestHandler.getAgentCard();
+					return new Response(JSON.stringify(agentCard), {
+						status: 200,
+						headers: {...headers, 'Content-Type': 'application/json'},
+					});
 				}
+
+				// For other routes, we need to handle them through the A2A Express app
+				// But since we can't easily mock Express, let's try a different approach
+				// Let's create a real Express app and capture its response
+				const express = await import('npm:express@5.1.0');
+				const {A2AExpressApp} = await import('npm:@a2a-js/sdk@0.3.4/server/express');
+				
+				const agentApp = express.default();
+				const agentAppBuilder = new A2AExpressApp(requestHandler);
+				agentAppBuilder.setupRoutes(agentApp);
+
+				// Create a promise that resolves when the response is sent
+				let responseResolve: (value: any) => void;
+				let responseReject: (reason: any) => void;
+				const responsePromise = new Promise((resolve, reject) => {
+					responseResolve = resolve;
+					responseReject = reject;
+				});
+
+				// Create a response object that captures the response
+				const captureRes = {
+					...mockRes,
+					json: (data: any) => {
+						console.log(`🔍 CaptureRes.json called with data:`, data);
+						responseData = data;
+						responseEnded = true;
+						responseResolve({data, status: responseStatus, headers: responseHeaders});
+						return captureRes;
+					},
+					send: (data: any) => {
+						console.log(`🔍 CaptureRes.send called with data:`, data);
+						responseData = data;
+						responseEnded = true;
+						responseResolve({data, status: responseStatus, headers: responseHeaders});
+						return captureRes;
+					},
+					end: (data?: any) => {
+						console.log(`🔍 CaptureRes.end called with data:`, data);
+						if (data !== undefined) {
+							responseData = data;
+						}
+						responseEnded = true;
+						responseResolve({data: responseData, status: responseStatus, headers: responseHeaders});
+						return captureRes;
+					},
+				};
+
+				// Call the Express app
+				agentApp(mockReq, captureRes, mockNext);
+
+				// Wait for the response
+				const result = await responsePromise;
+				
+				console.log(`🔍 Response captured:`, result);
 
 				// Return the actual response from the A2A Express app
 				return new Response(
-					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+					typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
 					{
-						status: responseStatus,
-						headers: responseHeaders,
+						status: result.status,
+						headers: result.headers,
 					},
 				);
 			} catch (error) {
