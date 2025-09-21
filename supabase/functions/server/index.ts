@@ -1285,100 +1285,39 @@ Deno.serve({port}, async (request: Request) => {
 					repositories as any,
 				);
 
-				// Handle specific routes directly
-				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
-					// Get agent card directly
-					const agentCard = await requestHandler.getAgentCard();
-					return new Response(JSON.stringify(agentCard), {
-						status: 200,
-						headers: {...headers, 'Content-Type': 'application/json'},
-					});
-				}
-
-				// For other routes, we need to handle them through the A2A Express app
-				// But since we can't easily mock Express, let's try a different approach
-				// Let's create a real Express app and capture its response
-				const express = await import('npm:express@5.1.0');
-				const {A2AExpressApp} = await import(
-					'npm:@a2a-js/sdk@0.3.4/server/express'
+				// Use handleAgentRequest directly like server.ts does
+				// This handles all A2A endpoints including agent card and chat streaming
+				await handleAgentRequest(
+					mockReq,
+					mockRes,
+					mockNext,
+					taskStore,
+					agentExecutor,
+					port,
+					repositories as any,
 				);
 
-				const agentApp = express.default();
-				const agentAppBuilder = new A2AExpressApp(requestHandler);
-				agentAppBuilder.setupRoutes(agentApp);
+				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
 
-				// Create a promise that resolves when the response is sent
-				let responseResolve: (value: {
-					data: any;
-					status: number;
-					headers: Record<string, string>;
-				}) => void;
-				let responseReject: (reason: any) => void;
-				const responsePromise = new Promise<{
-					data: any;
-					status: number;
-					headers: Record<string, string>;
-				}>((resolve, reject) => {
-					responseResolve = resolve;
-					responseReject = reject;
-				});
+				// If no response data was captured, fail fast - no fallbacks
+				if (!responseData && !responseEnded) {
+					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
+					return new Response(
+						JSON.stringify({
+							error: 'Agent request failed',
+							message: 'No response data captured from agent handler',
+							agentId: agentId,
+						}),
+						{status: 500, headers},
+					);
+				}
 
-				// Create a response object that captures the response
-				const captureRes = {
-					...mockRes,
-					json: (data: any) => {
-						console.log(`🔍 CaptureRes.json called with data:`, data);
-						responseData = data;
-						responseEnded = true;
-						responseResolve({
-							data,
-							status: responseStatus,
-							headers: responseHeaders,
-						});
-						return captureRes;
-					},
-					send: (data: any) => {
-						console.log(`🔍 CaptureRes.send called with data:`, data);
-						responseData = data;
-						responseEnded = true;
-						responseResolve({
-							data,
-							status: responseStatus,
-							headers: responseHeaders,
-						});
-						return captureRes;
-					},
-					end: (data?: any) => {
-						console.log(`🔍 CaptureRes.end called with data:`, data);
-						if (data !== undefined) {
-							responseData = data;
-						}
-						responseEnded = true;
-						responseResolve({
-							data: responseData,
-							status: responseStatus,
-							headers: responseHeaders,
-						});
-						return captureRes;
-					},
-				};
-
-				// Call the Express app
-				agentApp(mockReq, captureRes, mockNext);
-
-				// Wait for the response
-				const result = await responsePromise;
-
-				console.log(`🔍 Response captured:`, result);
-
-				// Return the actual response from the A2A Express app
+				// Return the response from handleAgentRequest
 				return new Response(
-					typeof result.data === 'string'
-						? result.data
-						: JSON.stringify(result.data),
+					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
 					{
-						status: result.status,
-						headers: result.headers,
+						status: responseStatus,
+						headers: responseHeaders,
 					},
 				);
 			} catch (error) {
