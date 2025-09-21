@@ -1286,9 +1286,29 @@ Deno.serve({port}, async (request: Request) => {
 				readableReadable: false,
 				readableResumeScheduled: false,
 				readableDestroyed: false,
+				// Add a catch-all method to see if any other methods are being called
+				[Symbol.iterator]: function* () {
+					yield* [];
+				},
+				// Proxy to catch any method calls we haven't explicitly defined
+				get(target: any, prop: string | symbol) {
+					if (typeof prop === 'string' && !(prop in mockRes)) {
+						console.log(`🔍 MockRes.${prop} called (undefined method)`);
+						return (...args: any[]) => {
+							console.log(`🔍 MockRes.${prop} called with args:`, args);
+							return mockRes;
+						};
+					}
+					return target[prop];
+				},
 			} as any;
 
-			const mockNext = () => {};
+			const mockNext = (err?: any) => {
+				console.log(`🔍 MockNext called with error:`, err);
+				if (err) {
+					console.error(`🔍 MockNext error:`, err);
+				}
+			};
 
 			try {
 				// Check if agent exists first
@@ -1329,15 +1349,25 @@ Deno.serve({port}, async (request: Request) => {
 				// Use handleAgentRequest directly like server.ts does
 				// This handles all A2A endpoints including agent card and chat streaming
 				console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
-				await handleAgentRequest(
-					mockReq,
-					mockRes,
-					mockNext,
-					taskStore,
-					agentExecutor,
-					port,
-					repositories as any,
-				);
+				console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
+				console.log(`🔍 Request originalUrl: ${mockReq.originalUrl}`);
+				console.log(`🔍 Request url: ${mockReq.url}`);
+				
+				// Add error handling to catch any issues
+				try {
+					await handleAgentRequest(
+						mockReq,
+						mockRes,
+						mockNext,
+						taskStore,
+						agentExecutor,
+						port,
+						repositories as any,
+					);
+				} catch (error) {
+					console.error(`🔍 Error in handleAgentRequest:`, error);
+					throw error;
+				}
 
 				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
 				console.log(`🔍 Response status: ${responseStatus}, headers:`, responseHeaders);
