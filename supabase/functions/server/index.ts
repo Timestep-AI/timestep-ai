@@ -1310,7 +1310,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			const ensureStream = () => {
 				if (!stream) {
-					stream = new ReadableStream<Uint8Array | string>({
+					stream = new ReadableStream<Uint8Array>({
 						start(controller) {
 							streamController = controller;
 						},
@@ -1577,11 +1577,19 @@ Deno.serve({port}, async (request: Request) => {
 
 						console.log(`🔍 JSON-RPC response:`, response);
 
-						// Set response data
-						responseData = response;
+						// For streaming responses, format as SSE
+						responseHeaders['Content-Type'] = 'text/event-stream';
+						responseHeaders['Cache-Control'] = 'no-cache';
+						responseHeaders['Connection'] = 'keep-alive';
+						responseHeaders['Access-Control-Allow-Origin'] = '*';
+						responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+						responseHeaders['Access-Control-Allow-Headers'] = 'authorization, x-client-info, apikey, content-type';
+
+						// Format response as SSE data
+						responseData = `data: ${JSON.stringify(response)}\n\n`;
 						responseStatus = 200;
-						responseHeaders['Content-Type'] = 'application/json';
 						responseEnded = true;
+						isStreaming = true;
 					} else {
 						// Unknown method
 						const errorResponse = {
