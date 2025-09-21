@@ -36,7 +36,7 @@ import {
 	type ModelProvider,
 	type Repository,
 	type RepositoryContainer,
-} from 'npm:@timestep-ai/timestep@2025.9.211334';
+} from 'npm:@timestep-ai/timestep@2025.9.211411';
 
 // Custom function to get agent card with correct Supabase base URL
 async function getAgentCardForSupabase(
@@ -44,7 +44,7 @@ async function getAgentCardForSupabase(
 	baseUrl: string,
 	repositories: any,
 ): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211334');
+	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211411');
 	const agent = await getAgent(agentId, repositories);
 	if (!agent) {
 		throw new Error(`Agent ${agentId} not found`);
@@ -98,7 +98,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		// Always ensure default agents exist and are up-to-date
 		try {
 			const {getDefaultAgents} = await import(
-				'npm:@timestep-ai/timestep@2025.9.211334'
+				'npm:@timestep-ai/timestep@2025.9.211411'
 			);
 			const defaultAgents = getDefaultAgents();
 
@@ -164,7 +164,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 			.select('*')
 			.eq('user_id', this.userId);
 		if (error) throw new Error(`Failed to list agents: ${error.message}`);
-		
+
 		// Transform database field names to expected format
 		return (data || []).map((agent: any) => ({
 			...agent,
@@ -183,9 +183,9 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (error && error.code !== 'PGRST116') {
 			throw new Error(`Failed to load agent: ${error.message}`);
 		}
-		
+
 		if (!data) return null;
-		
+
 		// Transform database field names to expected format
 		return {
 			...data,
@@ -401,7 +401,8 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 				const builtinServer = {
 					id: '00000000-0000-0000-0000-000000000000',
 					name: 'Built-in MCP Server',
-					description: 'Built-in MCP server providing weather data, document tools, and thinking capabilities',
+					description:
+						'Built-in MCP server providing weather data, document tools, and thinking capabilities',
 					serverUrl: '', // Empty for built-in server - handled internally
 					enabled: true,
 				};
@@ -417,7 +418,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultMcpServers} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 				const defaults = getDefaultMcpServers(this.baseUrl);
 				// Skip the built-in server since we already handled it above
@@ -445,7 +446,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 
 		// Decrypt auth tokens if needed
 		const {isEncryptedSecret, decryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 
 		const servers = await Promise.all(
@@ -467,7 +468,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 					id: row.id,
 					name: row.name,
 					description: row.description ?? row.name,
-					serverUrl: isBuiltin ? '' : (row.server_url ?? ''),
+					serverUrl: isBuiltin ? '' : row.server_url ?? '',
 					enabled: row.enabled ?? true,
 					authToken: authToken,
 				};
@@ -492,7 +493,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 
 		// Decrypt auth token if needed
 		const {isEncryptedSecret, decryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 
 		let authToken = data.auth_token;
@@ -514,7 +515,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			id: data.id,
 			name: data.name,
 			description: data.description ?? data.name,
-			serverUrl: isBuiltin ? '' : (data.server_url ?? ''),
+			serverUrl: isBuiltin ? '' : data.server_url ?? '',
 			enabled: data.enabled ?? true,
 			authToken: authToken,
 		};
@@ -532,7 +533,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			enabled: server.enabled,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 
 		// Handle auth token - encrypt if provided, set to null if not
@@ -606,7 +607,7 @@ class SupabaseModelProviderRepository
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultModelProviders} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 				const defaults = getDefaultModelProviders();
 				for (const p of defaults) {
@@ -627,7 +628,7 @@ class SupabaseModelProviderRepository
 
 		// Decrypt API keys if needed
 		const {isEncryptedSecret, decryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 
 		const providers = await Promise.all(
@@ -671,7 +672,7 @@ class SupabaseModelProviderRepository
 
 		// Decrypt API key if needed
 		const {isEncryptedSecret, decryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 
 		let apiKey = data.api_key;
@@ -704,7 +705,7 @@ class SupabaseModelProviderRepository
 			models_url: (provider as any).models_url ?? (provider as any).modelsUrl,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211334'
+			'npm:@timestep-ai/timestep@2025.9.211411'
 		);
 		if (
 			(provider as any).api_key !== undefined ||
@@ -797,9 +798,11 @@ class SupabaseTaskStore {
 
 	async load(taskId: string): Promise<any | undefined> {
 		console.log(`📋 SupabaseTaskStore.load(${taskId})`);
-		
+
 		if (!this.userId) {
-			console.log(`📋 SupabaseTaskStore.load(${taskId}) -> NOT FOUND (no user)`);
+			console.log(
+				`📋 SupabaseTaskStore.load(${taskId}) -> NOT FOUND (no user)`,
+			);
 			return undefined;
 		}
 
@@ -826,21 +829,24 @@ class SupabaseTaskStore {
 
 	async save(task: any): Promise<void> {
 		console.log(`📋 SupabaseTaskStore.save(${task.id})`);
-		
+
 		if (!this.userId) {
 			console.log(`📋 SupabaseTaskStore.save(${task.id}) -> SKIPPED (no user)`);
 			return;
 		}
 
-		const {error} = await this.supabase
-			.from('tasks')
-			.upsert([{
-				task_id: task.id,
-				user_id: this.userId,
-				task_data: task,
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-			}], {onConflict: 'task_id,user_id'});
+		const {error} = await this.supabase.from('tasks').upsert(
+			[
+				{
+					task_id: task.id,
+					user_id: this.userId,
+					task_data: task,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				},
+			],
+			{onConflict: 'task_id,user_id'},
+		);
 
 		if (error) {
 			console.error(`📋 SupabaseTaskStore.save(${task.id}) -> ERROR:`, error);
@@ -1193,7 +1199,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Get tool information from the MCP server
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 
 				// First, get the list of tools from the server
@@ -1296,7 +1302,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				const [serverId, toolName] = parts;
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 
 				const result = await handleMcpServerRequest(
@@ -1339,7 +1345,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 
 				if (request.method === 'POST') {
@@ -1382,7 +1388,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// GET request - return full MCP server record
 				const {getMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211334'
+					'npm:@timestep-ai/timestep@2025.9.211411'
 				);
 				const server = await getMcpServer(serverId, repositories as any);
 
@@ -1774,11 +1780,11 @@ Deno.serve({port}, async (request: Request) => {
 			};
 
 			try {
-							// Check if agent exists first
-							const timestepModule = await import(
-								'npm:@timestep-ai/timestep@2025.9.211334'
-							);
-							const isAgentAvailable = timestepModule.isAgentAvailable;
+				// Check if agent exists first
+				const timestepModule = await import(
+					'npm:@timestep-ai/timestep@2025.9.211411'
+				);
+				const isAgentAvailable = timestepModule.isAgentAvailable;
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1836,17 +1842,34 @@ Deno.serve({port}, async (request: Request) => {
 						try {
 							// Debug: Log agent details before creating request handler
 							console.log(`🔍 Creating request handler for agent: ${agentId}`);
-							console.log(`🔍 Available agents:`, (await repositories.agents.list()).map(a => ({ id: a.id, name: a.name, toolIds: a.toolIds, handoffIds: a.handoffIds })));
-							console.log(`🔍 Available MCP servers:`, (await repositories.mcpServers.list()).map(s => ({ id: s.id, name: s.name, enabled: s.enabled, serverUrl: s.serverUrl })));
-							
+							console.log(
+								`🔍 Available agents:`,
+								(await repositories.agents.list()).map(a => ({
+									id: a.id,
+									name: a.name,
+									toolIds: a.toolIds,
+									handoffIds: a.handoffIds,
+								})),
+							);
+							console.log(
+								`🔍 Available MCP servers:`,
+								(await repositories.mcpServers.list()).map(s => ({
+									id: s.id,
+									name: s.name,
+									enabled: s.enabled,
+									serverUrl: s.serverUrl,
+								})),
+							);
+
 							// Set userId for task store
 							taskStore.userId = userId;
-							
+
 							// Create the request handler for this agent
 							const timestepModule = await import(
-								'npm:@timestep-ai/timestep@2025.9.211334'
+								'npm:@timestep-ai/timestep@2025.9.211411'
 							);
-							const createAgentRequestHandler = timestepModule.createAgentRequestHandler;
+							const createAgentRequestHandler =
+								timestepModule.createAgentRequestHandler;
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
 								taskStore,
