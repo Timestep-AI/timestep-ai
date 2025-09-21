@@ -226,8 +226,28 @@ class SupabaseContextRepository implements Repository<Context, string> {
 
 	async save(context: Context): Promise<void> {
 		if (!this.userId) throw new Error('Unauthenticated: user_id required');
-		const {error} = await this.supabase.from('contexts').upsert([
-			{
+
+		// First check if context exists
+		const existing = await this.load(context.contextId);
+		const now = new Date().toISOString();
+
+		if (existing) {
+			// Update existing context
+			const {error} = await this.supabase
+				.from('contexts')
+				.update({
+					task_histories: context.taskHistories,
+					task_states: context.taskStates,
+					tasks: context.tasks,
+					updated_at: now,
+				})
+				.eq('user_id', this.userId)
+				.eq('context_id', context.contextId);
+
+			if (error) throw new Error(`Failed to update context: ${error.message}`);
+		} else {
+			// Insert new context
+			const {error} = await this.supabase.from('contexts').insert({
 				id: crypto.randomUUID(),
 				user_id: this.userId,
 				context_id: context.contextId,
@@ -235,11 +255,12 @@ class SupabaseContextRepository implements Repository<Context, string> {
 				task_histories: context.taskHistories,
 				task_states: context.taskStates,
 				tasks: context.tasks,
-				created_at: new Date().toISOString(),
-			},
-		]);
+				created_at: now,
+				updated_at: now,
+			});
 
-		if (error) throw new Error(`Failed to save context: ${error.message}`);
+			if (error) throw new Error(`Failed to create context: ${error.message}`);
+		}
 	}
 
 	async delete(id: string): Promise<void> {
