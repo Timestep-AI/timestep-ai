@@ -1,4 +1,4 @@
 project_id = "ohzbghitbjryfpmucgju"
 
 [functions.server]
-verify_jwt = true
+verify_jwt = false
