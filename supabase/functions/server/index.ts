@@ -1222,7 +1222,7 @@ Deno.serve({port}, async (request: Request) => {
 				route: undefined,
 				signedCookies: {},
 				url: agentSubPath + url.search,
-				baseUrl: '',
+				baseUrl: agentPrefix,
 				app: {} as any,
 				res: {} as any,
 				next: (() => {}) as any,
