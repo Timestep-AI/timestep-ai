@@ -1131,15 +1131,17 @@ Deno.serve({port}, async (request: Request) => {
 			}
 		}
 
-		// Handle dynamic agent routes with custom repository
+		// Handle dynamic agent routes - proxy to A2A Express app like server.ts
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
+			const agentId = agentMatch[1];
+			
 			// Create a mock Express-style request object that satisfies the Request interface
 			const mockReq = {
 				method: request.method,
 				path: cleanPath,
 				originalUrl: cleanPath + url.search,
-				params: {agentId: agentMatch[1]},
+				params: {agentId: agentId},
 				body:
 					request.method !== 'GET'
 						? await request.json().catch(() => ({}))
@@ -1154,7 +1156,7 @@ Deno.serve({port}, async (request: Request) => {
 				acceptsLanguages: () => false,
 				range: () => undefined,
 				param: (name: string) =>
-					name === 'agentId' ? agentMatch[1] : undefined,
+					name === 'agentId' ? agentId : undefined,
 				is: () => false,
 				protocol: 'https',
 				secure: true,
@@ -1177,15 +1179,76 @@ Deno.serve({port}, async (request: Request) => {
 				secret: undefined,
 			} as any;
 
-			// Create a mock response object
+			// Create a proper response handler that captures the response
+			let responseData: any = null;
+			let responseStatus = 200;
+			let responseHeaders: Record<string, string> = {...headers};
+			let isStreaming = false;
+
 			const mockRes = {
-				status: (code: number) => ({json: (data: any) => data}),
-				json: (data: any) => data,
-				send: (data: any) => data,
+				status: (code: number) => {
+					responseStatus = code;
+					return {
+						json: (data: any) => {
+							responseData = data;
+							return data;
+						},
+						send: (data: any) => {
+							responseData = data;
+							return data;
+						},
+						end: () => {},
+						setHeader: (name: string, value: string) => {
+							responseHeaders[name] = value;
+							// Detect streaming responses
+							if (name.toLowerCase() === 'content-type' && value.includes('text/event-stream')) {
+								isStreaming = true;
+							}
+						},
+						getHeader: (name: string) => responseHeaders[name],
+						removeHeader: (name: string) => {
+							delete responseHeaders[name];
+						},
+						locals: {},
+						append: () => {},
+						attachment: () => {},
+						cookie: () => {},
+						clearCookie: () => {},
+						download: () => {},
+						format: () => {},
+						get: () => undefined,
+						header: () => {},
+						links: () => {},
+						location: () => {},
+						redirect: () => {},
+						render: () => {},
+						sendFile: () => {},
+						sendStatus: () => {},
+						set: () => {},
+						type: () => {},
+						vary: () => {},
+					};
+				},
+				json: (data: any) => {
+					responseData = data;
+					return data;
+				},
+				send: (data: any) => {
+					responseData = data;
+					return data;
+				},
 				end: () => {},
-				setHeader: () => {},
-				getHeader: () => undefined,
-				removeHeader: () => {},
+				setHeader: (name: string, value: string) => {
+					responseHeaders[name] = value;
+					// Detect streaming responses
+					if (name.toLowerCase() === 'content-type' && value.includes('text/event-stream')) {
+						isStreaming = true;
+					}
+				},
+				getHeader: (name: string) => responseHeaders[name],
+				removeHeader: (name: string) => {
+					delete responseHeaders[name];
+				},
 				locals: {},
 				append: () => {},
 				attachment: () => {},
@@ -1209,111 +1272,14 @@ Deno.serve({port}, async (request: Request) => {
 			const mockNext = () => {};
 
 			try {
-				// Use the original handleAgentRequest function but with a custom port that represents the base URL
-				// We'll extract the port from the base URL for the agent card generation
+				// Use the original handleAgentRequest function exactly like server.ts
+				// Extract port from the base URL for agent card generation
 				const urlObj = new URL(agentBaseUrl);
 				const port = urlObj.port ? parseInt(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
 				
-				// Create a proper response handler that captures the response
-				let responseData: any = null;
-				let responseStatus = 200;
-				let responseHeaders: Record<string, string> = {...headers};
-
-				const enhancedMockRes = {
-					...mockRes,
-					status: (code: number) => {
-						console.log(`🔍 MockRes.status called with code: ${code}`);
-						responseStatus = code;
-						return {
-							json: (data: any) => {
-								console.log(`🔍 MockRes.status().json called with data:`, data);
-								responseData = data;
-								return data;
-							},
-							send: (data: any) => {
-								console.log(`🔍 MockRes.status().send called with data:`, data);
-								responseData = data;
-								return data;
-							},
-							end: () => {
-								console.log(`🔍 MockRes.status().end called`);
-							},
-							setHeader: (name: string, value: string) => {
-								console.log(`🔍 MockRes.status().setHeader called: ${name} = ${value}`);
-								responseHeaders[name] = value;
-							},
-							getHeader: (name: string) => responseHeaders[name],
-							removeHeader: (name: string) => {
-								delete responseHeaders[name];
-							},
-							locals: {},
-							append: () => {},
-							attachment: () => {},
-							cookie: () => {},
-							clearCookie: () => {},
-							download: () => {},
-							format: () => {},
-							get: () => undefined,
-							header: () => {},
-							links: () => {},
-							location: () => {},
-							redirect: () => {},
-							render: () => {},
-							sendFile: () => {},
-							sendStatus: () => {},
-							set: () => {},
-							type: () => {},
-							vary: () => {},
-						};
-					},
-					json: (data: any) => {
-						console.log(`🔍 MockRes.json called with data:`, data);
-						responseData = data;
-						return data;
-					},
-					send: (data: any) => {
-						console.log(`🔍 MockRes.send called with data:`, data);
-						responseData = data;
-						return data;
-					},
-					end: () => {
-						console.log(`🔍 MockRes.end called`);
-					},
-					setHeader: (name: string, value: string) => {
-						console.log(`🔍 MockRes.setHeader called: ${name} = ${value}`);
-						responseHeaders[name] = value;
-					},
-					getHeader: (name: string) => responseHeaders[name],
-					removeHeader: (name: string) => {
-						delete responseHeaders[name];
-					},
-					locals: {},
-					append: () => {},
-					attachment: () => {},
-					cookie: () => {},
-					clearCookie: () => {},
-					download: () => {},
-					format: () => {},
-					get: () => undefined,
-					header: () => {},
-					links: () => {},
-					location: () => {},
-					redirect: () => {},
-					render: () => {},
-					sendFile: () => {},
-					sendStatus: () => {},
-					set: () => {},
-					type: () => {},
-					vary: () => {},
-				};
-
-				// Use the original handleAgentRequest function
-				const {handleAgentRequest} = await import('npm:@timestep-ai/timestep@2025.9.211013');
-				
-				console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
 				await handleAgentRequest(
 					mockReq,
-					enhancedMockRes,
+					mockRes,
 					mockNext,
 					taskStore,
 					agentExecutor,
@@ -1321,35 +1287,17 @@ Deno.serve({port}, async (request: Request) => {
 					repositories as any,
 				);
 
-				console.log(`🔍 Response data after handleAgentRequest:`, responseData);
-				console.log(`🔍 Response status after handleAgentRequest:`, responseStatus);
-
-				// If no response data was captured, return a default agent card
+				// If no response data was captured, fail fast - no fallbacks
 				if (!responseData) {
-					console.log(`⚠️ No response data captured, returning default agent card`);
-					const defaultAgentCard = {
-						name: "Personal Assistant",
-						description: "A helpful AI agent powered by Personal Assistant",
-						url: `${agentBaseUrl}/agents/${agentMatch[1]}/`,
-						version: "1.0.0",
-						protocolVersion: "0.3.0",
-						preferredTransport: "JSONRPC",
-						defaultInputModes: ["text"],
-						defaultOutputModes: ["text"],
-						capabilities: { streaming: true },
-						skills: [{
-							id: "hello_world",
-							name: "Returns hello world",
-							description: "just returns hello world",
-							tags: ["hello world"],
-							examples: ["hi", "hello world"]
-						}],
-						supportsAuthenticatedExtendedCard: true
-					};
-					return new Response(JSON.stringify(defaultAgentCard), {
-						status: 200,
-						headers: {...headers, 'Content-Type': 'application/json'},
-					});
+					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
+					return new Response(
+						JSON.stringify({
+							error: 'Agent request failed',
+							message: 'No response data captured from agent handler',
+							agentId: agentId,
+						}),
+						{status: 500, headers},
+					);
 				}
 
 				// Return the actual response from the A2A Express app
@@ -1361,13 +1309,12 @@ Deno.serve({port}, async (request: Request) => {
 					},
 				);
 			} catch (error) {
-				console.error('Error in agent request handler:', error);
+				console.error(`Error in agent request handler for ${agentId}:`, error);
 				return new Response(
 					JSON.stringify({
-						error:
-							error instanceof Error
-								? error.message
-								: 'Failed to handle agent request',
+						error: 'Agent request failed',
+						message: error instanceof Error ? error.message : 'Unknown error',
+						agentId: agentId,
 					}),
 					{status: 500, headers},
 				);
