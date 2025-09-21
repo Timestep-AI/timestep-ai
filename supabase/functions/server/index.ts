@@ -164,7 +164,13 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 			.select('*')
 			.eq('user_id', this.userId);
 		if (error) throw new Error(`Failed to list agents: ${error.message}`);
-		return data || [];
+		
+		// Transform database field names to expected format
+		return (data || []).map((agent: any) => ({
+			...agent,
+			handoffIds: agent.handoff_ids || [],
+			toolIds: agent.tool_ids || [],
+		}));
 	}
 
 	async load(id: string): Promise<Agent | null> {
@@ -177,7 +183,15 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (error && error.code !== 'PGRST116') {
 			throw new Error(`Failed to load agent: ${error.message}`);
 		}
-		return data || null;
+		
+		if (!data) return null;
+		
+		// Transform database field names to expected format
+		return {
+			...data,
+			handoffIds: data.handoff_ids || [],
+			toolIds: data.tool_ids || [],
+		};
 	}
 
 	async save(agent: Agent): Promise<void> {
