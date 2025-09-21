@@ -1247,7 +1247,7 @@ Deno.serve({port}, async (request: Request) => {
 				route: undefined,
 				signedCookies: {},
 				url: agentSubPath + url.search,
-				baseUrl: agentPrefix,
+				baseUrl: '/agents',
 				app: {} as any,
 				res: {} as any,
 				next: (() => {}) as any,
@@ -1524,9 +1524,12 @@ Deno.serve({port}, async (request: Request) => {
 				// For Supabase, the agent base URL should point to the function URL
 				const supabaseAgentBaseUrl = agentBaseUrl.replace('/server', '/functions/v1/server');
 
-				// Import the agent message handler
-				const {handleAgentMessage} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211041'
+				// Use handleAgentRequest middleware directly
+				const requestHandler = handleAgentRequest(
+					taskStore,
+					agentExecutor,
+					port,
+					repositories as any,
 				);
 
 				// Check if this is an agent card request - handle it separately
@@ -1549,31 +1552,16 @@ Deno.serve({port}, async (request: Request) => {
 					responseEnded = true;
 				} else {
 					console.log(`🔍 Handling A2A request: ${cleanPath}`);
-					// Use handleAgentMessage directly for messaging
-					console.log(`🔍 Calling handleAgentMessage for agent ${agentId}`);
+					// Use handleAgentRequest middleware for messaging
+					console.log(`🔍 Calling handleAgentRequest for agent ${agentId}`);
 					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
-					console.log(`🔍 Request body:`, mockReq.body);
+					console.log(`🔍 Request params:`, mockReq.params);
 
 					// Add error handling to catch any issues
 					try {
-						const response = await handleAgentMessage(
-							agentId,
-							mockReq.body,
-							taskStore,
-							agentExecutor,
-							repositories as any,
-							port,
-						);
-
-						console.log(`🔍 Agent message response:`, response);
-
-						// Set response data
-						responseData = response;
-						responseStatus = 200;
-						responseHeaders['Content-Type'] = 'application/json';
-						responseEnded = true;
+						await requestHandler(mockReq, mockRes, mockNext);
 					} catch (error) {
-						console.error(`🔍 Error in handleAgentMessage for agent ${agentId}:`, error);
+						console.error(`🔍 Error in handleAgentRequest for agent ${agentId}:`, error);
 						throw error;
 					}
 				}
