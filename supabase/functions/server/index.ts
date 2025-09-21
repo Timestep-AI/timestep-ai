@@ -59,7 +59,15 @@ async function getAgentCardForSupabase(
 		name: agent.name || 'AI Agent',
 		preferredTransport: agent.preferredTransport || 'JSONRPC',
 		protocolVersion: agent.protocolVersion || '0.3.0',
-		skills: agent.skills || [],
+		skills: agent.skills && agent.skills.length > 0 ? agent.skills : [
+			{
+				id: 'hello_world',
+				name: 'Returns hello world',
+				description: 'just returns hello world',
+				examples: ['hi', 'hello world'],
+				tags: ['hello world']
+			}
+		],
 		supportsAuthenticatedExtendedCard: agent.supportsAuthenticatedExtendedCard || false,
 		url: `${baseUrl}/agents/${agentId}/`,
 		version: agent.version || '1.0.0',
@@ -1395,6 +1403,7 @@ Deno.serve({port}, async (request: Request) => {
 					responseHeaders['Content-Type'] = 'application/json';
 					responseEnded = true;
 				} else {
+					console.log(`🔍 Handling A2A request: ${cleanPath}`);
 					// Use handleAgentRequest for other A2A endpoints (chat streaming, etc.)
 					console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
 					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
@@ -1420,6 +1429,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
 				console.log(`🔍 Response status: ${responseStatus}, headers:`, responseHeaders);
+				console.log(`🔍 Is streaming: ${isStreaming}`);
 
 				// If no response data was captured, fail fast - no fallbacks
 				if (!responseData && !responseEnded) {
