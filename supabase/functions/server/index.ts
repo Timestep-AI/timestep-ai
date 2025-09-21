@@ -1285,85 +1285,41 @@ Deno.serve({port}, async (request: Request) => {
 					repositories as any,
 				);
 
-				// Handle agent card requests directly
-				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
-					// Get agent card directly from the request handler
-					const agentCard = await requestHandler.getAgentCard();
-					return new Response(JSON.stringify(agentCard), {
-						status: 200,
-						headers: {...headers, 'Content-Type': 'application/json'},
-					});
-				}
+				// Use handleAgentRequest directly like server.ts does
+				// This handles all A2A endpoints including agent card and chat streaming
+				await handleAgentRequest(
+					mockReq,
+					mockRes,
+					mockNext,
+					taskStore,
+					agentExecutor,
+					port,
+					repositories as any,
+				);
 
-				// For other A2A endpoints (like chat streaming), we need to handle them differently
-				// Since handleAgentRequest doesn't work well with our mock objects, let's try a different approach
-				// Let's create a real Express app and use it properly
-				const express = await import('npm:express@5.1.0');
-				const {A2AExpressApp} = await import('npm:@a2a-js/sdk@0.3.4/server/express');
-				
-				const agentApp = express.default();
-				const agentAppBuilder = new A2AExpressApp(requestHandler);
-				agentAppBuilder.setupRoutes(agentApp);
+				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
 
-				// Create a promise-based response handler
-				let responseResolve: (value: {data: any, status: number, headers: Record<string, string>}) => void;
-				let responseReject: (reason: any) => void;
-				const responsePromise = new Promise<{data: any, status: number, headers: Record<string, string>}>((resolve, reject) => {
-					responseResolve = resolve;
-					responseReject = reject;
-				});
-
-				// Create a response object that properly captures the response
-				const captureRes = {
-					...mockRes,
-					json: (data: any) => {
-						console.log(`🔍 CaptureRes.json called with data:`, data);
-						responseResolve({data, status: responseStatus, headers: responseHeaders});
-						return captureRes;
-					},
-					send: (data: any) => {
-						console.log(`🔍 CaptureRes.send called with data:`, data);
-						responseResolve({data, status: responseStatus, headers: responseHeaders});
-						return captureRes;
-					},
-					end: (data?: any) => {
-						console.log(`🔍 CaptureRes.end called with data:`, data);
-						responseResolve({data: data || responseData, status: responseStatus, headers: responseHeaders});
-						return captureRes;
-					},
-				};
-
-				// Call the Express app
-				agentApp(mockReq, captureRes, mockNext);
-
-				// Wait for the response with a timeout
-				const timeoutPromise = new Promise<never>((_, reject) => {
-					setTimeout(() => reject(new Error('Request timeout')), 10000);
-				});
-
-				try {
-					const result = await Promise.race([responsePromise, timeoutPromise]);
-					console.log(`🔍 Response captured:`, result);
-
-					// Return the actual response from the A2A Express app
-					return new Response(
-						typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-						{
-							status: result.status,
-							headers: result.headers,
-						},
-					);
-				} catch (error) {
-					console.error(`Error in Express app for agent ${agentId}:`, error);
+				// If no response data was captured, fail fast - no fallbacks
+				if (!responseData && !responseEnded) {
+					console.error(`❌ No response data captured from handleAgentRequest for agent ${agentId}`);
 					return new Response(
 						JSON.stringify({
 							error: 'Agent request failed',
-							message: error instanceof Error ? error.message : 'Unknown error',
+							message: 'No response data captured from agent handler',
 							agentId: agentId,
 						}),
 						{status: 500, headers},
 					);
 				}
+
+				// Return the response from handleAgentRequest
+				return new Response(
+					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+					{
+						status: responseStatus,
+						headers: responseHeaders,
+					},
+				);
 			} catch (error) {
 				console.error(`Error in agent request handler for ${agentId}:`, error);
 				return new Response(
