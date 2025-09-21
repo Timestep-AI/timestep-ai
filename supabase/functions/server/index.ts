@@ -1169,8 +1169,10 @@ Deno.serve({port}, async (request: Request) => {
 		}
 
 		// Handle dynamic agent routes - proxy to A2A Express app like server.ts
+		console.log(`🔍 Checking if path matches agent route: ${cleanPath}`);
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
+			console.log(`🔍 Agent route matched! agentId: ${agentMatch[1]}`);
 			const agentId = agentMatch[1];
 
 			// Create a mock Express-style request object that satisfies the Request interface
@@ -1465,6 +1467,7 @@ Deno.serve({port}, async (request: Request) => {
 			}
 		}
 
+		console.log(`🔍 No route matched for path: ${cleanPath}, method: ${request.method}`);
 		return new Response('Not found', {status: 404, headers});
 	} catch (error) {
 		console.error('Error in Supabase Edge Function:', error);
