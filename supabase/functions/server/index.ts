@@ -1556,25 +1556,17 @@ Deno.serve({port}, async (request: Request) => {
 					responseEnded = true;
 				} else {
 					console.log(`🔍 Handling A2A request: ${cleanPath}`);
-					// Use handleAgentRequest for other A2A endpoints (chat streaming, etc.)
-					console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
+					// Use the agent-specific request handler for A2A endpoints
+					console.log(`🔍 Calling agent request handler for agent ${agentId}`);
 					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
 					console.log(`🔍 Request originalUrl: ${mockReq.originalUrl}`);
 					console.log(`🔍 Request url: ${mockReq.url}`);
-					
+
 					// Add error handling to catch any issues
 					try {
-						await handleAgentRequest(
-							mockReq,
-							mockRes,
-							mockNext,
-							taskStore,
-							agentExecutor,
-							port,
-							repositories as any,
-						);
+						await requestHandler(mockReq, mockRes, mockNext);
 					} catch (error) {
-						console.error(`🔍 Error in handleAgentRequest:`, error);
+						console.error(`🔍 Error in agent request handler for agent ${agentId}:`, error);
 						throw error;
 					}
 				}
