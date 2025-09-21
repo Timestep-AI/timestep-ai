@@ -121,11 +121,14 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 						console.log(`Created default agent: ${defaultAgent.name}`);
 					} else {
 						// Check if agent needs updating
-						const needsUpdate =
-							existingAgent.name !== defaultAgent.name ||
-							existingAgent.instructions !== defaultAgent.instructions ||
-							JSON.stringify(existingAgent.tool_ids || []) !== JSON.stringify(defaultAgent.toolIds || []) ||
-							JSON.stringify(existingAgent.handoff_ids || []) !== JSON.stringify(defaultAgent.handoffIds || []);
+						const toolIdsMatch = JSON.stringify(existingAgent.tool_ids || []) === JSON.stringify((defaultAgent as any).toolIds || []);
+						const handoffIdsMatch = JSON.stringify(existingAgent.handoff_ids || []) === JSON.stringify((defaultAgent as any).handoffIds || []);
+						const nameMatch = existingAgent.name === defaultAgent.name;
+						const instructionsMatch = existingAgent.instructions === defaultAgent.instructions;
+
+						const needsUpdate = !toolIdsMatch || !handoffIdsMatch || !nameMatch || !instructionsMatch;
+
+						console.log(`Agent ${defaultAgent.name}: toolIds match=${toolIdsMatch}, handoffIds match=${handoffIdsMatch}, name match=${nameMatch}, instructions match=${instructionsMatch}, needs update=${needsUpdate}`);
 
 						if (needsUpdate) {
 							// Update existing agent with new defaults
@@ -349,9 +352,13 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 				`Failed to check existing MCP servers: ${checkError.message}`,
 			);
 
+		console.log(`🔌 MCP server list called, existing servers: ${existingData?.length || 0}`);
+
 		// Always ensure the built-in MCP server exists, regardless of other servers
 		const builtinServerId = '00000000-0000-0000-0000-000000000000';
 		const hasBuiltinServer = existingData?.some((server: any) => server.id === builtinServerId);
+
+		console.log(`🔌 Built-in MCP server exists: ${hasBuiltinServer}, baseUrl: ${this.baseUrl}`);
 
 		if (!hasBuiltinServer) {
 			try {
@@ -359,6 +366,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 					'npm:@timestep-ai/timestep@2025.9.211249'
 				);
 				const builtinServer = getBuiltinMcpServer(this.baseUrl);
+				console.log(`🔌 Creating built-in MCP server:`, builtinServer);
 				await this.save(builtinServer);
 				console.log(`🔌 Created built-in MCP server in database`);
 			} catch (e) {
