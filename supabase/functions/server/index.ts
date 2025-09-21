@@ -1212,10 +1212,11 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				// Check if agent exists
-				const {isAgentAvailable} = await import(
+				const {getAgent} = await import(
 					'npm:@timestep-ai/timestep@2025.9.211013'
 				);
-				if (!(await isAgentAvailable(agentId, repositories as any))) {
+				const agent = await getAgent(agentId, repositories as any);
+				if (!agent) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
 						JSON.stringify({
@@ -1236,9 +1237,9 @@ Deno.serve({port}, async (request: Request) => {
 				);
 
 				// Create A2A Express app and delegate
-				const {A2AExpressApp} = await import('@a2a-js/sdk/server/express');
+				const {A2AExpressApp} = await import('npm:@a2a-js/sdk@0.3.4/server/express');
 				const agentAppBuilder = new A2AExpressApp(requestHandler);
-				const agentApp = (await import('express')).default();
+				const agentApp = (await import('npm:express@5.1.0')).default();
 
 				// Set up the agent app routes
 				agentAppBuilder.setupRoutes(agentApp);
