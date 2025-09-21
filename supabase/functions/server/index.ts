@@ -345,9 +345,9 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 				id: row.id,
 				name: row.name,
 				description: row.description ?? row.name,
-				serverUrl: row.server_url ?? '',
+				server_url: row.server_url ?? '',
 				enabled: row.enabled ?? true,
-				authToken: row.auth_token,
+				auth_token: row.auth_token,
 			} as McpServer;
 		});
 
@@ -372,9 +372,9 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			id: data.id,
 			name: data.name,
 			description: data.description ?? data.name,
-			serverUrl: data.server_url ?? '',
+			server_url: data.server_url ?? '',
 			enabled: data.enabled ?? true,
-			authToken: data.auth_token,
+			auth_token: data.auth_token,
 		} as McpServer;
 	}
 
@@ -386,7 +386,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			user_id: this.userId,
 			name: server.name,
 			description: (server as any).description ?? server.name,
-			server_url: (server as any).serverUrl,
+			server_url: (server as any).server_url ?? (server as any).serverUrl,
 			enabled: server.enabled,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
@@ -394,8 +394,8 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		);
 
 		// Handle auth token - encrypt if provided, set to null if not
-		if ((server as any).authToken !== undefined) {
-			let token = (server as any).authToken as string | undefined;
+		if ((server as any).auth_token !== undefined || (server as any).authToken !== undefined) {
+			let token = ((server as any).auth_token ?? (server as any).authToken) as string | undefined;
 			if (token && !isEncryptedSecret(token)) {
 				try {
 					token = await encryptSecret(token);
@@ -481,9 +481,9 @@ class SupabaseModelProviderRepository
 		const providers = (data || []).map((row: any) => ({
 			id: row.id,
 			provider: row.provider,
-			apiKey: row.api_key,
-			baseUrl: row.base_url,
-			modelsUrl: row.models_url,
+			api_key: row.api_key,
+			base_url: row.base_url,
+			models_url: row.models_url,
 		}));
 
 		return providers;
@@ -509,14 +509,14 @@ class SupabaseModelProviderRepository
 			id: provider.id,
 			user_id: this.userId,
 			provider: provider.provider,
-			base_url: (provider as any).baseUrl ?? (provider as any).base_url,
-			models_url: (provider as any).modelsUrl ?? (provider as any).models_url,
+			base_url: (provider as any).base_url ?? (provider as any).baseUrl,
+			models_url: (provider as any).models_url ?? (provider as any).modelsUrl,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
 			'npm:@timestep-ai/timestep@2025.9.211249'
 		);
-		if ((provider as any).apiKey !== undefined) {
-			let key = (provider as any).apiKey as string | undefined;
+		if ((provider as any).api_key !== undefined || (provider as any).apiKey !== undefined) {
+			let key = ((provider as any).api_key ?? (provider as any).apiKey) as string | undefined;
 			if (key && !isEncryptedSecret(key)) {
 				try {
 					key = await encryptSecret(key);
