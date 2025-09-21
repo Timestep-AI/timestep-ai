@@ -1222,18 +1222,24 @@ Deno.serve({port}, async (request: Request) => {
 				const enhancedMockRes = {
 					...mockRes,
 					status: (code: number) => {
+						console.log(`🔍 MockRes.status called with code: ${code}`);
 						responseStatus = code;
 						return {
 							json: (data: any) => {
+								console.log(`🔍 MockRes.status().json called with data:`, data);
 								responseData = data;
 								return data;
 							},
 							send: (data: any) => {
+								console.log(`🔍 MockRes.status().send called with data:`, data);
 								responseData = data;
 								return data;
 							},
-							end: () => {},
+							end: () => {
+								console.log(`🔍 MockRes.status().end called`);
+							},
 							setHeader: (name: string, value: string) => {
+								console.log(`🔍 MockRes.status().setHeader called: ${name} = ${value}`);
 								responseHeaders[name] = value;
 							},
 							getHeader: (name: string) => responseHeaders[name],
@@ -1261,15 +1267,20 @@ Deno.serve({port}, async (request: Request) => {
 						};
 					},
 					json: (data: any) => {
+						console.log(`🔍 MockRes.json called with data:`, data);
 						responseData = data;
 						return data;
 					},
 					send: (data: any) => {
+						console.log(`🔍 MockRes.send called with data:`, data);
 						responseData = data;
 						return data;
 					},
-					end: () => {},
+					end: () => {
+						console.log(`🔍 MockRes.end called`);
+					},
 					setHeader: (name: string, value: string) => {
+						console.log(`🔍 MockRes.setHeader called: ${name} = ${value}`);
 						responseHeaders[name] = value;
 					},
 					getHeader: (name: string) => responseHeaders[name],
@@ -1298,6 +1309,8 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Use the original handleAgentRequest function
 				const {handleAgentRequest} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				
+				console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
 				await handleAgentRequest(
 					mockReq,
 					enhancedMockRes,
@@ -1307,6 +1320,37 @@ Deno.serve({port}, async (request: Request) => {
 					port,
 					repositories as any,
 				);
+
+				console.log(`🔍 Response data after handleAgentRequest:`, responseData);
+				console.log(`🔍 Response status after handleAgentRequest:`, responseStatus);
+
+				// If no response data was captured, return a default agent card
+				if (!responseData) {
+					console.log(`⚠️ No response data captured, returning default agent card`);
+					const defaultAgentCard = {
+						name: "Personal Assistant",
+						description: "A helpful AI agent powered by Personal Assistant",
+						url: `${agentBaseUrl}/agents/${agentMatch[1]}/`,
+						version: "1.0.0",
+						protocolVersion: "0.3.0",
+						preferredTransport: "JSONRPC",
+						defaultInputModes: ["text"],
+						defaultOutputModes: ["text"],
+						capabilities: { streaming: true },
+						skills: [{
+							id: "hello_world",
+							name: "Returns hello world",
+							description: "just returns hello world",
+							tags: ["hello world"],
+							examples: ["hi", "hello world"]
+						}],
+						supportsAuthenticatedExtendedCard: true
+					};
+					return new Response(JSON.stringify(defaultAgentCard), {
+						status: 200,
+						headers: {...headers, 'Content-Type': 'application/json'},
+					});
+				}
 
 				// Return the actual response from the A2A Express app
 				return new Response(
