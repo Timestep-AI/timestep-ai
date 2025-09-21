@@ -36,8 +36,7 @@ import {
 	type ModelProvider,
 	type Repository,
 	type RepositoryContainer,
-} from 'npm:@timestep-ai/timestep@2025.9.211013';
-
+} from 'npm:@timestep-ai/timestep@2025.9.211041';
 
 /**
  * Supabase Agent Repository Implementation
@@ -62,7 +61,7 @@ class SupabaseAgentRepository implements Repository<Agent, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultAgents} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 				const defaultAgents = getDefaultAgents();
 				for (const agent of defaultAgents) {
@@ -262,7 +261,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultMcpServers} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 				const defaults = getDefaultMcpServers(this.baseUrl);
 				for (const server of defaults) {
@@ -332,7 +331,7 @@ class SupabaseMcpServerRepository implements Repository<McpServer, string> {
 			enabled: server.enabled,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211013'
+			'npm:@timestep-ai/timestep@2025.9.211041'
 		);
 
 		// Handle auth token - encrypt if provided, set to null if not
@@ -401,7 +400,7 @@ class SupabaseModelProviderRepository
 		if (!existingData || existingData.length === 0) {
 			try {
 				const {getDefaultModelProviders} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 				const defaults = getDefaultModelProviders();
 				for (const p of defaults) {
@@ -455,7 +454,7 @@ class SupabaseModelProviderRepository
 			models_url: (provider as any).modelsUrl ?? (provider as any).models_url,
 		};
 		const {isEncryptedSecret, encryptSecret} = await import(
-			'npm:@timestep-ai/timestep@2025.9.211013'
+			'npm:@timestep-ai/timestep@2025.9.211041'
 		);
 		if ((provider as any).apiKey !== undefined) {
 			let key = (provider as any).apiKey as string | undefined;
@@ -890,7 +889,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Get tool information from the MCP server
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 
 				// First, get the list of tools from the server
@@ -993,7 +992,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				const [serverId, toolName] = parts;
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 
 				const result = await handleMcpServerRequest(
@@ -1036,7 +1035,7 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				const {handleMcpServerRequest} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 
 				if (request.method === 'POST') {
@@ -1079,7 +1078,7 @@ Deno.serve({port}, async (request: Request) => {
 
 				// GET request - return full MCP server record
 				const {getMcpServer} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
+					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
 				const server = await getMcpServer(serverId, repositories as any);
 
@@ -1135,7 +1134,7 @@ Deno.serve({port}, async (request: Request) => {
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
 			const agentId = agentMatch[1];
-			
+
 			// Create a mock Express-style request object that satisfies the Request interface
 			const mockReq = {
 				method: request.method,
@@ -1155,8 +1154,7 @@ Deno.serve({port}, async (request: Request) => {
 				acceptsEncodings: () => false,
 				acceptsLanguages: () => false,
 				range: () => undefined,
-				param: (name: string) =>
-					name === 'agentId' ? agentId : undefined,
+				param: (name: string) => (name === 'agentId' ? agentId : undefined),
 				is: () => false,
 				protocol: 'https',
 				secure: true,
@@ -1216,7 +1214,10 @@ Deno.serve({port}, async (request: Request) => {
 					console.log(`🔍 MockRes.setHeader called: ${name} = ${value}`);
 					responseHeaders[name] = value;
 					// Detect streaming responses
-					if (name.toLowerCase() === 'content-type' && value.includes('text/event-stream')) {
+					if (
+						name.toLowerCase() === 'content-type' &&
+						value.includes('text/event-stream')
+					) {
 						isStreaming = true;
 					}
 					return mockRes;
@@ -1250,7 +1251,9 @@ Deno.serve({port}, async (request: Request) => {
 
 			try {
 				// Check if agent exists first
-				const {isAgentAvailable} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				const {isAgentAvailable} = await import(
+					'npm:@timestep-ai/timestep@2025.9.211041'
+				);
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1264,10 +1267,16 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Extract port from the base URL for agent card generation
 				const urlObj = new URL(agentBaseUrl);
-				const port = urlObj.port ? parseInt(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
+				const port = urlObj.port
+					? parseInt(urlObj.port)
+					: urlObj.protocol === 'https:'
+					? 443
+					: 80;
 
-				// Create request handler directly
-				const {createAgentRequestHandler} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				// Create request handler directly - import from source since it's not exported yet
+				const {createAgentRequestHandler} = await import(
+					'npm:@timestep-ai/timestep@2025.9.211041'
+				);
 				const requestHandler = await createAgentRequestHandler(
 					agentId,
 					taskStore,
@@ -1290,16 +1299,26 @@ Deno.serve({port}, async (request: Request) => {
 				// But since we can't easily mock Express, let's try a different approach
 				// Let's create a real Express app and capture its response
 				const express = await import('npm:express@5.1.0');
-				const {A2AExpressApp} = await import('npm:@a2a-js/sdk@0.3.4/server/express');
-				
+				const {A2AExpressApp} = await import(
+					'npm:@a2a-js/sdk@0.3.4/server/express'
+				);
+
 				const agentApp = express.default();
 				const agentAppBuilder = new A2AExpressApp(requestHandler);
 				agentAppBuilder.setupRoutes(agentApp);
 
 				// Create a promise that resolves when the response is sent
-				let responseResolve: (value: any) => void;
+				let responseResolve: (value: {
+					data: any;
+					status: number;
+					headers: Record<string, string>;
+				}) => void;
 				let responseReject: (reason: any) => void;
-				const responsePromise = new Promise((resolve, reject) => {
+				const responsePromise = new Promise<{
+					data: any;
+					status: number;
+					headers: Record<string, string>;
+				}>((resolve, reject) => {
 					responseResolve = resolve;
 					responseReject = reject;
 				});
@@ -1311,14 +1330,22 @@ Deno.serve({port}, async (request: Request) => {
 						console.log(`🔍 CaptureRes.json called with data:`, data);
 						responseData = data;
 						responseEnded = true;
-						responseResolve({data, status: responseStatus, headers: responseHeaders});
+						responseResolve({
+							data,
+							status: responseStatus,
+							headers: responseHeaders,
+						});
 						return captureRes;
 					},
 					send: (data: any) => {
 						console.log(`🔍 CaptureRes.send called with data:`, data);
 						responseData = data;
 						responseEnded = true;
-						responseResolve({data, status: responseStatus, headers: responseHeaders});
+						responseResolve({
+							data,
+							status: responseStatus,
+							headers: responseHeaders,
+						});
 						return captureRes;
 					},
 					end: (data?: any) => {
@@ -1327,7 +1354,11 @@ Deno.serve({port}, async (request: Request) => {
 							responseData = data;
 						}
 						responseEnded = true;
-						responseResolve({data: responseData, status: responseStatus, headers: responseHeaders});
+						responseResolve({
+							data: responseData,
+							status: responseStatus,
+							headers: responseHeaders,
+						});
 						return captureRes;
 					},
 				};
@@ -1337,12 +1368,14 @@ Deno.serve({port}, async (request: Request) => {
 
 				// Wait for the response
 				const result = await responsePromise;
-				
+
 				console.log(`🔍 Response captured:`, result);
 
 				// Return the actual response from the A2A Express app
 				return new Response(
-					typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
+					typeof result.data === 'string'
+						? result.data
+						: JSON.stringify(result.data),
 					{
 						status: result.status,
 						headers: result.headers,
