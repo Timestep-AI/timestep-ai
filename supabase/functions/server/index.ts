@@ -1644,8 +1644,13 @@ Deno.serve({port}, async (request: Request) => {
 										)) {
 											console.log(`🔍 Stream event:`, event);
 
-											// Format as SSE data (just the event object, not wrapped in JSON-RPC)
-											const sseData = `data: ${JSON.stringify(event)}\n\n`;
+											// Format as JSON-RPC SSE response
+											const jsonRpcResponse = {
+												jsonrpc: '2.0',
+												id: jsonRpcRequest.id,
+												result: event,
+											};
+											const sseData = `data: ${JSON.stringify(jsonRpcResponse)}\n\n`;
 											const encoder = new TextEncoder();
 											controller.enqueue(encoder.encode(sseData));
 										}
@@ -1657,15 +1662,16 @@ Deno.serve({port}, async (request: Request) => {
 											`🔍 Error in stream for agent ${agentId}:`,
 											error,
 										);
-										const errorEvent = {
-											kind: 'error',
-											message:
-												error instanceof Error
-													? error.message
-													: 'Unknown error',
-											agentId: agentId,
+										const errorResponse = {
+											jsonrpc: '2.0',
+											id: jsonRpcRequest.id,
+											error: {
+												code: -32603,
+												message: 'Internal error',
+												data: error instanceof Error ? error.message : 'Unknown error',
+											},
 										};
-										const sseData = `data: ${JSON.stringify(errorEvent)}\n\n`;
+										const sseData = `data: ${JSON.stringify(errorResponse)}\n\n`;
 										const encoder = new TextEncoder();
 										controller.enqueue(encoder.encode(sseData));
 										controller.close();
