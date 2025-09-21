@@ -1483,6 +1483,9 @@ Deno.serve({port}, async (request: Request) => {
 					? 443
 					: 80;
 
+				// For Supabase, the agent base URL should point to the function URL
+				const supabaseAgentBaseUrl = agentBaseUrl.replace('/server', '/functions/v1/server');
+
 				// Create request handler directly - import from source since it's not exported yet
 				const {createAgentRequestHandler} = await import(
 					'npm:@timestep-ai/timestep@2025.9.211041'
@@ -1502,7 +1505,7 @@ Deno.serve({port}, async (request: Request) => {
 					// Get the agent card directly
 					const agentCard = await getAgentCardForSupabase(
 						agentId,
-						agentBaseUrl,
+						supabaseAgentBaseUrl,
 						repositories as any,
 					);
 					
