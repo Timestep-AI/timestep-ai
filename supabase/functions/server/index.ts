@@ -793,24 +793,60 @@ class SupabaseRepositoryContainer implements RepositoryContainer {
  * Custom task store for Supabase environment
  */
 class SupabaseTaskStore {
-	private store: Map<string, any> = new Map();
+	constructor(private supabase: any, public userId: string | null) {}
 
 	async load(taskId: string): Promise<any | undefined> {
 		console.log(`📋 SupabaseTaskStore.load(${taskId})`);
-		const entry = this.store.get(taskId);
-		if (entry) {
-			console.log(`📋 SupabaseTaskStore.load(${taskId}) -> FOUND`);
-			return {...entry};
-		} else {
+		
+		if (!this.userId) {
+			console.log(`📋 SupabaseTaskStore.load(${taskId}) -> NOT FOUND (no user)`);
+			return undefined;
+		}
+
+		const {data, error} = await this.supabase
+			.from('tasks')
+			.select('*')
+			.eq('task_id', taskId)
+			.eq('user_id', this.userId)
+			.single();
+
+		if (error && error.code !== 'PGRST116') {
+			console.error(`📋 SupabaseTaskStore.load(${taskId}) -> ERROR:`, error);
+			return undefined;
+		}
+
+		if (!data) {
 			console.log(`📋 SupabaseTaskStore.load(${taskId}) -> NOT FOUND`);
 			return undefined;
 		}
+
+		console.log(`📋 SupabaseTaskStore.load(${taskId}) -> FOUND`);
+		return data.task_data;
 	}
 
 	async save(task: any): Promise<void> {
 		console.log(`📋 SupabaseTaskStore.save(${task.id})`);
-		this.store.set(task.id, {...task});
-		console.log(`📋 SupabaseTaskStore.save(${task.id}) -> SAVED`);
+		
+		if (!this.userId) {
+			console.log(`📋 SupabaseTaskStore.save(${task.id}) -> SKIPPED (no user)`);
+			return;
+		}
+
+		const {error} = await this.supabase
+			.from('tasks')
+			.upsert([{
+				task_id: task.id,
+				user_id: this.userId,
+				task_data: task,
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+			}], {onConflict: 'task_id,user_id'});
+
+		if (error) {
+			console.error(`📋 SupabaseTaskStore.save(${task.id}) -> ERROR:`, error);
+		} else {
+			console.log(`📋 SupabaseTaskStore.save(${task.id}) -> SAVED`);
+		}
 	}
 }
 
@@ -823,7 +859,7 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Task store and server config
-const taskStore = new SupabaseTaskStore();
+const taskStore = new SupabaseTaskStore(supabase, null); // Will be set per request
 
 // Configure the port from environment or default
 const port = parseInt(Deno.env.get('PORT') || '3000');
@@ -1742,7 +1778,7 @@ Deno.serve({port}, async (request: Request) => {
 							const timestepModule = await import(
 								'npm:@timestep-ai/timestep@2025.9.211334'
 							);
-							const isAgentAvailable = timestepModule.isAgentAvailable;
+							const isAgentAvailable = timestepModule.default.isAgentAvailable;
 				if (!(await isAgentAvailable(agentId, repositories as any))) {
 					console.log(`❌ Agent ${agentId} not found`);
 					return new Response(
@@ -1803,11 +1839,14 @@ Deno.serve({port}, async (request: Request) => {
 							console.log(`🔍 Available agents:`, (await repositories.agents.list()).map(a => ({ id: a.id, name: a.name, toolIds: a.toolIds, handoffIds: a.handoffIds })));
 							console.log(`🔍 Available MCP servers:`, (await repositories.mcpServers.list()).map(s => ({ id: s.id, name: s.name, enabled: s.enabled, serverUrl: s.serverUrl })));
 							
+							// Set userId for task store
+							taskStore.userId = userId;
+							
 							// Create the request handler for this agent
 							const timestepModule = await import(
 								'npm:@timestep-ai/timestep@2025.9.211334'
 							);
-							const createAgentRequestHandler = timestepModule.createAgentRequestHandler;
+							const createAgentRequestHandler = timestepModule.default.createAgentRequestHandler;
 							const requestHandler = await createAgentRequestHandler(
 								agentId,
 								taskStore,
@@ -2121,6 +2160,17 @@ CREATE TABLE model_providers (
   PRIMARY KEY (user_id, id)
 );
 
+-- Create tasks table
+CREATE TABLE tasks (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  task_id TEXT NOT NULL,
+  task_data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (user_id, task_id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_agents_user_id ON agents(user_id);
 CREATE INDEX idx_agents_name ON agents(name);
@@ -2131,12 +2181,15 @@ CREATE INDEX idx_mcp_servers_user_id ON mcp_servers(user_id);
 CREATE INDEX idx_mcp_servers_name ON mcp_servers(name);
 CREATE INDEX idx_model_providers_user_id ON model_providers(user_id);
 CREATE INDEX idx_model_providers_provider ON model_providers(provider);
+CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX idx_tasks_task_id ON tasks(task_id);
 
 -- Enable Row Level Security (optional)
 ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contexts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE model_providers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -2164,12 +2217,17 @@ CREATE TRIGGER update_model_providers_updated_at
     BEFORE UPDATE ON model_providers 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_tasks_updated_at 
+    BEFORE UPDATE ON tasks 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Create policies for authenticated users (optional)
 -- Basic per-user RLS: require matching user_id
 CREATE POLICY "Users can access agents" ON agents FOR ALL TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "Users can access contexts" ON contexts FOR ALL TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "Users can access mcp_servers" ON mcp_servers FOR ALL TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "Users can access model_providers" ON model_providers FOR ALL TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "Users can access tasks" ON tasks FOR ALL TO authenticated USING (user_id = auth.uid());
 `;
 
 /*
