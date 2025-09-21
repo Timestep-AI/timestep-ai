@@ -1525,11 +1525,10 @@ Deno.serve({port}, async (request: Request) => {
 				const supabaseAgentBaseUrl = agentBaseUrl.replace('/server', '/functions/v1/server');
 
 				// Create request handler directly - import from source since it's not exported yet
-				const {createAgentRequestHandler} = await import(
+				const {handleAgentRequest} = await import(
 					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
-				const requestHandler = createAgentRequestHandler(
-					agentId,
+				const requestHandler = handleAgentRequest(
 					taskStore,
 					agentExecutor,
 					port,
