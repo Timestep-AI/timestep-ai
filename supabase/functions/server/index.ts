@@ -1346,27 +1346,46 @@ Deno.serve({port}, async (request: Request) => {
 					repositories as any,
 				);
 
-				// Use handleAgentRequest directly like server.ts does
-				// This handles all A2A endpoints including agent card and chat streaming
-				console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
-				console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
-				console.log(`🔍 Request originalUrl: ${mockReq.originalUrl}`);
-				console.log(`🔍 Request url: ${mockReq.url}`);
-				
-				// Add error handling to catch any issues
-				try {
-					await handleAgentRequest(
-						mockReq,
-						mockRes,
-						mockNext,
-						taskStore,
-						agentExecutor,
-						port,
+				// Check if this is an agent card request - handle it separately
+				if (cleanPath.endsWith('/.well-known/agent-card.json')) {
+					console.log(`🔍 Handling agent card request directly`);
+					
+					// Get the agent card directly
+					const agentCard = await getAgentCardForSupabase(
+						agentId,
+						agentBaseUrl,
 						repositories as any,
 					);
-				} catch (error) {
-					console.error(`🔍 Error in handleAgentRequest:`, error);
-					throw error;
+					
+					console.log(`🔍 Agent card generated:`, agentCard);
+					
+					// Set response data directly
+					responseData = agentCard;
+					responseStatus = 200;
+					responseHeaders['Content-Type'] = 'application/json';
+					responseEnded = true;
+				} else {
+					// Use handleAgentRequest for other A2A endpoints (chat streaming, etc.)
+					console.log(`🔍 Calling handleAgentRequest with port: ${port}`);
+					console.log(`🔍 Request path: ${mockReq.path}, method: ${mockReq.method}`);
+					console.log(`🔍 Request originalUrl: ${mockReq.originalUrl}`);
+					console.log(`🔍 Request url: ${mockReq.url}`);
+					
+					// Add error handling to catch any issues
+					try {
+						await handleAgentRequest(
+							mockReq,
+							mockRes,
+							mockNext,
+							taskStore,
+							agentExecutor,
+							port,
+							repositories as any,
+						);
+					} catch (error) {
+						console.error(`🔍 Error in handleAgentRequest:`, error);
+						throw error;
+					}
 				}
 
 				console.log(`🔍 Response ended: ${responseEnded}, data:`, responseData);
