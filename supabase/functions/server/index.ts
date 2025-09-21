@@ -1528,7 +1528,7 @@ Deno.serve({port}, async (request: Request) => {
 				const {createAgentRequestHandler} = await import(
 					'npm:@timestep-ai/timestep@2025.9.211041'
 				);
-				const requestHandler = await createAgentRequestHandler(
+				const requestHandler = createAgentRequestHandler(
 					agentId,
 					taskStore,
 					agentExecutor,
