@@ -38,80 +38,6 @@ import {
 	type RepositoryContainer,
 } from 'npm:@timestep-ai/timestep@2025.9.211013';
 
-/**
- * Custom getAgentCard function for Supabase Edge Function
- * Uses the correct base URL instead of localhost:port
- */
-async function getAgentCardForSupabase(
-	agentId: string,
-	baseUrl: string,
-	repositories: RepositoryContainer,
-): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211013');
-	const agent = await getAgent(agentId, repositories as any);
-	if (!agent) {
-		throw new Error(`Agent with ID ${agentId} not found`);
-	}
-
-	// Define agent skills
-	const helloSkill = {
-		id: 'hello_world',
-		name: 'Returns hello world',
-		description: 'just returns hello world',
-		tags: ['hello world'],
-		examples: ['hi', 'hello world'],
-	};
-
-	const publicAgentCard = {
-		name: agent.name,
-		description: `A helpful AI agent powered by ${agent.name}`,
-		url: `${baseUrl}/agents/${agentId}/`,
-		version: '1.0.0',
-		protocolVersion: '0.3.0',
-		preferredTransport: 'JSONRPC',
-		defaultInputModes: ['text'],
-		defaultOutputModes: ['text'],
-		capabilities: {streaming: true},
-		skills: [helloSkill],
-		supportsAuthenticatedExtendedCard: true,
-	};
-
-	return publicAgentCard;
-}
-
-/**
- * Custom createAgentRequestHandler function for Supabase Edge Function
- * Uses the correct base URL for agent cards
- */
-async function createAgentRequestHandlerForSupabase(
-	agentId: string,
-	baseUrl: string,
-	taskStore: any,
-	agentExecutor: any,
-	repositories: RepositoryContainer,
-): Promise<any> {
-	const {getAgent} = await import('npm:@timestep-ai/timestep@2025.9.211013');
-	const agent = await getAgent(agentId, repositories as any);
-	if (!agent) {
-		throw new Error(`Agent with ID ${agentId} not found`);
-	}
-
-	const agentCard = await getAgentCardForSupabase(
-		agentId,
-		baseUrl,
-		repositories as any,
-	);
-
-	const {ContextAwareRequestHandler} = await import(
-		'npm:@timestep-ai/timestep@2025.9.211013'
-	);
-	return new ContextAwareRequestHandler(
-		agentId,
-		agentCard,
-		taskStore,
-		agentExecutor,
-	);
-}
 
 /**
  * Supabase Agent Repository Implementation
@@ -1208,90 +1134,93 @@ Deno.serve({port}, async (request: Request) => {
 		// Handle dynamic agent routes with custom repository
 		const agentMatch = cleanPath.match(/^\/agents\/([^\/]+)(?:\/.*)?$/);
 		if (agentMatch) {
-			const agentId = agentMatch[1];
+			// Create a mock Express-style request object that satisfies the Request interface
+			const mockReq = {
+				method: request.method,
+				path: cleanPath,
+				originalUrl: cleanPath + url.search,
+				params: {agentId: agentMatch[1]},
+				body:
+					request.method !== 'GET'
+						? await request.json().catch(() => ({}))
+						: {},
+				headers: Object.fromEntries(Array.from(request.headers.entries())),
+				// Add required Express Request methods as stubs
+				get: (name: string) => request.headers.get(name),
+				header: (name: string) => request.headers.get(name),
+				accepts: () => false,
+				acceptsCharsets: () => false,
+				acceptsEncodings: () => false,
+				acceptsLanguages: () => false,
+				range: () => undefined,
+				param: (name: string) =>
+					name === 'agentId' ? agentMatch[1] : undefined,
+				is: () => false,
+				protocol: 'https',
+				secure: true,
+				ip: '127.0.0.1',
+				ips: [],
+				subdomains: [],
+				hostname: url.hostname,
+				fresh: false,
+				stale: true,
+				xhr: false,
+				route: undefined,
+				signedCookies: {},
+				url: cleanPath + url.search,
+				baseUrl: '',
+				app: {} as any,
+				res: {} as any,
+				next: (() => {}) as any,
+				query: Object.fromEntries(url.searchParams),
+				cookies: {},
+				secret: undefined,
+			} as any;
+
+			// Create a mock response object
+			const mockRes = {
+				status: (code: number) => ({json: (data: any) => data}),
+				json: (data: any) => data,
+				send: (data: any) => data,
+				end: () => {},
+				setHeader: () => {},
+				getHeader: () => undefined,
+				removeHeader: () => {},
+				locals: {},
+				append: () => {},
+				attachment: () => {},
+				cookie: () => {},
+				clearCookie: () => {},
+				download: () => {},
+				format: () => {},
+				get: () => undefined,
+				header: () => {},
+				links: () => {},
+				location: () => {},
+				redirect: () => {},
+				render: () => {},
+				sendFile: () => {},
+				sendStatus: () => {},
+				set: () => {},
+				type: () => {},
+				vary: () => {},
+			} as any;
+
+			const mockNext = () => {};
 
 			try {
-				// Check if agent exists
-				const {getAgent} = await import(
-					'npm:@timestep-ai/timestep@2025.9.211013'
-				);
-				const agent = await getAgent(agentId, repositories as any);
-				if (!agent) {
-					console.log(`❌ Agent ${agentId} not found`);
-					return new Response(
-						JSON.stringify({
-							error: 'Agent not found',
-							agentId: agentId,
-						}),
-						{status: 404, headers},
-					);
-				}
-
-				// Create request handler with correct base URL
-				const requestHandler = await createAgentRequestHandlerForSupabase(
-					agentId,
-					agentBaseUrl,
-					taskStore,
-					agentExecutor,
-					repositories as any,
-				);
-
-				// Create A2A Express app and delegate
-				const {A2AExpressApp} = await import('npm:@a2a-js/sdk@0.3.4/server/express');
-				const agentAppBuilder = new A2AExpressApp(requestHandler);
-				const agentApp = (await import('npm:express@5.1.0')).default();
-
-				// Set up the agent app routes
-				agentAppBuilder.setupRoutes(agentApp);
-
-				// Create a mock Express-style request object
-				const mockReq = {
-					method: request.method,
-					path: cleanPath,
-					originalUrl: cleanPath + url.search,
-					params: {agentId: agentId},
-					body:
-						request.method !== 'GET'
-							? await request.json().catch(() => ({}))
-							: {},
-					headers: Object.fromEntries(Array.from(request.headers.entries())),
-					// Add required Express Request methods as stubs
-					get: (name: string) => request.headers.get(name),
-					header: (name: string) => request.headers.get(name),
-					accepts: () => false,
-					acceptsCharsets: () => false,
-					acceptsEncodings: () => false,
-					acceptsLanguages: () => false,
-					range: () => undefined,
-					param: (name: string) => (name === 'agentId' ? agentId : undefined),
-					is: () => false,
-					protocol: 'https',
-					secure: true,
-					ip: '127.0.0.1',
-					ips: [],
-					subdomains: [],
-					hostname: url.hostname,
-					fresh: false,
-					stale: true,
-					xhr: false,
-					route: undefined,
-					signedCookies: {},
-					url: cleanPath + url.search,
-					baseUrl: '',
-					app: {} as any,
-					res: {} as any,
-					next: (() => {}) as any,
-					query: Object.fromEntries(url.searchParams),
-					cookies: {},
-					secret: undefined,
-				} as any;
-
-				// Create a proper response handler that captures the A2A Express app response
+				// Use the original handleAgentRequest function but with a custom port that represents the base URL
+				// We'll extract the port from the base URL for the agent card generation
+				const urlObj = new URL(agentBaseUrl);
+				const port = urlObj.port ? parseInt(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
+				
+				// Create a proper response handler that captures the response
 				let responseData: any = null;
 				let responseStatus = 200;
-				const responseHeaders: Record<string, string> = {...headers};
+				let responseHeaders: Record<string, string> = {...headers};
 
-				const mockRes = {
+				const enhancedMockRes = {
+					...mockRes,
 					status: (code: number) => {
 						responseStatus = code;
 						return {
@@ -1365,29 +1294,36 @@ Deno.serve({port}, async (request: Request) => {
 					set: () => {},
 					type: () => {},
 					vary: () => {},
-				} as any;
+				};
 
-				const mockNext = () => {};
-
-				// Delegate to the agent-specific app
-				agentApp(mockReq, mockRes, mockNext);
+				// Use the original handleAgentRequest function
+				const {handleAgentRequest} = await import('npm:@timestep-ai/timestep@2025.9.211013');
+				await handleAgentRequest(
+					mockReq,
+					enhancedMockRes,
+					mockNext,
+					taskStore,
+					agentExecutor,
+					port,
+					repositories as any,
+				);
 
 				// Return the actual response from the A2A Express app
 				return new Response(
-					typeof responseData === 'string'
-						? responseData
-						: JSON.stringify(responseData),
+					typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
 					{
 						status: responseStatus,
 						headers: responseHeaders,
 					},
 				);
 			} catch (error) {
-				console.error(`Error handling request for agent ${agentId}:`, error);
+				console.error('Error in agent request handler:', error);
 				return new Response(
 					JSON.stringify({
-						error: 'Internal server error',
-						message: error instanceof Error ? error.message : 'Unknown error',
+						error:
+							error instanceof Error
+								? error.message
+								: 'Failed to handle agent request',
 					}),
 					{status: 500, headers},
 				);
