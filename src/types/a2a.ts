@@ -9,9 +9,11 @@ export interface FilePart {
   file: {
     name?: string;
     mimeType?: string;
-    uri?: string;
-    bytes?: string; // base64 encoded
-  };
+  } & ({
+    uri: string;
+  } | {
+    bytes: string; // base64 encoded
+  });
   metadata?: { [key: string]: any };
 }
 
