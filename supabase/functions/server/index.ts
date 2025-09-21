@@ -1550,46 +1550,87 @@ Deno.serve({port}, async (request: Request) => {
 					console.log(`🔍 Processing JSON-RPC request for agent ${agentId}`);
 					console.log(`🔍 Request body:`, mockReq.body);
 
-					// Simple JSON-RPC response for message/stream
 					const jsonRpcRequest = mockReq.body;
 					if (jsonRpcRequest.method === 'message/stream') {
-						// Create a simple streaming response
-						const response = {
-							jsonrpc: '2.0',
-							id: jsonRpcRequest.id,
-							result: {
-								stream: {
-									kind: 'message',
-									message: {
-										messageId: 'response-' + Date.now(),
-										kind: 'message',
-										role: 'agent',
-										parts: [
-											{
-												kind: 'text',
-												text: 'Hello! I received your message: "' + jsonRpcRequest.params.message.parts[0].text + '"\n\nThis is a placeholder response from the Supabase Edge Function. The agent logic needs to be properly implemented.',
-											},
-										],
-									},
+						// Use the actual A2A SDK streaming logic
+						try {
+							// Create the request handler for this agent
+							const {createAgentRequestHandler} = await import(
+								'npm:@timestep-ai/timestep@2025.9.211041'
+							);
+							const requestHandler = await createAgentRequestHandler(
+								agentId,
+								taskStore,
+								agentExecutor,
+								port,
+								repositories as any,
+							);
+
+							// Extract message params from JSON-RPC request
+							const messageParams = jsonRpcRequest.params;
+
+							// Set up SSE response headers
+							responseHeaders['Content-Type'] = 'text/event-stream';
+							responseHeaders['Cache-Control'] = 'no-cache';
+							responseHeaders['Connection'] = 'keep-alive';
+							responseHeaders['Access-Control-Allow-Origin'] = '*';
+							responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+							responseHeaders['Access-Control-Allow-Headers'] = 'authorization, x-client-info, apikey, content-type';
+
+							// Start the streaming response
+							responseStatus = 200;
+							isStreaming = true;
+
+							// Create a ReadableStream that yields the actual stream events
+							stream = new ReadableStream<Uint8Array>({
+								async start(controller) {
+									try {
+										console.log(`🔍 Starting message stream for agent ${agentId}`);
+
+										// Call sendMessageStream and iterate over the events
+										for await (const event of requestHandler.sendMessageStream(messageParams)) {
+											console.log(`🔍 Stream event:`, event);
+
+											// Format as SSE data (just the event object, not wrapped in JSON-RPC)
+											const sseData = `data: ${JSON.stringify(event)}\n\n`;
+											const encoder = new TextEncoder();
+											controller.enqueue(encoder.encode(sseData));
+										}
+
+										console.log(`🔍 Stream completed for agent ${agentId}`);
+										controller.close();
+									} catch (error) {
+										console.error(`🔍 Error in stream for agent ${agentId}:`, error);
+										const errorEvent = {
+											kind: 'error',
+											message: error instanceof Error ? error.message : 'Unknown error',
+											agentId: agentId,
+										};
+										const sseData = `data: ${JSON.stringify(errorEvent)}\n\n`;
+										const encoder = new TextEncoder();
+										controller.enqueue(encoder.encode(sseData));
+										controller.close();
+									}
 								},
-							},
-						};
+							});
 
-						console.log(`🔍 JSON-RPC response:`, response);
-
-						// For streaming responses, format as SSE
-						responseHeaders['Content-Type'] = 'text/event-stream';
-						responseHeaders['Cache-Control'] = 'no-cache';
-						responseHeaders['Connection'] = 'keep-alive';
-						responseHeaders['Access-Control-Allow-Origin'] = '*';
-						responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-						responseHeaders['Access-Control-Allow-Headers'] = 'authorization, x-client-info, apikey, content-type';
-
-						// Format response as SSE data
-						responseData = `data: ${JSON.stringify(response)}\n\n`;
-						responseStatus = 200;
-						responseEnded = true;
-						isStreaming = true;
+							responseEnded = true;
+						} catch (error) {
+							console.error(`🔍 Error setting up stream for agent ${agentId}:`, error);
+							const errorResponse = {
+								jsonrpc: '2.0',
+								id: jsonRpcRequest.id,
+								error: {
+									code: -32603,
+									message: 'Internal error',
+									data: error instanceof Error ? error.message : 'Unknown error',
+								},
+							};
+							responseData = errorResponse;
+							responseStatus = 500;
+							responseHeaders['Content-Type'] = 'application/json';
+							responseEnded = true;
+						}
 					} else {
 						// Unknown method
 						const errorResponse = {
