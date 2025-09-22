@@ -69,7 +69,6 @@ export const Chats = () => {
       actionButton={<CreateChatDialog onChatCreated={handleChatCreated} />}
       renderItem={(chat) => (
         <ChatRow
-          key={chat.id}
           chat={chat}
           onEdit={handleEdit}
           onDelete={handleDelete}

@@ -1,4 +1,5 @@
 import { Chat, CreateChatRequest, UpdateChatRequest } from '@/types/chat';
+import { Message } from '@/types/message';
 import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
@@ -32,23 +33,146 @@ class ChatsService {
       console.log('ChatsService: Raw response:', result);
       
       // The /chats endpoint returns contexts, so we need to map them to Chat format
-      const chats = (Array.isArray(result) ? result : []).map((context: any) => ({
-        id: context.contextId || context.id,
-        title: `Chat ${context.contextId || context.id}`,
-        lastMessage: '',
-        createdAt: context.createdAt || new Date().toISOString(),
-        updatedAt: context.updatedAt || new Date().toISOString(),
-        messageCount: 0,
-        status: 'active' as const,
-        participants: [],
-        agentId: context.agentId || ''
-      }));
+      const chats = (Array.isArray(result) ? result : []).map((context: any) => {
+        // Extract messages from taskHistories to get real message data
+        const allMessages: any[] = [];
+        if (context.taskHistories && typeof context.taskHistories === 'object') {
+          Object.values(context.taskHistories).forEach((taskHistory: any) => {
+            if (Array.isArray(taskHistory)) {
+              allMessages.push(...taskHistory);
+            }
+          });
+        }
+        
+        // All items in taskHistories are messages (user messages, function calls, function results, assistant messages)
+        const messageContent = allMessages.filter(msg => 
+          msg && (msg.type === 'message' || msg.type === 'function_call' || msg.type === 'function_call_result')
+        );
+        
+        // Get the last message content - prefer actual message content over function calls
+        const lastMessage = messageContent.length > 0 
+          ? (messageContent[messageContent.length - 1].content?.[0]?.text || 
+             messageContent[messageContent.length - 1].name || 
+             messageContent[messageContent.length - 1].id || 
+             '')
+          : '';
+        
+        return {
+          id: context.contextId || context.context_id || context.id,
+          title: context.title || `Chat ${context.contextId || context.context_id || context.id}`,
+          lastMessage: lastMessage,
+          createdAt: context.createdAt || context.created_at || new Date().toISOString(),
+          updatedAt: context.updatedAt || context.updated_at || new Date().toISOString(),
+          messageCount: messageContent.length,
+          status: context.status || 'active',
+          participants: context.participants || [],
+          agentId: context.agentId || context.agent_id || ''
+        };
+      });
       
       console.log('ChatsService: Processed chats:', chats);
       return chats;
     } catch (error) {
       console.error('Error fetching chats:', error);
       throw error;
+    }
+  }
+
+  async getRawContextData(id: string): Promise<any | null> {
+    try {
+      // Since there's no /chats/{id} endpoint, get all chats and find the one with matching ID
+      const allChats = await this.getAll();
+      const chat = allChats.find(c => c.id === id);
+      if (!chat) return null;
+      
+      // Get the raw context data from the server
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/chats`, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch contexts: ${response.statusText}`);
+      }
+      const contexts = await response.json();
+      
+      // Find the context with matching ID
+      return contexts.find((context: any) => 
+        (context.contextId || context.context_id || context.id) === id
+      ) || null;
+    } catch (error) {
+      console.error('Error fetching raw context data:', error);
+      return null;
+    }
+  }
+
+  async getMessagesFromContext(chatId: string): Promise<Message[]> {
+    try {
+      const contextData = await this.getRawContextData(chatId);
+      if (!contextData || !contextData.taskHistories) {
+        return [];
+      }
+
+      const allMessages: any[] = [];
+      Object.values(contextData.taskHistories).forEach((taskHistory: any) => {
+        if (Array.isArray(taskHistory)) {
+          allMessages.push(...taskHistory);
+        }
+      });
+
+      // Convert task history items to Message format
+      return allMessages.map((msg, index) => {
+        let messageType: 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_response';
+        let sender: string;
+        let content: string;
+
+        if (msg.type === 'message') {
+          messageType = msg.role === 'user' ? 'user' : 'assistant';
+          sender = msg.role === 'user' ? 'User' : 'Assistant';
+          content = msg.content?.[0]?.text || '';
+        } else if (msg.type === 'function_call') {
+          messageType = 'tool_call';
+          sender = 'Assistant';
+          // Show both name and arguments if available
+          const args = msg.arguments || msg.parameters || {};
+          content = `${msg.name}(${JSON.stringify(args)})`;
+        } else if (msg.type === 'function_call_result') {
+          messageType = 'tool_response';
+          sender = 'Tool';
+          // Try to extract the actual response content from various possible fields
+          let responseContent = '';
+          if (msg.output) {
+            responseContent = typeof msg.output === 'string' ? msg.output : JSON.stringify(msg.output);
+          } else if (msg.content && typeof msg.content === 'string') {
+            responseContent = msg.content;
+          } else if (msg.content && Array.isArray(msg.content) && msg.content.length > 0) {
+            responseContent = msg.content[0]?.text || JSON.stringify(msg.content);
+          } else if (msg.result) {
+            responseContent = typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
+          } else if (msg.response) {
+            responseContent = typeof msg.response === 'string' ? msg.response : JSON.stringify(msg.response);
+          } else if (msg.data) {
+            responseContent = typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data);
+          } else {
+            responseContent = 'Tool execution completed';
+          }
+          content = responseContent;
+        } else {
+          messageType = 'system';
+          sender = 'System';
+          content = msg.content?.[0]?.text || msg.name || msg.id || '';
+        }
+
+        return {
+          id: msg.id || `msg-${index}`,
+          chatId: chatId,
+          content: content,
+          sender: sender,
+          type: messageType,
+          status: 'sent' as const,
+          timestamp: new Date().toISOString()
+        };
+      });
+    } catch (error) {
+      console.error('Error extracting messages from context:', error);
+      return [];
     }
   }
 
@@ -64,17 +188,40 @@ class ChatsService {
       }
       const context = await response.json();
       
+      // Extract messages from taskHistories to get real message data
+      const allMessages: any[] = [];
+      if (context.taskHistories && typeof context.taskHistories === 'object') {
+        Object.values(context.taskHistories).forEach((taskHistory: any) => {
+          if (Array.isArray(taskHistory)) {
+            allMessages.push(...taskHistory);
+          }
+        });
+      }
+      
+      // All items in taskHistories are messages (user messages, function calls, function results, assistant messages)
+      const messageContent = allMessages.filter(msg => 
+        msg && (msg.type === 'message' || msg.type === 'function_call' || msg.type === 'function_call_result')
+      );
+      
+      // Get the last message content - prefer actual message content over function calls
+      const lastMessage = messageContent.length > 0 
+        ? (messageContent[messageContent.length - 1].content?.[0]?.text || 
+           messageContent[messageContent.length - 1].name || 
+           messageContent[messageContent.length - 1].id || 
+           '')
+        : '';
+
       // Map context to Chat format
       return {
-        id: context.contextId || context.id,
-        title: `Chat ${context.contextId || context.id}`,
-        lastMessage: '',
-        createdAt: context.createdAt || new Date().toISOString(),
-        updatedAt: context.updatedAt || new Date().toISOString(),
-        messageCount: 0,
-        status: 'active' as const,
-        participants: [],
-        agentId: context.agentId || ''
+        id: context.contextId || context.context_id || context.id,
+        title: context.title || `Chat ${context.contextId || context.context_id || context.id}`,
+        lastMessage: lastMessage,
+        createdAt: context.createdAt || context.created_at || new Date().toISOString(),
+        updatedAt: context.updatedAt || context.updated_at || new Date().toISOString(),
+        messageCount: messageContent.length,
+        status: context.status || 'active',
+        participants: context.participants || [],
+        agentId: context.agentId || context.agent_id || ''
       };
     } catch (error) {
       console.error('Error fetching chat:', error);

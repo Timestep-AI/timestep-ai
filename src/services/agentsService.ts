@@ -57,55 +57,19 @@ class AgentsService {
   async getById(id: string): Promise<Agent | null> {
     try {
       console.log('AgentsService: Fetching agent by ID:', id);
-      const headers = await getAuthHeaders();
-      console.log('AgentsService: Request URL:', `${SERVER_BASE_URL}/agents/${id}`);
-      console.log('AgentsService: Request headers:', headers);
       
-      const response = await fetch(`${SERVER_BASE_URL}/agents/${id}`, { headers });
-      console.log('AgentsService: Response status:', response.status);
-      console.log('AgentsService: Response headers:', Object.fromEntries(response.headers.entries()));
+      // Since the server doesn't have a /agents/{id} endpoint, 
+      // we'll fetch all agents and find the one with matching ID
+      const allAgents = await this.getAll();
+      const agent = allAgents.find(a => a.id === id);
       
-      if (response.status === 404) {
+      if (agent) {
+        console.log('AgentsService: Found agent:', agent);
+        return agent;
+      } else {
         console.log('AgentsService: Agent not found:', id);
         return null;
       }
-      if (!response.ok) {
-        throw new Error(`Failed to fetch agent: ${response.statusText}`);
-      }
-      const apiAgent = await response.json();
-      console.log('AgentsService: Raw agent response:', apiAgent);
-      
-      // Check if the response is a JSON-RPC error
-      if (apiAgent && typeof apiAgent === 'object' && 'jsonrpc' in apiAgent && 'error' in apiAgent) {
-        console.error('AgentsService: Server returned JSON-RPC error:', apiAgent.error);
-        console.error('AgentsService: Full error response:', JSON.stringify(apiAgent, null, 2));
-        throw new Error(`Server error: ${apiAgent.error.message || 'Unknown error'}`);
-      }
-      
-      // Check if the response is just {success: true} instead of agent data
-      if (apiAgent && typeof apiAgent === 'object' && 'success' in apiAgent && !('id' in apiAgent)) {
-        console.error('AgentsService: Server returned success response instead of agent data:', apiAgent);
-        throw new Error('Server returned success response instead of agent data');
-      }
-      
-      // Map server response to our Agent interface
-      const agent: Agent = {
-        id: apiAgent.id,
-        name: apiAgent.name,
-        description: apiAgent.handoff_description || 'AI Agent',
-        instructions: apiAgent.instructions || '',
-        handoffIds: apiAgent.handoff_ids || [],
-        handoffDescription: apiAgent.handoff_description || '',
-        createdAt: apiAgent.created_at || new Date().toISOString(),
-        model: apiAgent.model,
-        modelSettings: apiAgent.model_settings || {},
-        status: 'active' as const,
-        isHandoff: Boolean(apiAgent.handoff_description),
-        toolIds: apiAgent.tool_ids || []
-      };
-      
-      console.log('AgentsService: Mapped agent:', agent);
-      return agent;
     } catch (error) {
       console.error('Error fetching agent:', error);
       throw error;

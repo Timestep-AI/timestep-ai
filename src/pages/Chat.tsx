@@ -37,35 +37,31 @@ export const Chat = () => {
       
       try {
         setLoading(true);
-        const [chats, chatMessages] = await Promise.all([
-          chatsService.getAll(),
-          messagesService.getByChatId(id)
-        ]);
-        
+        const chats = await chatsService.getAll();
         const foundChat = chats.find(c => c.id === id);
         setChat(foundChat || null);
-        setMessages(chatMessages);
+        
+        // Extract messages from taskHistories instead of using messagesService
+        let extractedMessages: Message[] = [];
+        if (foundChat) {
+          extractedMessages = await chatsService.getMessagesFromContext(id);
+        }
+        setMessages(extractedMessages);
 
-        // Load agent information - create basic agent object from agentId
+        // Load agent information from the agents service
         if (foundChat?.agentId) {
           console.log('Chat: Using agent ID:', foundChat.agentId);
-          // Create a basic agent object - the A2A client will handle the agent card fetching
-          const agentInfo: Agent = {
-            id: foundChat.agentId,
-            name: 'Agent', // Will be updated when we fetch the agent card
-            description: 'AI Agent',
-            instructions: '',
-            model: 'gpt-4',
-            toolIds: [],
-            handoffIds: [],
-            createdAt: new Date().toISOString(),
-            status: 'active',
-            isHandoff: false
-          };
-          console.log('Chat: Created agent object:', agentInfo);
-          setAgent(agentInfo);
+          const agentInfo = await agentsService.getById(foundChat.agentId);
+          if (agentInfo) {
+            console.log('Chat: Loaded agent from service:', agentInfo);
+            setAgent(agentInfo);
+          } else {
+            console.error('Chat: Agent not found in service:', foundChat.agentId);
+            setAgent(null);
+          }
         } else {
           console.log('Chat: No agentId found in chat:', foundChat);
+          setAgent(null);
         }
       } catch (error) {
         console.error('Error loading chat and messages:', error);
@@ -699,8 +695,6 @@ export const Chat = () => {
                   <MessageRow
                     key={message.id}
                     message={message}
-                    onEdit={handleEditMessage}
-                    onDelete={handleDeleteMessage}
                   />
                 ))}
               </div>

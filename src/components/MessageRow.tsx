@@ -1,43 +1,13 @@
-import { MoreHorizontal, MessageSquare, Calendar, User, Bot, Settings, Wrench, Code } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { MessageSquare, Calendar, User, Bot, Settings, Wrench, Code } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Message } from '@/types/message';
 
 interface MessageRowProps {
   message: Message;
-  onEdit?: (message: Message) => void;
-  onDelete?: (message: Message) => void;
 }
 
-export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
-  const navigate = useNavigate();
-  const { id: chatId } = useParams<{ id: string }>();
-
-  const handleRowClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on the dropdown menu
-    if ((e.target as HTMLElement).closest('[data-dropdown-trigger]')) {
-      return;
-    }
-    navigate(`/chats/${chatId}/messages/${message.id}`);
-  };
+export const MessageRow = ({ message }: MessageRowProps) => {
 
   const getTypeIcon = () => {
     switch (message.type) {
@@ -137,8 +107,7 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
 
   return (
     <div 
-      className="bg-card border border-muted-foreground/80 rounded-xl p-3 sm:p-4 hover:border-muted-foreground transition-all duration-200 group cursor-pointer"
-      onClick={handleRowClick}
+      className="bg-card border border-muted-foreground/80 rounded-xl p-3 sm:p-4 hover:border-muted-foreground transition-all duration-200 group"
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0 mb-3 sm:mb-0">
@@ -151,10 +120,6 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
               <h3 className="font-semibold text-text-primary text-sm sm:text-base break-words">
                 {message.sender}
               </h3>
-              <Badge variant="outline" className="text-xs flex-shrink-0 capitalize">
-                {message.type === 'tool_call' ? 'assistant' : message.type === 'tool_response' ? 'tool' : message.type.replace('_', ' ')}
-              </Badge>
-              {getStatusBadge()}
             </div>
             
             {renderContent()}
@@ -173,49 +138,6 @@ export const MessageRow = ({ message, onEdit, onDelete }: MessageRowProps) => {
           </div>
         </div>
         
-        <div className="flex items-center justify-end space-x-2 flex-shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-                data-dropdown-trigger
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit?.(message)}>
-                Edit Message
-              </DropdownMenuItem>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                    Delete Message
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Message</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete this message? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => onDelete?.(message)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete Message
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </div>
   );

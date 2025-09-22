@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageSquare, Calendar, User, Bot, Settings, Edit, Trash2, Paperclip } from 'lucide-react';
 import { Message as MessageType } from '@/types/message';
 import { messagesService } from '@/services/messagesService';
+import { chatsService } from '@/services/chatsService';
 
 export const Message = () => {
   const { id: chatId, messageId } = useParams<{ id: string; messageId: string }>();
@@ -15,12 +16,14 @@ export const Message = () => {
 
   useEffect(() => {
     const loadMessage = async () => {
-      if (!messageId) return;
+      if (!messageId || !chatId) return;
       
       try {
         setLoading(true);
-        const foundMessage = await messagesService.getById(messageId);
-        setMessage(foundMessage);
+        // Get all messages from the chat's taskHistories
+        const messages = await chatsService.getMessagesFromContext(chatId);
+        const foundMessage = messages.find(m => m.id === messageId);
+        setMessage(foundMessage || null);
       } catch (error) {
         console.error('Error loading message:', error);
       } finally {
@@ -29,7 +32,7 @@ export const Message = () => {
     };
 
     loadMessage();
-  }, [messageId]);
+  }, [messageId, chatId]);
 
   const handleEdit = () => {
     // TODO: Implement edit functionality
@@ -40,7 +43,9 @@ export const Message = () => {
     if (!message) return;
     
     try {
-      await messagesService.delete(message.id);
+      // Note: Individual message deletion from taskHistories is not supported
+      // Messages are part of the conversation history and cannot be deleted individually
+      console.warn('Individual message deletion is not supported for messages stored in taskHistories');
       navigate(`/chats/${chatId}`);
     } catch (error) {
       console.error('Error deleting message:', error);

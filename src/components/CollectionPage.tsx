@@ -152,7 +152,11 @@ export const CollectionPage = <T,>({
               </p>
             </div>
           ) : (
-            filteredItems.map((item) => renderItem(item))
+            filteredItems.map((item, index) => (
+              <div key={(item as any).id || (item as any).key || index}>
+                {renderItem(item)}
+              </div>
+            ))
           )}
         </div>
       </div>
