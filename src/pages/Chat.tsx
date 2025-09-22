@@ -417,9 +417,12 @@ export const Chat = () => {
         } else if (event.kind === 'task') {
           const task = event as Task;
           console.log(`Tool call response task: ${task.id}`);
+          console.log(`Task status:`, task.status);
+          console.log(`Task message:`, task.status.message);
 
           if (task.status.message) {
             const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
+            console.log(`Converted agent message:`, agentMessage);
             await messagesService.create({
               chatId: id!,
               content: agentMessage.content!,
@@ -427,6 +430,9 @@ export const Chat = () => {
               type: agentMessage.type!,
               status: agentMessage.status!
             });
+            console.log(`Message saved successfully`);
+          } else {
+            console.log(`No message in task status`);
           }
         }
       }
@@ -555,9 +561,12 @@ export const Chat = () => {
         } else if (event.kind === 'task') {
           const task = event as Task;
           console.log(`Tool call response task: ${task.id}`);
+          console.log(`Task status:`, task.status);
+          console.log(`Task message:`, task.status.message);
 
           if (task.status.message) {
             const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
+            console.log(`Converted agent message:`, agentMessage);
             await messagesService.create({
               chatId: id!,
               content: agentMessage.content!,
@@ -565,6 +574,9 @@ export const Chat = () => {
               type: agentMessage.type!,
               status: agentMessage.status!
             });
+            console.log(`Message saved successfully`);
+          } else {
+            console.log(`No message in task status`);
           }
         }
       }
