@@ -38,6 +38,9 @@ import {
 	type RepositoryContainer,
 } from 'npm:@timestep-ai/timestep@2025.9.221624';
 
+// Deployment heartbeat - helps ensure redeploys are visible in logs
+console.log('[server] Edge function loaded at', new Date().toISOString());
+
 // Custom function to get agent card with correct Supabase base URL
 async function getAgentCardForSupabase(
 	agentId: string,
