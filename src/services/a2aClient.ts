@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 const BASE_SERVER_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
 
 export class A2AClient {
-  private client: A2AClientSDK;
+  private clientPromise: Promise<any>;
   private agent?: Agent;
   private authToken?: string;
 
@@ -16,7 +16,10 @@ export class A2AClient {
     this.agent = agent;
     this.authToken = authToken;
     const authFetch = this.createAuthFetch(this.authToken);
-    this.client = new A2AClientSDK(agentCardUrl, { fetchImpl: authFetch });
+    // Create SDK client from full agent-card URL
+    this.clientPromise = (async () => {
+      return await (A2AClientSDK as any).fromCardUrl(agentCardUrl, { fetchImpl: authFetch });
+    })();
   }
 
   static async fromCardUrl(agentCardUrl: string): Promise<A2AClient> {
@@ -92,7 +95,8 @@ export class A2AClient {
 
   async getAgentCard(): Promise<AgentCard> {
     try {
-      return await this.client.getAgentCard();
+      const client = await this.clientPromise;
+      return await client.getAgentCard();
     } catch (error) {
       console.error('Error getting agent card:', error);
       // Fallback to basic card if agent is available
@@ -119,6 +123,7 @@ export class A2AClient {
     console.log('Message params:', JSON.stringify(params, null, 2));
 
     try {
+      const client = await this.clientPromise;
       // Get fresh auth token for each request
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token ?? this.authToken;
@@ -138,7 +143,7 @@ export class A2AClient {
       });
 
       // Use the A2A SDK's sendMessageStream method
-      const stream = this.client.sendMessageStream(paramsWithAuth);
+      const stream = client.sendMessageStream(paramsWithAuth);
 
       for await (const event of stream) {
         console.log('A2A Event received:', event.kind, event);

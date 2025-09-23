@@ -14,7 +14,7 @@ export interface Message {
   sender: string;
   timestamp: string;
   type: 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_response';
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
   attachments?: string[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
@@ -26,7 +26,7 @@ export interface CreateMessageRequest {
   content: string;
   sender: string;
   type?: 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_response';
-  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  status?: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
   attachments?: string[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
@@ -35,7 +35,7 @@ export interface CreateMessageRequest {
 
 export interface UpdateMessageRequest {
   content?: string;
-  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  status?: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
   attachments?: string[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
