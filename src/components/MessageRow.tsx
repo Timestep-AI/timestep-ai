@@ -99,8 +99,8 @@ export const MessageRow = ({ message }: MessageRowProps) => {
     }
     
     return (
-      <p className="text-xs sm:text-sm text-text-secondary mb-2 break-words line-clamp-2">
-        {truncateContent(message.content)}
+      <p className="text-xs sm:text-sm text-text-secondary mb-2 break-words whitespace-pre-wrap">
+        {message.content}
       </p>
     );
   };

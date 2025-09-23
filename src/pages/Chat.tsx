@@ -518,6 +518,9 @@ export const Chat = () => {
       // Store the current tool call ID before processing
       const currentToolCallId = pendingToolCall.id;
 
+      // Show success toast immediately when user approves
+      toast.success('Tool call approved');
+
       // Reuse same agent client used for main stream to avoid parallel streams
       const clientForAgent = await A2AClient.fromAgentId(agent.id);
 
@@ -558,7 +561,7 @@ export const Chat = () => {
       const refreshedMessages = await messagesService.getByChatId(id!);
       setMessages(refreshedMessages);
 
-      toast.success('Tool call approved');
+      // Toast was already shown immediately when user approved
     } catch (error) {
       console.error('Error approving tool call:', error);
       toast.error('Failed to approve tool call');
