@@ -51,13 +51,13 @@ export const ToolCallApproval = ({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto mb-4 border-orange-200 bg-orange-50">
+    <Card className="w-full max-w-2xl mx-auto mb-4 border-amber-700 bg-amber-900">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-orange-800">
+        <CardTitle className="flex items-center gap-2 text-amber-200">
           <Settings className="w-5 h-5" />
           Tool Call Approval Required
         </CardTitle>
-        <CardDescription className="text-orange-700">
+        <CardDescription className="text-amber-300">
           The agent wants to execute a tool call that requires your approval.
         </CardDescription>
       </CardHeader>
@@ -65,26 +65,26 @@ export const ToolCallApproval = ({
         {/* Tool Call Details */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono">
+            <Badge variant="outline" className="font-mono bg-amber-800 border-amber-600 text-amber-200">
               {toolCall.name}
             </Badge>
-            <span className="text-sm text-gray-600">ID: {toolCall.id}</span>
+            <span className="text-sm text-amber-400">ID: {toolCall.id}</span>
           </div>
           
           {toolCall.description && (
-            <p className="text-sm text-gray-700">{toolCall.description}</p>
+            <p className="text-sm text-amber-300">{toolCall.description}</p>
           )}
         </div>
 
         {/* Parameters */}
         {Object.keys(toolCall.parameters).length > 0 && (
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Parameters:</Label>
-            <div className="bg-gray-50 p-3 rounded-md space-y-1">
+            <Label className="text-sm font-medium text-amber-200">Parameters:</Label>
+            <div className="bg-amber-950 p-3 rounded-md space-y-1">
               {Object.entries(toolCall.parameters).map(([key, value]) => (
                 <div key={key} className="flex justify-between text-sm">
-                  <span className="font-mono text-gray-600">{key}:</span>
-                  <span className="font-mono text-gray-800">
+                  <span className="font-mono text-blue-300">{key}:</span>
+                  <span className="font-mono text-amber-200">
                     {typeof value === 'string' ? `"${value}"` : JSON.stringify(value)}
                   </span>
                 </div>
@@ -95,7 +95,7 @@ export const ToolCallApproval = ({
 
         {/* Reason Input */}
         <div className="space-y-2">
-          <Label htmlFor="reason" className="text-sm font-medium">
+          <Label htmlFor="reason" className="text-sm font-medium text-amber-200">
             Reason (optional):
           </Label>
           <Textarea
@@ -103,80 +103,32 @@ export const ToolCallApproval = ({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Enter a reason for your decision..."
-            className="min-h-[60px]"
+            className="min-h-[60px] bg-amber-950 border-amber-700 text-amber-200 placeholder:text-amber-400"
           />
         </div>
 
         {/* Modify Parameters */}
-        {showModifyForm ? (
-          <div className="space-y-3 p-3 bg-blue-50 rounded-md">
-            <Label className="text-sm font-medium text-blue-800">Modify Parameters:</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="paramName" className="text-xs">Parameter Name</Label>
-                <input
-                  id="paramName"
-                  type="text"
-                  value={modifyParam}
-                  onChange={(e) => setModifyParam(e.target.value)}
-                  placeholder="e.g., city"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                />
-              </div>
-              <div>
-                <Label htmlFor="paramValue" className="text-xs">New Value</Label>
-                <input
-                  id="paramValue"
-                  type="text"
-                  value={modifyValue}
-                  onChange={(e) => setModifyValue(e.target.value)}
-                  placeholder="e.g., San Francisco"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleModify}
-                disabled={!modifyParam.trim() || !modifyValue.trim()}
-              >
-                Apply Change
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowModifyForm(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowModifyForm(true)}
-            className="w-full"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Modify Parameters
-          </Button>
-        )}
+        <Button
+          size="sm"
+          onClick={() => setShowModifyForm(!showModifyForm)}
+          className="w-full bg-amber-800 hover:bg-amber-700 text-amber-200 border-amber-600"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Modify Parameters
+        </Button>
 
         {/* Action Buttons */}
         <div className="flex gap-2">
           <Button
             onClick={handleApprove}
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
           >
             <CheckCircle className="w-4 h-4 mr-2" />
             Approve
           </Button>
           <Button
             onClick={handleReject}
-            variant="destructive"
-            className="flex-1"
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
           >
             <XCircle className="w-4 h-4 mr-2" />
             Reject
@@ -184,17 +136,14 @@ export const ToolCallApproval = ({
         </div>
 
         {/* Additional Actions */}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onShowParams}
-            className="flex-1"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Show Parameters
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={onShowParams}
+          className="w-full bg-amber-800 hover:bg-amber-700 text-amber-200 border-amber-600"
+        >
+          <Eye className="w-4 h-4 mr-2" />
+          Show Parameters
+        </Button>
       </CardContent>
     </Card>
   );
