@@ -19,6 +19,8 @@ export interface Message {
   toolCalls?: ToolCall[];
   toolCallId?: string;
   approved?: boolean;
+  isToolCall?: boolean;
+  rawMessage?: any; // Raw message data from server for tool call approval
 }
 
 export interface CreateMessageRequest {

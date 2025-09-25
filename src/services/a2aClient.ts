@@ -177,15 +177,54 @@ export class A2AClient {
 
   // Convert A2A Message to our internal Message format
   static convertFromA2AMessage(a2aMessage: A2AMessage, chatId: string): Partial<Message> {
-    const textPart = a2aMessage.parts.find(p => p.kind === 'text') as TextPart;
+    console.log('convertFromA2AMessage called with:', {
+      messageId: a2aMessage.messageId,
+      role: a2aMessage.role,
+      parts: a2aMessage.parts,
+      partsDetail: a2aMessage.parts.map(p => ({ kind: p.kind, data: p.kind === 'data' ? p.data : p.kind === 'text' ? p.text : 'other' }))
+    });
+
+    // Extract text content just like the CLI does - get all text parts
+    let textContent = a2aMessage.parts
+      .filter(p => p.kind === 'text')
+      .map(p => (p as TextPart).text)
+      .join('\n');
+
+    // If no text parts, check for data parts with deltas like the CLI does
+    if (!textContent) {
+      const dataParts = a2aMessage.parts.filter(p => p.kind === 'data');
+      for (const part of dataParts) {
+        if (part.data && typeof part.data === 'object') {
+          const data = part.data as Record<string, unknown>;
+          if (data.type === 'output_text_delta' && data.delta) {
+            textContent += String(data.delta);
+          } else if (data.text && typeof data.text === 'string') {
+            textContent += data.text;
+          }
+        }
+      }
+    }
+
+    console.log('Extracted text content:', textContent);
+
+    // Detect tool calls in assistant messages (like CLI does)
+    const isToolCall = a2aMessage.role === 'agent' &&
+      textContent &&
+      /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*.*\s*\)\s*$/.test(textContent.trim());
+
+    if (isToolCall) {
+      console.log('Detected tool call pattern:', textContent);
+    }
+
     return {
       id: a2aMessage.messageId,
       chatId,
-      content: textPart?.text || '',
+      content: textContent || '',
       sender: a2aMessage.role === 'user' ? 'User' : 'Agent',
       timestamp: new Date().toISOString(),
       type: a2aMessage.role === 'user' ? 'user' : 'assistant',
-      status: 'sent'
+      status: 'sent',
+      isToolCall
     };
   }
 

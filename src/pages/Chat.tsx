@@ -203,6 +203,42 @@ export const Chat = () => {
           } else {
             // Regular non-streaming message (tool approvals, etc.)
             console.log('Creating non-streaming message for state:', statusEvent.status.state);
+
+            // Check if this is a tool call message that needs approval
+            if (agentMessage.isToolCall && agentMessage.content && !pendingToolCallRef.current) {
+              console.log('Detected tool call in message:', agentMessage.content);
+
+              // Parse tool call from content (e.g., "get_forecast(...)")
+              const toolCallMatch = agentMessage.content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*?)\s*\)\s*$/);
+              if (toolCallMatch) {
+                const toolName = toolCallMatch[1];
+                let parameters: Record<string, any> = {};
+
+                const argsString = toolCallMatch[2];
+                if (argsString) {
+                  console.log('Real-time parsing args:', argsString);
+                  parameters = JSON.parse(argsString);
+                }
+
+                // Get the real call ID from the raw message data
+                const realCallId = agentMessage.rawMessage?.callId || agentMessage.rawMessage?.id || agentMessage.id;
+                console.log('Using call ID for real-time approval:', realCallId);
+                console.log('Raw message data:', agentMessage.rawMessage);
+
+                const newPending: PendingToolCall = {
+                  id: realCallId,
+                  name: toolName,
+                  parameters,
+                  artifactId: realCallId,
+                  description: `Tool call: ${toolName}`
+                };
+
+                setPendingToolCall(newPending);
+                toast.info(`Tool call "${toolName}" requires approval`);
+                console.log('Set pending tool call:', newPending);
+              }
+            }
+
             // Only persist final non-streaming messages once
             const newMessage = await messagesService.create({
               chatId: id!,
@@ -353,6 +389,98 @@ export const Chat = () => {
     }
   };
 
+  // Check for tool call approval state in existing messages (for page refresh/load)
+  const checkForToolCallApprovalState = (messages: Message[]) => {
+    console.log('checkForToolCallApprovalState called with messages:', messages);
+    console.log('pendingToolCallRef.current:', pendingToolCallRef.current);
+
+    if (pendingToolCallRef.current) {
+      return; // Already have a tool call showing
+    }
+
+    // Find the most recent assistant message that looks like a tool call
+    // We check in reverse order to find the most recent one
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      console.log(`Checking message ${i}:`, message);
+
+      if ((message.type === 'assistant' || message.type === 'tool_call') && message.content && message.sender === 'Agent') {
+        console.log('Found assistant message:', message.content, 'sender:', message.sender);
+        // Check if this message contains a tool call pattern
+        const toolCallMatch = message.content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*?)\s*\)\s*$/);
+        console.log('Tool call match:', toolCallMatch);
+
+        if (toolCallMatch) {
+          // Check if there's a subsequent tool response that would indicate this was already executed
+          const hasSubsequentToolResponse = messages.slice(i + 1).some(laterMessage =>
+            laterMessage.type === 'tool_response' ||
+            (laterMessage.sender === 'Tool')
+          );
+
+          console.log('Found tool call on page load:', message.content);
+          console.log('Has subsequent tool response:', hasSubsequentToolResponse);
+
+          const toolName = toolCallMatch[1];
+          let parameters: Record<string, any> = {};
+
+          const argsString = toolCallMatch[2];
+          console.log('Raw args string:', argsString);
+          console.log('Args string type:', typeof argsString);
+          console.log('Args string length:', argsString.length);
+
+          if (argsString) {
+            console.log('Attempting to parse JSON:', argsString);
+            const firstParse = JSON.parse(argsString);
+            console.log('First parse result:', firstParse);
+            console.log('First parse type:', typeof firstParse);
+
+            if (typeof firstParse === 'string') {
+              console.log('First parse returned string, parsing again...');
+              parameters = JSON.parse(firstParse);
+              console.log('Second parse result:', parameters);
+              console.log('Second parse type:', typeof parameters);
+            } else {
+              parameters = firstParse;
+              console.log('First parse returned object directly:', parameters);
+            }
+          }
+
+          // Use the real tool call ID from the raw message data - callId is the key!
+          const realToolCallId = message.rawMessage?.callId || message.rawMessage?.id || message.id;
+          console.log('Real tool call ID:', realToolCallId);
+          console.log('Raw message data:', message.rawMessage);
+          console.log('Available raw message keys:', Object.keys(message.rawMessage || {}));
+
+          const toolCallApproval: PendingToolCall = {
+            id: realToolCallId,
+            name: toolName,
+            parameters,
+            artifactId: realToolCallId, // Use same ID as artifact ID
+            description: `Tool call: ${toolName}`,
+            approved: hasSubsequentToolResponse // Only mark as approved if there's a tool response
+          };
+
+          console.log('Created toolCallApproval with parameters:', parameters);
+          console.log('Parameters type:', typeof parameters);
+          console.log('Parameters keys:', Object.keys(parameters));
+          console.log('Full toolCallApproval object:', toolCallApproval);
+
+          setPendingToolCall(toolCallApproval);
+
+          if (hasSubsequentToolResponse) {
+            console.log('Tool call already executed - showing approved state');
+          } else {
+            console.log('Tool call needs approval - showing approval dialog');
+            toast.info(`Tool call "${toolName}" requires approval`);
+          }
+
+          // Only set the first (most recent) tool call
+          break;
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const loadChatAndMessages = async () => {
       if (!id) return;
@@ -369,6 +497,9 @@ export const Chat = () => {
           extractedMessages = await chatsService.getMessagesFromContext(id);
         }
         setMessages(extractedMessages);
+
+        // Check for tool call approval state in existing messages on page load
+        checkForToolCallApprovalState(extractedMessages);
 
         // Load agent information from the agents service
         if (foundChat?.agentId) {
@@ -524,15 +655,29 @@ export const Chat = () => {
       // Reuse same agent client used for main stream to avoid parallel streams
       const clientForAgent = await A2AClient.fromAgentId(agent.id);
 
-      // Create tool call response message
+      // Find the message with this tool call to get task ID
+      const toolCallMessage = messages.find(msg =>
+        (msg.type === 'assistant' || msg.type === 'tool_call') &&
+        msg.rawMessage &&
+        (msg.rawMessage.callId === pendingToolCall.id || msg.rawMessage.id === pendingToolCall.id)
+      );
+
+      console.log('Found tool call message for approval:', toolCallMessage);
+      console.log('Tool call raw message:', toolCallMessage?.rawMessage);
+
+      // Extract task ID from raw message
+      const taskId = toolCallMessage?.rawMessage?.taskId;
+      console.log('Using task ID for approval:', taskId);
+
+      // Create tool call response message - use chat ID as context ID and found task ID
       const toolResponse = A2AClient.createToolCallResponse(
         pendingToolCall.id,
         pendingToolCall.artifactId,
         'approve',
         reason,
         `Tool call approved by user${reason ? `: ${reason}` : ''}`,
-        currentContextId,
-        currentTaskId
+        id, // Use chat ID as context ID
+        taskId // Use task ID from raw message
       );
 
       // Clear current pending request immediately to allow subsequent approvals to surface
@@ -582,15 +727,29 @@ export const Chat = () => {
       // Use the new static method for creating client
       const clientForAgent = await A2AClient.fromAgentId(agent.id);
 
-      // Create tool call response message
+      // Find the message with this tool call to get task ID
+      const toolCallMessage = messages.find(msg =>
+        (msg.type === 'assistant' || msg.type === 'tool_call') &&
+        msg.rawMessage &&
+        (msg.rawMessage.callId === pendingToolCall.id || msg.rawMessage.id === pendingToolCall.id)
+      );
+
+      console.log('Found tool call message for rejection:', toolCallMessage);
+      console.log('Tool call raw message:', toolCallMessage?.rawMessage);
+
+      // Extract task ID from raw message
+      const taskId = toolCallMessage?.rawMessage?.taskId;
+      console.log('Using task ID for rejection:', taskId);
+
+      // Create tool call response message - use chat ID as context ID and found task ID
       const toolResponse = A2AClient.createToolCallResponse(
         pendingToolCall.id,
         pendingToolCall.artifactId,
         'reject',
         reason,
         `Tool call rejected by user${reason ? `: ${reason}` : ''}`,
-        currentContextId,
-        currentTaskId
+        id, // Use chat ID as context ID
+        taskId // Use task ID from raw message
       );
 
       // Clear current pending request immediately to allow subsequent approvals to surface

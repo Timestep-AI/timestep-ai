@@ -121,11 +121,12 @@ export interface AgentCard {
   outputModes?: string[];
 }
 
-// UI-friendly representation of a pending tool call that requires approval
+// UI-friendly representation of a tool call that may need approval or show approval state
 export interface PendingToolCall {
   id: string;
   name: string;
   parameters: Record<string, any>;
   artifactId: string;
   description?: string;
+  approved?: boolean; // true if already approved, false/undefined if needs approval
 }

@@ -125,14 +125,15 @@ class ChatsService {
 
         if (msg.type === 'message') {
           messageType = msg.role === 'user' ? 'user' : 'assistant';
-          sender = msg.role === 'user' ? 'User' : 'Assistant';
+          sender = msg.role === 'user' ? 'User' : 'Agent';
           content = msg.content?.[0]?.text || '';
         } else if (msg.type === 'function_call') {
           messageType = 'tool_call';
-          sender = 'Assistant';
+          sender = 'Agent';
           // Show both name and arguments if available
           const args = msg.arguments || msg.parameters || {};
           content = `${msg.name}(${JSON.stringify(args)})`;
+          console.log('Function call raw data:', msg);
         } else if (msg.type === 'function_call_result') {
           messageType = 'tool_response';
           sender = 'Tool';
@@ -160,6 +161,11 @@ class ChatsService {
           content = msg.content?.[0]?.text || msg.name || msg.id || '';
         }
 
+        // Detect tool calls in assistant messages (same logic as A2AClient)
+        const isToolCall = messageType === 'assistant' &&
+          content &&
+          /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*.*\s*\)\s*$/.test(content.trim());
+
         return {
           id: msg.id || `msg-${index}`,
           chatId: chatId,
@@ -167,7 +173,9 @@ class ChatsService {
           sender: sender,
           type: messageType,
           status: 'sent' as const,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isToolCall,
+          rawMessage: msg // Include raw message data for tool call approval
         };
       });
     } catch (error) {
