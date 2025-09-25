@@ -19,6 +19,23 @@ const getAuthHeaders = async () => {
 };
 
 class ChatsService {
+  // Helper method to format tool input like the CLI does
+  private formatToolInput(input: string): string {
+    try {
+      const parsed = JSON.parse(input);
+      // Format as a more readable object display
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) return '{}';
+      if (entries.length === 1) {
+        const [key, value] = entries[0];
+        return `{'${key}': ${JSON.stringify(value)}}`;
+      }
+      return JSON.stringify(parsed);
+    } catch {
+      return input;
+    }
+  }
+
   async getAll(): Promise<Chat[]> {
     try {
       console.log('ChatsService: Fetching chats from', `${SERVER_BASE_URL}/chats`);
@@ -105,66 +122,125 @@ class ChatsService {
 
   async getMessagesFromContext(chatId: string): Promise<Message[]> {
     try {
-      const contextData = await this.getRawContextData(chatId);
-      if (!contextData || !contextData.taskHistories) {
+      // Use the dedicated history endpoint like the CLI does
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${SERVER_BASE_URL}/contexts/${chatId}/history`, { headers });
+      
+      if (!response.ok) {
+        console.error(`Failed to fetch conversation history: ${response.statusText}`);
+        return [];
+      }
+      
+      const history = await response.json();
+      console.log('Loaded conversation history:', history);
+
+      if (!Array.isArray(history) || history.length === 0) {
         return [];
       }
 
-      const allMessages: any[] = [];
-      Object.values(contextData.taskHistories).forEach((taskHistory: any) => {
-        if (Array.isArray(taskHistory)) {
-          allMessages.push(...taskHistory);
-        }
-      });
-
-      // Convert task history items to Message format
-      return allMessages.map((msg, index) => {
+      // Convert history items to Message format (like CLI does)
+      return history.map((msg: any, index: number) => {
         let messageType: 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_response';
         let sender: string;
         let content: string;
 
-        if (msg.type === 'message') {
-          messageType = msg.role === 'user' ? 'user' : 'assistant';
-          sender = msg.role === 'user' ? 'User' : 'Agent';
-          content = msg.content?.[0]?.text || '';
+        // Handle different message types like the CLI does
+        if (msg.role === 'user') {
+          messageType = 'user';
+          sender = 'User';
+          content = msg.content?.[0]?.text || msg.content || '';
+        } else if (msg.role === 'assistant') {
+          messageType = 'assistant';
+          sender = 'Assistant';
+          content = msg.content?.[0]?.text || msg.content || '';
         } else if (msg.type === 'function_call') {
           messageType = 'tool_call';
           sender = 'Agent';
-          // Show both name and arguments if available
-          const args = msg.arguments || msg.parameters || {};
-          content = `${msg.name}(${JSON.stringify(args)})`;
+          // Format like CLI: functionName("formattedArgs")
+          const functionArgs = msg.arguments || msg.parameters || msg.input || '{}';
+          const formattedArgs = this.formatToolInput(functionArgs);
+          content = `${msg.name}("${formattedArgs}")`;
           console.log('Function call raw data:', msg);
         } else if (msg.type === 'function_call_result') {
           messageType = 'tool_response';
           sender = 'Tool';
-          // Try to extract the actual response content from various possible fields
-          let responseContent = '';
-          if (msg.output) {
-            responseContent = typeof msg.output === 'string' ? msg.output : JSON.stringify(msg.output);
-          } else if (msg.content && typeof msg.content === 'string') {
-            responseContent = msg.content;
-          } else if (msg.content && Array.isArray(msg.content) && msg.content.length > 0) {
-            responseContent = msg.content[0]?.text || JSON.stringify(msg.content);
-          } else if (msg.result) {
-            responseContent = typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
-          } else if (msg.response) {
-            responseContent = typeof msg.response === 'string' ? msg.response : JSON.stringify(msg.response);
-          } else if (msg.data) {
-            responseContent = typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data);
-          } else {
-            responseContent = 'Tool execution completed';
+          // Extract text content from output like CLI does
+          let cleanOutput = msg.output || 'No output';
+          if (typeof cleanOutput === 'object' && cleanOutput.type === 'text') {
+            cleanOutput = cleanOutput.text;
+          } else if (typeof cleanOutput === 'string') {
+            try {
+              const parsed = JSON.parse(cleanOutput);
+              if (parsed.type === 'text' && parsed.text) {
+                cleanOutput = parsed.text;
+              }
+            } catch {
+              // Keep original string if not JSON
+            }
           }
-          content = responseContent;
+          content = cleanOutput;
         } else {
           messageType = 'system';
           sender = 'System';
           content = msg.content?.[0]?.text || msg.name || msg.id || '';
         }
 
-        // Detect tool calls in assistant messages (same logic as A2AClient)
-        const isToolCall = messageType === 'assistant' &&
+        // Detect tool calls in assistant messages OR direct tool_call messages
+        const isToolCall = (messageType === 'assistant' &&
           content &&
-          /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*.*\s*\)\s*$/.test(content.trim());
+          /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*.*\s*\)\s*$/.test(content.trim())) ||
+          messageType === 'tool_call';
+
+        // Debug logging for tool call detection
+        if ((messageType === 'assistant' && content) || messageType === 'tool_call') {
+          console.log('Checking message for tool call:', {
+            content: content,
+            isToolCall: isToolCall,
+            messageType: messageType,
+            rawMsg: msg
+          });
+        }
+
+        // Create rawMessage for tool call approval
+        let rawMessage = undefined;
+        if (isToolCall) {
+          // Extract tool name and arguments from content
+          const toolCallMatch = content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)\s*$/);
+          if (toolCallMatch) {
+            const toolName = toolCallMatch[1];
+            const argsString = toolCallMatch[2];
+            
+            // Get task ID from the message data (like CLI does)
+            const taskId = msg.taskId || msg.task_id || msg.task?.id;
+            
+            rawMessage = {
+              name: toolName,
+              arguments: argsString,
+              callId: msg.id || `msg-${index}`,
+              taskId: taskId
+            };
+          }
+        } else if (messageType === 'tool_call') {
+          // For function_call messages, extract tool call data
+          const taskId = msg.taskId || msg.task_id || msg.task?.id;
+          
+          // Debug logging to see what fields are available
+          console.log('Function call message fields:', {
+            id: msg.id,
+            name: msg.name,
+            taskId: msg.taskId,
+            task_id: msg.task_id,
+            task: msg.task,
+            allFields: Object.keys(msg)
+          });
+          
+          rawMessage = {
+            name: msg.name,
+            arguments: JSON.stringify(msg.arguments || msg.parameters || {}),
+            callId: msg.id || `msg-${index}`,
+            taskId: taskId
+          };
+        }
 
         return {
           id: msg.id || `msg-${index}`,
@@ -175,7 +251,7 @@ class ChatsService {
           status: 'sent' as const,
           timestamp: new Date().toISOString(),
           isToolCall,
-          rawMessage: msg // Include raw message data for tool call approval
+          rawMessage: rawMessage || msg // Use processed rawMessage or fallback to original msg
         };
       });
     } catch (error) {

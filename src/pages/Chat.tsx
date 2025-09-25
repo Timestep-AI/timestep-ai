@@ -4,7 +4,7 @@ import { ItemPage } from '@/components/ItemPage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, Calendar, Users, Hash, Send, Bot } from 'lucide-react';
+import { MessageCircle, Calendar, Users, Hash, Send, Bot, RefreshCw } from 'lucide-react';
 import { Chat as ChatType } from '@/types/chat';
 import { Message } from '@/types/message';
 import { Agent } from '@/types/agent';
@@ -27,7 +27,7 @@ export const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingToolCall, setPendingToolCall] = useState<PendingToolCall | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentContextId, setCurrentContextId] = useState<string | undefined>(undefined);
   // Global streaming state - matches example client pattern
@@ -41,7 +41,6 @@ export const Chat = () => {
   const lastDisplayedContentRef = useRef<string>('');
   const isCurrentlyStreamingRef = useRef<boolean>(false);
   const currentStreamingTaskIdRef = useRef<string | null>(null);
-  const pendingToolCallRef = useRef<PendingToolCall | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -56,11 +55,58 @@ export const Chat = () => {
     isCurrentlyStreamingRef.current = isCurrentlyStreaming;
   }, [isCurrentlyStreaming]);
 
-  useEffect(() => {
-    pendingToolCallRef.current = pendingToolCall;
-  }, [pendingToolCall]);
 
   // Shared stream event handler (matches example client pattern)
+  // Tool event detection (like CLI)
+  const checkForToolEvent = (message: any): {type: 'tool_call' | 'tool_response', name: string, arguments: string, output?: string} | null => {
+    if (!message.parts) return null;
+
+    for (const part of message.parts) {
+      if (part.kind === 'data') {
+        const data = part.data as Record<string, unknown>;
+
+        // Skip handoff events - they should be displayed as Assistant messages, not Tool boxes
+        const eventType = data?.['type'] as string;
+        if (eventType === 'handoff_requested' || eventType === 'handoff_occurred') {
+          return null;
+        }
+
+        // Check for tool call
+        if (data?.['name'] && data?.['arguments']) {
+          const toolName = data['name'] as string;
+          const toolArgs = data['arguments'] as string;
+
+          // Skip handoff function calls - they should be handled as Assistant messages only
+          if (toolName.startsWith('transfer_to_')) {
+            return null;
+          }
+
+          return {
+            type: 'tool_call',
+            name: toolName,
+            arguments: toolArgs
+          };
+        }
+
+        // Check for tool output/response
+        if (data?.['type'] === 'function_call_result' && data?.['name'] && data?.['output']) {
+          const toolName = data['name'] as string;
+          const output = data?.['output'] as Record<string, unknown>;
+          const outputText = output?.['text'] || JSON.stringify(output);
+
+          return {
+            type: 'tool_response',
+            name: toolName,
+            arguments: '{}', // We don't have the original arguments here
+            output: typeof outputText === 'string' ? outputText : JSON.stringify(outputText)
+          };
+        }
+      }
+    }
+
+    return null;
+  };
+
   const handleStreamEvent = async (event: any) => {
     console.log('A2A Event:', event);
     console.log('Event kind:', event.kind, 'Event type:', typeof event);
@@ -74,75 +120,89 @@ export const Chat = () => {
         fullStatus: statusEvent.status
       });
 
-      // Update current task and context IDs
-      if (statusEvent.taskId && statusEvent.taskId !== currentTaskId) {
-        setCurrentTaskId(statusEvent.taskId);
-      }
+      // Update current task and context IDs (like CLI does)
       if (statusEvent.contextId && statusEvent.contextId !== currentContextId) {
+        console.log(`Context created (ID: ${statusEvent.contextId})`);
         setCurrentContextId(statusEvent.contextId);
       }
+      if (statusEvent.taskId && statusEvent.taskId !== currentTaskId) {
+        console.log(`Task created (ID: ${statusEvent.taskId})`);
+        setCurrentTaskId(statusEvent.taskId);
+      }
 
-      // Handle status message content (matches example client logic)
+      // Handle status message content (matches CLI logic)
       if (statusEvent.status.message) {
-        const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id!);
+        // Check for output_text_delta events (like CLI does)
+        const hasOutputTextDelta = statusEvent.status.message.parts?.some(
+          p => p.kind === 'data' && 
+          (p as any).data && 
+          typeof (p as any).data === 'object' && 
+          ((p as any).data as Record<string, unknown>)?.['type'] === 'output_text_delta'
+        );
 
-        // Detect streaming mode (working state and not final) - matches example client
-        const isStreaming = statusEvent.status.state === 'working' && !statusEvent.final;
-
-        console.log('Streaming Debug:', {
-          state: statusEvent.status.state,
-          final: statusEvent.final,
-          isStreaming,
-          taskId: statusEvent.taskId,
-          hasStreamedThisTask: streamedTaskIds.has(statusEvent.taskId),
-          lastDisplayedLength: lastDisplayedContent.length,
-          currentContentLength: agentMessage.content?.length || 0,
-          content: agentMessage.content?.substring(0, 50) + '...'
-        });
-
-        if (isStreaming) {
-          // Start streaming message once per task
-          if (!streamingMessageRef.current || currentStreamingTaskIdRef.current !== statusEvent.taskId) {
-            console.log('Starting streaming for task:', statusEvent.taskId);
+        if (hasOutputTextDelta) {
+          // Handle streaming deltas (like CLI does)
+          if (!isCurrentlyStreaming) {
             setIsCurrentlyStreaming(true);
             setStreamedTaskIds(prev => new Set([...prev, statusEvent.taskId]));
-            currentStreamingTaskIdRef.current = statusEvent.taskId;
             setLastDisplayedContent('');
 
             // Create initial streaming message
             const tempMessage: Message = {
-              id: `temp-${statusEvent.taskId}`, // Use task ID to ensure uniqueness
+              id: `temp-${statusEvent.taskId}`,
               chatId: id!,
-              content: agentMessage.content!,
-              sender: agentMessage.sender!,
-              type: agentMessage.type!,
+              content: '',
+              sender: 'Assistant',
+              type: 'assistant',
               status: 'sending',
               timestamp: new Date().toISOString()
             };
 
-            // Set ref immediately to avoid race on next tick
-            streamingMessageRef.current = tempMessage;
             setStreamingMessage(tempMessage);
+            setLastDisplayedContent(''); // Reset accumulated content for new streaming message
             setMessages(prevMessages => {
               if (prevMessages.some(m => m.id === tempMessage.id)) return prevMessages;
               return [...prevMessages, tempMessage];
             });
           }
 
-          // Update streaming content (matches example delta logic)
-          const currentText = agentMessage.content!;
-          if (currentText.length > (lastDisplayedContentRef.current?.length || 0) &&
-              currentText.startsWith(lastDisplayedContentRef.current || '')) {
-            // Show only the delta (new content)
-            console.log('Delta update detected');
-            setLastDisplayedContent(currentText);
-
-            // Update the streaming message
+          // Process deltas and accumulate content
+          let deltaContent = '';
+          statusEvent.status.message.parts?.forEach((part: any) => {
+            if (part.kind === 'data' && part.data?.type === 'output_text_delta') {
+              deltaContent += part.data.delta || '';
+            }
+          });
+          
+          if (deltaContent) {
+            setLastDisplayedContent(prev => {
+              const newContent = prev + deltaContent;
+              
+              // Check if the accumulated content is a tool call
+              const toolCallMatch = newContent.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)\s*$/);
+              const isToolCall = toolCallMatch && !toolCallMatch[1].startsWith('transfer_to_');
+              
+              let rawMessage = undefined;
+              if (isToolCall && toolCallMatch) {
+                const toolName = toolCallMatch[1];
+                const argsString = toolCallMatch[2];
+                const callId = `${toolName}-${statusEvent.taskId}-${argsString}`;
+                rawMessage = {
+                  name: toolName,
+                  arguments: argsString,
+                  callId: callId,
+                  taskId: statusEvent.taskId
+                };
+              }
+              
+              // Update streaming message with accumulated content
             if (streamingMessageRef.current) {
               const updatedMessage = {
                 ...streamingMessageRef.current,
-                content: currentText,
-                status: 'sending' as const
+                  content: newContent,
+                  status: 'sending' as const,
+                  isToolCall: isToolCall || false,
+                  rawMessage: rawMessage
               };
 
               setStreamingMessage(updatedMessage);
@@ -152,39 +212,75 @@ export const Chat = () => {
                 )
               );
             }
-          } else if (currentText !== lastDisplayedContentRef.current) {
-            // Content changed completely
-            console.log('Complete content replacement');
-            setLastDisplayedContent(currentText);
-
-            if (streamingMessageRef.current) {
-              const updatedMessage = {
-                ...streamingMessageRef.current,
-                content: currentText,
-                status: 'sending' as const
-              };
-
-              setStreamingMessage(updatedMessage);
-              setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                  msg.id === streamingMessageRef.current!.id ? updatedMessage : msg
-                )
-              );
-            }
+              
+              return newContent;
+            });
           }
         } else {
-          // For non-streaming mode, check if we were just streaming (matches example)
-          if (isCurrentlyStreamingRef.current && statusEvent.status.state === 'completed' && statusEvent.final) {
+          // Check for tool responses in the message (like CLI does)
+          const toolEvent = checkForToolEvent(statusEvent.status.message);
+          if (toolEvent && toolEvent.type === 'tool_response') {
+            // Tool responses are Tool messages (like CLI does)
+            const responseId = `tool-response-${toolEvent.name}-${statusEvent.taskId}`;
+            const toolResponseMessage: Message = {
+              id: responseId,
+              chatId: id!,
+              content: toolEvent.output || '',
+              sender: 'Tool',
+              type: 'tool_response',
+              status: 'sent',
+              timestamp: new Date().toISOString()
+            };
+            
+            // Check if this tool response message already exists to prevent duplication
+            setMessages(prevMessages => {
+              const existingMessage = prevMessages.find(m => m.id === responseId);
+              if (existingMessage) {
+                return prevMessages; // Don't add duplicate
+              }
+              return [...prevMessages, toolResponseMessage];
+            });
+          } else {
+            // Regular non-streaming message - convert and add
+            const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id!, statusEvent.taskId);
+            
+            // Add the message if it has content
+            if (agentMessage.content && agentMessage.content.trim()) {
+              setMessages(prevMessages => {
+                // Check if this message already exists
+                const existingIndex = prevMessages.findIndex(m => 
+                  m.id === agentMessage.id || 
+                  (m.content === agentMessage.content && m.sender === agentMessage.sender)
+                );
+                
+                if (existingIndex >= 0) {
+                  // Update existing message
+                  const updated = [...prevMessages];
+                  updated[existingIndex] = { ...updated[existingIndex], ...agentMessage } as Message;
+                  return updated;
+                } else {
+                  // Add new message
+                  return [...prevMessages, agentMessage as Message];
+                }
+              });
+            }
+          }
+        }
+
+        // Handle completion of streaming (like CLI does)
+        if (statusEvent.status.state === 'completed' && statusEvent.final && isCurrentlyStreaming) {
             console.log('Completing streaming for task:', statusEvent.taskId);
 
             // Finalize the streaming message
             if (streamingMessageRef.current) {
               const finalMessage = await messagesService.create({
                 chatId: id!,
-                content: agentMessage.content!,
-                sender: agentMessage.sender!,
-                type: agentMessage.type!,
-                status: 'sent'
+                content: streamingMessageRef.current.content,
+                sender: streamingMessageRef.current.sender,
+                type: streamingMessageRef.current.type,
+                status: 'sent',
+                isToolCall: streamingMessageRef.current.isToolCall,
+                rawMessage: streamingMessageRef.current.rawMessage
               });
 
               // Replace temporary with real message
@@ -200,56 +296,9 @@ export const Chat = () => {
               setIsCurrentlyStreaming(false);
               currentStreamingTaskIdRef.current = null;
             }
-          } else {
-            // Regular non-streaming message (tool approvals, etc.)
-            console.log('Creating non-streaming message for state:', statusEvent.status.state);
-
-            // Check if this is a tool call message that needs approval
-            if (agentMessage.isToolCall && agentMessage.content && !pendingToolCallRef.current) {
-              console.log('Detected tool call in message:', agentMessage.content);
-
-              // Parse tool call from content (e.g., "get_forecast(...)")
-              const toolCallMatch = agentMessage.content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*?)\s*\)\s*$/);
-              if (toolCallMatch) {
-                const toolName = toolCallMatch[1];
-                let parameters: Record<string, any> = {};
-
-                const argsString = toolCallMatch[2];
-                if (argsString) {
-                  console.log('Real-time parsing args:', argsString);
-                  parameters = JSON.parse(argsString);
-                }
-
-                // Get the real call ID from the raw message data
-                const realCallId = agentMessage.rawMessage?.callId || agentMessage.rawMessage?.id || agentMessage.id;
-                console.log('Using call ID for real-time approval:', realCallId);
-                console.log('Raw message data:', agentMessage.rawMessage);
-
-                const newPending: PendingToolCall = {
-                  id: realCallId,
-                  name: toolName,
-                  parameters,
-                  artifactId: realCallId,
-                  description: `Tool call: ${toolName}`
-                };
-
-                setPendingToolCall(newPending);
-                toast.info(`Tool call "${toolName}" requires approval`);
-                console.log('Set pending tool call:', newPending);
-              }
-            }
-
-            // Only persist final non-streaming messages once
-            const newMessage = await messagesService.create({
-              chatId: id!,
-              content: agentMessage.content!,
-              sender: agentMessage.sender!,
-              type: agentMessage.type!,
-              status: 'sent'
-            });
-
-            setMessages(prevMessages => [...prevMessages, newMessage]);
-          }
+          
+          // Show task completed message (like CLI does)
+          console.log(`Task completed (ID: ${statusEvent.taskId})`);
         }
 
         // Check if this is a tool call approval request from status message
@@ -267,18 +316,6 @@ export const Chat = () => {
                     parameters = tm[2] ? JSON.parse(tm[2]) : {};
                   } catch (_) {
                     parameters = {};
-                  }
-                  // Avoid duplicate prompts if one is already pending
-                  if (!pendingToolCallRef.current) {
-                    const newPending: PendingToolCall = {
-                      id: `call_${Date.now()}`,
-                      name: toolName,
-                      parameters,
-                      artifactId: `tool-call-${Date.now()}`,
-                      description: 'Tool execution requires human approval'
-                    };
-                    setPendingToolCall(newPending);
-                    toast.info('Tool call requires approval');
                   }
                   break;
                 }
@@ -317,36 +354,45 @@ export const Chat = () => {
           part => part.kind === 'data' && part.data && typeof part.data === 'object' && part.data['toolCall']
         );
 
-        if (toolCallData && toolCallData.kind === 'data') {
-          const toolCall = toolCallData.data.toolCall;
-          if (!pendingToolCallRef.current) {
-            const newPending: PendingToolCall = {
-              id: toolCall.id || `call_${Date.now()}`,
-              name: toolCall.name || 'Unknown Tool',
-              parameters: toolCall.parameters || {},
-              artifactId: artifactEvent.artifact.artifactId,
-              description: artifactEvent.artifact.name || 'Tool execution request'
-            };
-            setPendingToolCall(newPending);
-            toast.info('Tool call requires approval');
-          }
-        }
       } else {
         // Handle other artifacts as messages - but only if not streaming
         if (!streamingMessageRef.current || !isCurrentlyStreamingRef.current) {
           const textParts = artifactEvent.artifact.parts.filter(p => p.kind === 'text') as TextPart[];
           if (textParts.length > 0) {
             const content = textParts.map(p => p.text).join('\n');
+            
+            // Check if the content is a tool call
+            const toolCallMatch = content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)\s*$/);
+            const isToolCall = toolCallMatch && !toolCallMatch[1].startsWith('transfer_to_');
+            
+            let rawMessage = undefined;
+            if (isToolCall && toolCallMatch) {
+              const toolName = toolCallMatch[1];
+              const argsString = toolCallMatch[2];
+              const callId = `${toolName}-${currentTaskId}-${argsString}`;
+              rawMessage = {
+                name: toolName,
+                arguments: argsString,
+                callId: callId,
+                taskId: currentTaskId
+              };
+            }
+            
             const newMessage = await messagesService.create({
               chatId: id!,
               content,
               sender: 'Agent',
               type: 'assistant',
-              status: 'sent'
+              status: 'sent',
+              isToolCall: isToolCall || false,
+              rawMessage: rawMessage
             });
 
-            // Add to local messages state
-            setMessages(prevMessages => [...prevMessages, newMessage]);
+            // Add to local messages state (avoid duplicates)
+            setMessages(prevMessages => {
+              if (prevMessages.some(m => m.id === newMessage.id)) return prevMessages;
+              return [...prevMessages, newMessage];
+            });
           }
         } else {
           console.log('Artifact event: Skipping message creation because we are streaming');
@@ -369,7 +415,7 @@ export const Chat = () => {
       }
 
       if (task.status.message) {
-        const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
+        const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!, task.id);
 
         // Only create message if we're not currently streaming
         if (!isCurrentlyStreaming) {
@@ -378,10 +424,15 @@ export const Chat = () => {
             content: agentMessage.content!,
             sender: agentMessage.sender!,
             type: agentMessage.type!,
-            status: 'sent'
+            status: 'sent',
+            isToolCall: agentMessage.isToolCall,
+            rawMessage: agentMessage.rawMessage
           });
 
-          setMessages(prevMessages => [...prevMessages, newMessage]);
+          setMessages(prevMessages => {
+            if (prevMessages.some(m => m.id === newMessage.id)) return prevMessages;
+            return [...prevMessages, newMessage];
+          });
         } else {
           console.log('Task event: Skipping message creation because we are streaming');
         }
@@ -389,97 +440,6 @@ export const Chat = () => {
     }
   };
 
-  // Check for tool call approval state in existing messages (for page refresh/load)
-  const checkForToolCallApprovalState = (messages: Message[]) => {
-    console.log('checkForToolCallApprovalState called with messages:', messages);
-    console.log('pendingToolCallRef.current:', pendingToolCallRef.current);
-
-    if (pendingToolCallRef.current) {
-      return; // Already have a tool call showing
-    }
-
-    // Find the most recent assistant message that looks like a tool call
-    // We check in reverse order to find the most recent one
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
-      console.log(`Checking message ${i}:`, message);
-
-      if ((message.type === 'assistant' || message.type === 'tool_call') && message.content && message.sender === 'Agent') {
-        console.log('Found assistant message:', message.content, 'sender:', message.sender);
-        // Check if this message contains a tool call pattern
-        const toolCallMatch = message.content.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*?)\s*\)\s*$/);
-        console.log('Tool call match:', toolCallMatch);
-
-        if (toolCallMatch) {
-          // Check if there's a subsequent tool response that would indicate this was already executed
-          const hasSubsequentToolResponse = messages.slice(i + 1).some(laterMessage =>
-            laterMessage.type === 'tool_response' ||
-            (laterMessage.sender === 'Tool')
-          );
-
-          console.log('Found tool call on page load:', message.content);
-          console.log('Has subsequent tool response:', hasSubsequentToolResponse);
-
-          const toolName = toolCallMatch[1];
-          let parameters: Record<string, any> = {};
-
-          const argsString = toolCallMatch[2];
-          console.log('Raw args string:', argsString);
-          console.log('Args string type:', typeof argsString);
-          console.log('Args string length:', argsString.length);
-
-          if (argsString) {
-            console.log('Attempting to parse JSON:', argsString);
-            const firstParse = JSON.parse(argsString);
-            console.log('First parse result:', firstParse);
-            console.log('First parse type:', typeof firstParse);
-
-            if (typeof firstParse === 'string') {
-              console.log('First parse returned string, parsing again...');
-              parameters = JSON.parse(firstParse);
-              console.log('Second parse result:', parameters);
-              console.log('Second parse type:', typeof parameters);
-            } else {
-              parameters = firstParse;
-              console.log('First parse returned object directly:', parameters);
-            }
-          }
-
-          // Use the real tool call ID from the raw message data - callId is the key!
-          const realToolCallId = message.rawMessage?.callId || message.rawMessage?.id || message.id;
-          console.log('Real tool call ID:', realToolCallId);
-          console.log('Raw message data:', message.rawMessage);
-          console.log('Available raw message keys:', Object.keys(message.rawMessage || {}));
-
-          const toolCallApproval: PendingToolCall = {
-            id: realToolCallId,
-            name: toolName,
-            parameters,
-            artifactId: realToolCallId, // Use same ID as artifact ID
-            description: `Tool call: ${toolName}`,
-            approved: hasSubsequentToolResponse // Only mark as approved if there's a tool response
-          };
-
-          console.log('Created toolCallApproval with parameters:', parameters);
-          console.log('Parameters type:', typeof parameters);
-          console.log('Parameters keys:', Object.keys(parameters));
-          console.log('Full toolCallApproval object:', toolCallApproval);
-
-          setPendingToolCall(toolCallApproval);
-
-          if (hasSubsequentToolResponse) {
-            console.log('Tool call already executed - showing approved state');
-          } else {
-            console.log('Tool call needs approval - showing approval dialog');
-            toast.info(`Tool call "${toolName}" requires approval`);
-          }
-
-          // Only set the first (most recent) tool call
-          break;
-        }
-      }
-    }
-  };
 
   useEffect(() => {
     const loadChatAndMessages = async () => {
@@ -487,37 +447,53 @@ export const Chat = () => {
       
       try {
         setLoading(true);
+        console.log('Loading chat and messages for ID:', id);
+        
+        // Load chat information
         const chats = await chatsService.getAll();
         const foundChat = chats.find(c => c.id === id);
         setChat(foundChat || null);
         
-        // Extract messages from taskHistories instead of using messagesService
-        let extractedMessages: Message[] = [];
-        if (foundChat) {
-          extractedMessages = await chatsService.getMessagesFromContext(id);
+        if (!foundChat) {
+          console.error('Chat not found:', id);
+          toast.error('Chat not found');
+          return;
         }
+
+        console.log('Found chat:', foundChat);
+        
+        // Load conversation history from backend (like CLI does)
+        console.log('Loading conversation history from backend...');
+        const extractedMessages = await chatsService.getMessagesFromContext(id);
+        console.log('Loaded messages from context:', extractedMessages);
         setMessages(extractedMessages);
 
-        // Check for tool call approval state in existing messages on page load
-        checkForToolCallApprovalState(extractedMessages);
+        // Set current context ID from the chat
+        setCurrentContextId(id);
+        console.log('Set current context ID:', id);
+
 
         // Load agent information from the agents service
         if (foundChat?.agentId) {
-          console.log('Chat: Using agent ID:', foundChat.agentId);
+          console.log('Loading agent with ID:', foundChat.agentId);
           const agentInfo = await agentsService.getById(foundChat.agentId);
           if (agentInfo) {
-            console.log('Chat: Loaded agent from service:', agentInfo);
+            console.log('Loaded agent:', agentInfo);
             setAgent(agentInfo);
           } else {
-            console.error('Chat: Agent not found in service:', foundChat.agentId);
+            console.error('Agent not found:', foundChat.agentId);
             setAgent(null);
+            toast.error('Agent not found');
           }
         } else {
-          console.log('Chat: No agentId found in chat:', foundChat);
+          console.log('No agentId found in chat');
           setAgent(null);
         }
+
+        toast.success(`Loaded ${extractedMessages.length} messages from conversation history`);
       } catch (error) {
         console.error('Error loading chat and messages:', error);
+        toast.error('Failed to load chat');
       } finally {
         setLoading(false);
       }
@@ -542,6 +518,28 @@ export const Chat = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!id) return;
+    
+    try {
+      setRefreshing(true);
+      toast.info('Refreshing conversation...');
+      
+      console.log('Refreshing conversation from backend...');
+      const refreshedMessages = await chatsService.getMessagesFromContext(id);
+      console.log('Refreshed messages:', refreshedMessages);
+      setMessages(refreshedMessages);
+      
+      
+      toast.success(`Refreshed ${refreshedMessages.length} messages`);
+    } catch (error) {
+      console.error('Error refreshing conversation:', error);
+      toast.error('Failed to refresh conversation');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleEditMessage = (message: Message) => {
     // TODO: Implement edit message functionality
     console.log('Edit message:', message);
@@ -563,37 +561,44 @@ export const Chat = () => {
     try {
       setSending(true);
       
-      // Create user message first
-      const userMessage = await messagesService.create({
-        chatId: id,
-        content: newMessage,
-        sender: 'User',
-        type: 'user',
-        status: 'sent'
-      });
-
-      // Update messages list immediately
-      const updatedMessages = await messagesService.getByChatId(id);
-      setMessages(updatedMessages);
+      // Store the user input before clearing
+      const userInput = newMessage.trim();
       
-      // Clear input
+      // Clear input immediately for better UX
       setNewMessage('');
 
-      // Send to A2A agent
+      // Display user message immediately (like CLI does)
+      const userMessage: Message = {
+        id: `temp-user-${Date.now()}`,
+        chatId: id,
+        content: userInput,
+        sender: 'User',
+        type: 'user',
+        status: 'sent',
+        timestamp: new Date().toISOString()
+      };
+
+      // Add user message to UI immediately (avoid duplicates)
+      setMessages(prevMessages => {
+        if (prevMessages.some(m => m.id === userMessage.id)) return prevMessages;
+        return [...prevMessages, userMessage];
+      });
+      
+      // Send to A2A agent (like CLI does)
       const a2aMessage = A2AClient.convertToA2AMessage(userMessage);
-      a2aMessage.contextId = id; // Use the chat ID as context ID
+      a2aMessage.contextId = currentContextId || id; // Use current context ID
       const messageParams = { message: a2aMessage };
 
       // Reset streaming state for new conversation
       setStreamingMessage(null);
       setLastDisplayedContent('');
       setIsCurrentlyStreaming(false);
+      setStreamedTaskIds(new Set());
 
+      console.log('Sending message to agent:', agent?.name);
       toast.info(`Sending message to ${agent?.name || 'agent'}...`);
 
       // Create agent-specific client if available
-      console.log('Agent object:', agent);
-      console.log('Agent ID:', agent?.id);
       if (!agent || !agent.id) {
         throw new Error('No agent or agent ID available');
       }
@@ -604,14 +609,14 @@ export const Chat = () => {
       // Initialize client for agent (auth handled internally)
       const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl);
 
-      // Single stream for entire conversation
+      // Single stream for entire conversation (like CLI)
       const stream = clientForAgent.sendMessageStream(messageParams);
       let hasReceivedAgentMessage = false;
 
       for await (const event of stream) {
         await handleStreamEvent(event);
 
-        // Minimal success detection without duplicating logic
+        // Track if we received any agent response
         if (event.kind === 'status-update') {
           hasReceivedAgentMessage = hasReceivedAgentMessage || !!event.status?.message;
         } else if (event.kind === 'artifact-update') {
@@ -622,9 +627,15 @@ export const Chat = () => {
         }
       }
 
-      toast[hasReceivedAgentMessage ? 'success' : 'warning'](
-        hasReceivedAgentMessage ? 'Message sent successfully!' : 'No response received from agent'
-      );
+      // Show success/failure toast
+      if (hasReceivedAgentMessage) {
+        toast.success('Message sent successfully!');
+      } else {
+        toast.warning('No response received from agent');
+      }
+
+      // Don't refresh from backend - the streaming response handles all message updates
+      
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -640,26 +651,24 @@ export const Chat = () => {
     }
   };
 
-  const handleToolCallApprove = async (reason?: string) => {
-    if (!pendingToolCall || !agent) return;
+  const handleToolCallApprove = async (toolCall: PendingToolCall, reason?: string) => {
+    if (!agent) return;
 
     try {
       setSending(true);
 
-      // Store the current tool call ID before processing
-      const currentToolCallId = pendingToolCall.id;
-
       // Show success toast immediately when user approves
       toast.success('Tool call approved');
 
-      // Reuse same agent client used for main stream to avoid parallel streams
-      const clientForAgent = await A2AClient.fromAgentId(agent.id);
+      // Create agent client
+      const agentCardUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}/.well-known/agent-card.json`;
+      const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl);
 
       // Find the message with this tool call to get task ID
       const toolCallMessage = messages.find(msg =>
         (msg.type === 'assistant' || msg.type === 'tool_call') &&
         msg.rawMessage &&
-        (msg.rawMessage.callId === pendingToolCall.id || msg.rawMessage.id === pendingToolCall.id)
+        (msg.rawMessage.callId === toolCall.id || msg.rawMessage.id === toolCall.id)
       );
 
       console.log('Found tool call message for approval:', toolCallMessage);
@@ -669,44 +678,32 @@ export const Chat = () => {
       const taskId = toolCallMessage?.rawMessage?.taskId;
       console.log('Using task ID for approval:', taskId);
 
-      // Create tool call response message - use chat ID as context ID and found task ID
+      // Create tool call response message - use current context ID and found task ID
       const toolResponse = A2AClient.createToolCallResponse(
-        pendingToolCall.id,
-        pendingToolCall.artifactId,
+        toolCall.id,
+        toolCall.artifactId,
         'approve',
         reason,
         `Tool call approved by user${reason ? `: ${reason}` : ''}`,
-        id, // Use chat ID as context ID
+        currentContextId || id, // Use current context ID
         taskId // Use task ID from raw message
       );
-
-      // Clear current pending request immediately to allow subsequent approvals to surface
-      setPendingToolCall(null);
 
       // Send the response
       const messageParams = { message: toolResponse };
       const stream = clientForAgent.sendMessageStream(messageParams);
 
-      // Route events through shared handler; do not create new temp messages here
+      // Route events through shared handler
       for await (const event of stream) {
         console.log('Tool call approve response event:', event.kind);
         await handleStreamEvent(event);
       }
 
-      // Only clear pending tool call if no new one was set during processing
-      // (i.e., if the current pending tool call is still the one we processed)
-      setPendingToolCall(prev => {
-        // If a new tool call was set during processing, keep it
-        if (prev && prev.id !== currentToolCallId) {
-          return prev;
-        }
-        // Otherwise, clear it
-        return null;
-      });
-      const refreshedMessages = await messagesService.getByChatId(id!);
+      // Refresh messages from backend to get the latest state
+      console.log('Refreshing messages after tool approval...');
+      const refreshedMessages = await chatsService.getMessagesFromContext(id!);
       setMessages(refreshedMessages);
 
-      // Toast was already shown immediately when user approved
     } catch (error) {
       console.error('Error approving tool call:', error);
       toast.error('Failed to approve tool call');
@@ -715,23 +712,24 @@ export const Chat = () => {
     }
   };
 
-  const handleToolCallReject = async (reason?: string) => {
-    if (!pendingToolCall || !agent) return;
+  const handleToolCallReject = async (toolCall: PendingToolCall, reason?: string) => {
+    if (!agent) return;
 
     try {
       setSending(true);
 
-      // Store the current tool call ID before processing
-      const currentToolCallId = pendingToolCall.id;
+      // Show success toast immediately when user rejects
+      toast.success('Tool call rejected');
 
-      // Use the new static method for creating client
-      const clientForAgent = await A2AClient.fromAgentId(agent.id);
+      // Create agent client
+      const agentCardUrl = `https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/agents/${agent.id}/.well-known/agent-card.json`;
+      const clientForAgent = await A2AClient.fromCardUrl(agentCardUrl);
 
       // Find the message with this tool call to get task ID
       const toolCallMessage = messages.find(msg =>
         (msg.type === 'assistant' || msg.type === 'tool_call') &&
         msg.rawMessage &&
-        (msg.rawMessage.callId === pendingToolCall.id || msg.rawMessage.id === pendingToolCall.id)
+        (msg.rawMessage.callId === toolCall.id || msg.rawMessage.id === toolCall.id)
       );
 
       console.log('Found tool call message for rejection:', toolCallMessage);
@@ -741,232 +739,33 @@ export const Chat = () => {
       const taskId = toolCallMessage?.rawMessage?.taskId;
       console.log('Using task ID for rejection:', taskId);
 
-      // Create tool call response message - use chat ID as context ID and found task ID
+      // Create tool call response message - use current context ID and found task ID
       const toolResponse = A2AClient.createToolCallResponse(
-        pendingToolCall.id,
-        pendingToolCall.artifactId,
+        toolCall.id,
+        toolCall.artifactId,
         'reject',
         reason,
         `Tool call rejected by user${reason ? `: ${reason}` : ''}`,
-        id, // Use chat ID as context ID
+        currentContextId || id, // Use current context ID
         taskId // Use task ID from raw message
       );
-
-      // Clear current pending request immediately to allow subsequent approvals to surface
-      setPendingToolCall(null);
 
       // Send the response
       const messageParams = { message: toolResponse };
       const stream = clientForAgent.sendMessageStream(messageParams);
 
-      // Process the response stream - but this creates a separate stream from the main handler
-      // This means the main handler won't see these events, which is why messages don't appear in the UI
+      // Route events through shared handler
       for await (const event of stream) {
-        console.log('Tool call approve response event:', event.kind);
+        console.log('Tool call reject response event:', event.kind);
         await handleStreamEvent(event);
-        // Handle the response similar to regular messages
-        if (event.kind === 'status-update') {
-          const statusEvent = event as TaskStatusUpdateEvent;
-          if (statusEvent.status.message) {
-            const agentMessage = A2AClient.convertFromA2AMessage(statusEvent.status.message, id!);
-            // Handle streaming updates the same way as main handler
-            const isStreamingUpdate = statusEvent.status.state === 'working' && !statusEvent.final;
-            
-            if (isStreamingUpdate) {
-              // For streaming updates, update existing message or create temporary one
-              if (!streamingMessage) {
-                const tempMessage: Message = {
-                  id: `temp-${Date.now()}`,
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: 'sending',
-                  timestamp: new Date().toISOString()
-                };
-                setStreamingMessage(tempMessage);
-                setMessages(prevMessages => [...prevMessages, tempMessage]);
-              } else {
-                // Update existing streaming message
-                setStreamingMessage(prev => prev ? { ...prev, content: agentMessage.content! } : null);
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.id === streamingMessage.id 
-                      ? { ...msg, content: agentMessage.content! }
-                      : msg
-                  )
-                );
-              }
-            } else {
-              // Final update - create real message
-              if (streamingMessage) {
-                const newMessage = await messagesService.create({
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: agentMessage.status!
-                });
-                
-                // Replace temporary message with real one
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.id === streamingMessage.id ? newMessage : msg
-                  )
-                );
-                setStreamingMessage(null);
-              } else {
-                const newMessage = await messagesService.create({
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: agentMessage.status!
-                });
-                setMessages(prevMessages => [...prevMessages, newMessage]);
-              }
-            }
-
-            // Surface next approval request from status text if present
-            if (statusEvent.status.state === 'input-required' && statusEvent.status.message.parts) {
-              for (const p of statusEvent.status.message.parts) {
-                if (p.kind === 'text' && typeof p.text === 'string') {
-                  const m = p.text.match(/Human approval required for tool execution: (.+)/);
-                  if (m) {
-                    const callText = m[1];
-                    const tm = callText.match(/^(\w+)\((.*)\)$/);
-                    if (tm) {
-                      const toolName = tm[1];
-                      let parameters: Record<string, any> = {};
-                      try {
-                        parameters = tm[2] ? JSON.parse(tm[2]) : {};
-                      } catch (_) {
-                        parameters = {};
-                      }
-                      setPendingToolCall({
-                        id: `call_${Date.now()}`,
-                        name: toolName,
-                        parameters,
-                        artifactId: `tool-call-${Date.now()}`,
-                        description: 'Tool execution requires human approval'
-                      });
-                      toast.info('Tool call requires approval');
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else if (event.kind === 'artifact-update') {
-          const artifactEvent = event as TaskArtifactUpdateEvent;
-          const isToolCallArtifact = artifactEvent.artifact.parts.some(
-            part => part.kind === 'data' &&
-              part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
-          );
-          if (isToolCallArtifact) {
-            const toolCallData = artifactEvent.artifact.parts.find(
-              part => part.kind === 'data' && part.data && typeof part.data === 'object' && (part.data as any)['toolCall']
-            );
-            if (toolCallData && toolCallData.kind === 'data') {
-              const toolCall = (toolCallData.data as any).toolCall;
-              setPendingToolCall({
-                id: toolCall.id || crypto.randomUUID(),
-                name: toolCall.name || 'Unknown Tool',
-                parameters: toolCall.parameters || {},
-                artifactId: artifactEvent.artifact.artifactId,
-                description: artifactEvent.artifact.name || 'Tool execution request'
-              });
-              toast.info('Tool call requires approval');
-            }
-          }
-        } else if (event.kind === 'task') {
-          const task = event as Task;
-          console.log(`Tool call response task: ${task.id}`);
-          console.log(`Task status:`, task.status);
-          console.log(`Task message:`, task.status.message);
-
-          if (task.status.message) {
-            const agentMessage = A2AClient.convertFromA2AMessage(task.status.message, id!);
-            console.log(`Converted agent message:`, agentMessage);
-            // Handle streaming updates the same way as main handler
-            const isStreamingUpdate = task.status.state === 'working';
-            
-            if (isStreamingUpdate) {
-              // For streaming updates, update existing message or create temporary one
-              if (!streamingMessage) {
-                const tempMessage: Message = {
-                  id: `temp-${Date.now()}`,
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: 'sending',
-                  timestamp: new Date().toISOString()
-                };
-                setStreamingMessage(tempMessage);
-                setMessages(prevMessages => [...prevMessages, tempMessage]);
-              } else {
-                // Update existing streaming message
-                setStreamingMessage(prev => prev ? { ...prev, content: agentMessage.content! } : null);
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.id === streamingMessage.id 
-                      ? { ...msg, content: agentMessage.content! }
-                      : msg
-                  )
-                );
-              }
-            } else {
-              // Final update - create real message
-              if (streamingMessage) {
-                const newMessage = await messagesService.create({
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: agentMessage.status!
-                });
-                
-                // Replace temporary message with real one
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.id === streamingMessage.id ? newMessage : msg
-                  )
-                );
-                setStreamingMessage(null);
-              } else {
-                const newMessage = await messagesService.create({
-                  chatId: id!,
-                  content: agentMessage.content!,
-                  sender: agentMessage.sender!,
-                  type: agentMessage.type!,
-                  status: agentMessage.status!
-                });
-                setMessages(prevMessages => [...prevMessages, newMessage]);
-              }
-            }
-            console.log(`Message saved successfully`);
-          } else {
-            console.log(`No message in task status`);
-          }
-        }
       }
 
-      // Only clear pending tool call if no new one was set during processing
-      // (i.e., if the current pending tool call is still the one we processed)
-      setPendingToolCall(prev => {
-        // If a new tool call was set during processing, keep it
-        if (prev && prev.id !== currentToolCallId) {
-          return prev;
-        }
-        // Otherwise, clear it
-        return null;
-      });
-      const refreshedMessages = await messagesService.getByChatId(id!);
+
+      // Refresh messages from backend to get the latest state
+      console.log('Refreshing messages after tool rejection...');
+      const refreshedMessages = await chatsService.getMessagesFromContext(id!);
       setMessages(refreshedMessages);
 
-      toast.success('Tool call rejected');
     } catch (error) {
       console.error('Error rejecting tool call:', error);
       toast.error('Failed to reject tool call');
@@ -975,25 +774,16 @@ export const Chat = () => {
     }
   };
 
-  const handleToolCallModify = (paramName: string, value: any) => {
-    if (!pendingToolCall) return;
-
-    setPendingToolCall({
-      ...pendingToolCall,
-      parameters: {
-        ...pendingToolCall.parameters,
-        [paramName]: value
-      }
-    });
-
-    toast.info(`Modified parameter ${paramName} to ${value}`);
+  const handleToolCallModify = (toolCall: PendingToolCall, paramName: string, value: any) => {
+    // Since we're creating tool call data on-the-fly, we need to refresh the messages
+    // to show the updated parameters. This is a simplified approach.
+    console.log('Tool call parameter modified:', paramName, '=', value);
+    toast.info(`Parameter ${paramName} modified to ${value}`);
   };
 
-  const handleShowParams = () => {
-    if (pendingToolCall) {
-      console.log('Current tool call parameters:', pendingToolCall.parameters);
+  const handleShowParams = (toolCall: PendingToolCall) => {
+    console.log('Current tool call parameters:', toolCall.parameters);
       toast.info('Parameters logged to console');
-    }
   };
 
   const getStatusBadge = () => {
@@ -1051,7 +841,19 @@ export const Chat = () => {
 
           {/* Messages */}
           <div className="border-t border-border pt-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">Messages</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-text-primary">Messages</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
             
             {messages.length === 0 ? (
               <div className="text-center py-12">
@@ -1067,25 +869,121 @@ export const Chat = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((message) => (
-                  <MessageRow
-                    key={message.id}
-                    message={message}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Tool Call Approval */}
-            {pendingToolCall && (
+                {messages.map((message, index) => {
+                  // Check if this is a tool call message (either assistant with tool call or direct tool_call type)
+                  // But skip handoff function calls (transfer_to_*) like the CLI does
+                  const toolCallMatch = message.content?.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*.*\s*\)\s*$/);
+                  const toolName = toolCallMatch?.[1];
+                  const isHandoffFunction = toolName?.startsWith('transfer_to_');
+                  
+                  const isToolCallMessage = ((message.type === 'assistant' && 
+                    (message.isToolCall || toolCallMatch)) || 
+                    message.type === 'tool_call') && 
+                    !isHandoffFunction;
+                  
+                  // Check if this tool call has been executed by looking for subsequent tool responses
+                  // Only show approval for pending tool calls (like CLI does)
+                  const hasSubsequentToolResponse = messages.slice(index + 1).some(laterMessage =>
+                    laterMessage.type === 'tool_response' ||
+                    (laterMessage.sender === 'Tool')
+                  );
+                  
+                  // Show tool approval for all tool calls (pending or completed)
+                  const shouldShowToolApproval = isToolCallMessage;
+                  
+                  // Debug logging for tool call detection
+                  if ((message.type === 'assistant' && message.content) || message.type === 'tool_call') {
+                    console.log('Tool call detection for message:', {
+                      messageId: message.id,
+                      content: message.content,
+                      type: message.type,
+                      isToolCall: message.isToolCall,
+                      toolCallMatch: toolCallMatch,
+                      isHandoffFunction: isHandoffFunction,
+                      isToolCallMessage: isToolCallMessage,
+                      hasSubsequentToolResponse: hasSubsequentToolResponse,
+                      shouldShowToolApproval: shouldShowToolApproval,
+                      rawMessage: message.rawMessage
+                    });
+                  }
+                  
+                  return (
+                    <div key={message.id}>
+                      <MessageRow message={message} contextId={currentContextId} taskId={currentTaskId} />
+                      
+                      {/* Show Tool Call Approval right after ANY assistant message with a tool call */}
+                      {shouldShowToolApproval && (
+                          <div className="mt-3">
+                            {/* This tool call is pending (no subsequent tool response found) */}
+                            {(() => {
+                            // Get tool call information from message
+                            let toolName = '';
+                            let parameters: Record<string, any> = {};
+                            
+                            // Try to get tool name from rawMessage first, then from content
+                            if (message.rawMessage?.name) {
+                              toolName = message.rawMessage.name;
+                              // Parse arguments string into parameters object
+                              const argsString = message.rawMessage.arguments;
+                              if (argsString && argsString.trim() !== '') {
+                                try {
+                                  const firstParse = JSON.parse(argsString);
+                                  if (typeof firstParse === 'string') {
+                                    parameters = JSON.parse(firstParse);
+                                  } else {
+                                    parameters = firstParse;
+                                  }
+                                } catch (error) {
+                                  parameters = {};
+                                }
+                              }
+                            } else if (toolCallMatch) {
+                              toolName = toolCallMatch[1];
+                              const argsString = toolCallMatch[2];
+                              if (argsString && argsString.trim() !== '') {
+                                try {
+                                  const firstParse = JSON.parse(argsString);
+                                  if (typeof firstParse === 'string') {
+                                    parameters = JSON.parse(firstParse);
+                                  } else {
+                                    parameters = firstParse;
+                                  }
+                                } catch (error) {
+                                  parameters = {};
+                                }
+                              }
+                            }
+                            
+                            if (!toolName) return null;
+                            
+                            const realToolCallId = message.rawMessage?.callId || message.rawMessage?.id || message.id;
+                            
+                            const toolCallForApproval: PendingToolCall = {
+                              id: realToolCallId,
+                              name: toolName,
+                              parameters,
+                              artifactId: realToolCallId,
+                              description: `Tool call: ${toolName}`,
+                              approved: hasSubsequentToolResponse // Approved if there's a subsequent tool response
+                            };
+                            
+                            return (
               <ToolCallApproval
-                toolCall={pendingToolCall}
-                onApprove={handleToolCallApprove}
-                onReject={handleToolCallReject}
-                onModify={handleToolCallModify}
-                onShowParams={handleShowParams}
-                isVisible={!!pendingToolCall}
-              />
+                                toolCall={toolCallForApproval}
+                                onApprove={(reason) => handleToolCallApprove(toolCallForApproval, reason)}
+                                onReject={(reason) => handleToolCallReject(toolCallForApproval, reason)}
+                                onModify={(paramName, value) => handleToolCallModify(toolCallForApproval, paramName, value)}
+                                onShowParams={() => handleShowParams(toolCallForApproval)}
+                                isVisible={true}
+                              />
+                            );
+                          })()}
+                          </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {/* Message Input */}

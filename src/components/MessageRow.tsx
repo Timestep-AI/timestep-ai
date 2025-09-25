@@ -5,9 +5,11 @@ import { Message } from '@/types/message';
 
 interface MessageRowProps {
   message: Message;
+  contextId?: string;
+  taskId?: string;
 }
 
-export const MessageRow = ({ message }: MessageRowProps) => {
+export const MessageRow = ({ message, contextId, taskId }: MessageRowProps) => {
 
   const getTypeIcon = () => {
     switch (message.type) {
@@ -75,26 +77,30 @@ export const MessageRow = ({ message }: MessageRowProps) => {
     }
     
     if (message.type === 'tool_response') {
-      let formattedResponse;
+      let responseText;
       try {
         const parsed = JSON.parse(message.content);
-        formattedResponse = JSON.stringify(parsed, null, 2);
+        // Try to extract text from common response formats
+        if (parsed.text) {
+          responseText = parsed.text;
+        } else if (parsed.output && parsed.output.text) {
+          responseText = parsed.output.text;
+        } else if (parsed.result && parsed.result.text) {
+          responseText = parsed.result.text;
+        } else if (typeof parsed === 'string') {
+          responseText = parsed;
+        } else {
+          // Fallback to JSON if no text found
+          responseText = JSON.stringify(parsed, null, 2);
+        }
       } catch {
-        formattedResponse = message.content;
+        responseText = message.content;
       }
       
       return (
-        <div className="bg-surface-elevated rounded-lg p-3 border border-border">
-          <div className="flex items-center mb-2">
-            <span className="text-xs font-medium text-text-primary">Response</span>
-            {message.toolCallId && (
-              <span className="text-xs text-text-tertiary ml-2">({message.toolCallId})</span>
-            )}
-          </div>
-          <pre className="text-xs text-text-tertiary whitespace-pre-wrap break-words font-mono">
-            {formattedResponse}
-          </pre>
-        </div>
+        <p className="text-xs sm:text-sm text-text-secondary mb-2 break-words whitespace-pre-wrap">
+          {responseText}
+        </p>
       );
     }
     
@@ -129,6 +135,16 @@ export const MessageRow = ({ message }: MessageRowProps) => {
                 <Calendar className="w-3 h-3 flex-shrink-0" />
                 <span className="break-all">{message.timestamp}</span>
               </div>
+              {(contextId || taskId) && (
+                <div className="flex items-center space-x-1">
+                  <span>Context ID: {contextId || 'unknown'}</span>
+                </div>
+              )}
+              {(contextId || taskId) && (
+                <div className="flex items-center space-x-1">
+                  <span>Task ID: {taskId || 'unknown'}</span>
+                </div>
+              )}
               {message.attachments && message.attachments.length > 0 && (
                 <div className="flex items-center space-x-1">
                   <span>{message.attachments.length} attachment{message.attachments.length > 1 ? 's' : ''}</span>

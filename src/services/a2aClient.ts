@@ -176,7 +176,7 @@ export class A2AClient {
   }
 
   // Convert A2A Message to our internal Message format
-  static convertFromA2AMessage(a2aMessage: A2AMessage, chatId: string): Partial<Message> {
+  static convertFromA2AMessage(a2aMessage: A2AMessage, chatId: string, taskId?: string): Partial<Message> {
     console.log('convertFromA2AMessage called with:', {
       messageId: a2aMessage.messageId,
       role: a2aMessage.role,
@@ -200,6 +200,9 @@ export class A2AClient {
             textContent += String(data.delta);
           } else if (data.text && typeof data.text === 'string') {
             textContent += data.text;
+          } else if (data.name && data.arguments) {
+            // This is a tool call in data parts - format it as text content
+            textContent = `${data.name}("${data.arguments}")`;
           }
         }
       }
@@ -212,8 +215,43 @@ export class A2AClient {
       textContent &&
       /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*.*\s*\)\s*$/.test(textContent.trim());
 
+    let rawMessage = undefined;
     if (isToolCall) {
       console.log('Detected tool call pattern:', textContent);
+      
+      // Try to get tool call data from data parts first
+      const dataParts = a2aMessage.parts.filter(p => p.kind === 'data');
+      let toolName = '';
+      let argsString = '';
+      
+      for (const part of dataParts) {
+        if (part.data && typeof part.data === 'object') {
+          const data = part.data as Record<string, unknown>;
+          if (data.name && data.arguments) {
+            toolName = String(data.name);
+            argsString = String(data.arguments);
+            break;
+          }
+        }
+      }
+      
+      // If not found in data parts, extract from text content
+      if (!toolName) {
+        const toolCallMatch = textContent.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)\s*$/);
+        if (toolCallMatch) {
+          toolName = toolCallMatch[1];
+          argsString = toolCallMatch[2];
+        }
+      }
+      
+      if (toolName) {
+        rawMessage = {
+          name: toolName,
+          arguments: argsString,
+          callId: a2aMessage.messageId,
+          taskId: taskId
+        };
+      }
     }
 
     return {
@@ -224,7 +262,8 @@ export class A2AClient {
       timestamp: new Date().toISOString(),
       type: a2aMessage.role === 'user' ? 'user' : 'assistant',
       status: 'sent',
-      isToolCall
+      isToolCall,
+      rawMessage
     };
   }
 

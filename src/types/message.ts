@@ -33,6 +33,8 @@ export interface CreateMessageRequest {
   toolCalls?: ToolCall[];
   toolCallId?: string;
   approved?: boolean;
+  isToolCall?: boolean;
+  rawMessage?: any;
 }
 
 export interface UpdateMessageRequest {

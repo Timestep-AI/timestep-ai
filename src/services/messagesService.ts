@@ -50,6 +50,11 @@ class MessagesService {
       status: request.status || 'sent',
       attachments: request.attachments,
       timestamp: new Date().toLocaleString(),
+      toolCalls: request.toolCalls,
+      toolCallId: request.toolCallId,
+      approved: request.approved,
+      isToolCall: request.isToolCall,
+      rawMessage: request.rawMessage,
     };
 
     this.messages.push(newMessage);
