@@ -4,9 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
 import { Agent } from '@/types/agent';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, MessageCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bot } from 'lucide-react';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -27,14 +26,10 @@ const Chat = () => {
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
       
-      // Set default agent (Personal Assistant) if available
-      // TEMPORARILY DISABLED: Let user manually select agent for testing
-      // const defaultAgent = agentsData.find(agent => agent.id === '00000000-0000-0000-0000-000000000000');
-      // if (defaultAgent) {
-      //   setSelectedAgent(defaultAgent);
-      // } else if (agentsData.length > 0) {
-      //   setSelectedAgent(agentsData[0]);
-      // }
+      // Auto-select the first agent if available
+      if (agentsData.length > 0 && !selectedAgent) {
+        setSelectedAgent(agentsData[0]);
+      }
     } catch (error) {
       console.error('Error loading agents:', error);
       toast.error('Failed to load agents');
@@ -80,10 +75,24 @@ const Chat = () => {
     };
   };
 
+  // Handle agent switching
+  const handleAgentChange = (agentId: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    if (agent) {
+      console.log('Switching to agent:', agent.name, 'ID:', agent.id);
+      setSelectedAgent(agent);
+      // Show a toast notification when switching agents
+      toast.success(`Switched to ${agent.name}`);
+    }
+  };
+
   // ChatKit configuration
+  const chatKitUrl = selectedAgent ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit` : `${getServerBaseUrl()}/api/chatkit`;
+  console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
+  
   const { control } = useChatKit({
     api: {
-      url: selectedAgent ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit` : `${getServerBaseUrl()}/api/chatkit`,
+      url: chatKitUrl,
 
       // Custom fetch with auth injection
       async fetch(url: string, options: RequestInit) {
@@ -143,75 +152,42 @@ const Chat = () => {
 
   console.log('ChatKit: Control object:', control);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || loadingAgents) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing chat...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show agent selection if no agent is selected or still loading
-  if (loadingAgents || !selectedAgent) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome to Timestep AI</h1>
-            <p className="text-muted-foreground">Choose an agent to start chatting</p>
-          </div>
-          
-          {loadingAgents ? (
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading agents...</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {agents.map((agent) => (
-                <Card 
-                  key={agent.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedAgent?.id === agent.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setSelectedAgent(agent)}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bot className="w-5 h-5" />
-                      {agent.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {agent.description || 'AI Agent'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button 
-                      className="w-full" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAgent(agent);
-                      }}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Start Chatting
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <p className="text-muted-foreground">
+            {!isAuthenticated ? 'Initializing chat...' : 'Loading agents...'}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen">
+    <div className="h-screen w-screen relative">
+      {/* Agent Selection Dropdown */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="flex items-center gap-2 bg-background/95 backdrop-blur-sm border rounded-lg px-3 py-2 shadow-lg">
+          <Bot className="w-4 h-4 text-muted-foreground" />
+          <Select value={selectedAgent?.id || ""} onValueChange={handleAgentChange}>
+            <SelectTrigger className="w-48 h-8 text-sm border-0 bg-transparent shadow-none">
+              <SelectValue placeholder="Select Agent" />
+            </SelectTrigger>
+            <SelectContent>
+              {agents.map((agent) => (
+                <SelectItem key={agent.id} value={agent.id}>
+                  {agent.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
       <ChatKit 
+        key={selectedAgent?.id || 'default'} 
         control={control} 
         className="h-full w-full" 
       />

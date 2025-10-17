@@ -11,13 +11,13 @@ test.beforeAll(async () => {
   await cleanupOldTestData();
 });
 
-test('Personal Assistant weather workflow end-to-end', async ({ page }) => {
-  const testId = 'personal-assistant-' + Date.now();
+test('Weather Assistant weather workflow end-to-end', async ({ page }) => {
+  const testId = 'weather-assistant-' + Date.now();
 
   const config: ConversationTestConfig = {
-    agentName: 'Personal Assistant',
-    expectHandoffs: true,
-    steps: createMathWeatherConversation(true),
+    agentName: 'Weather Assistant',
+    expectHandoffs: false,
+    steps: createMathWeatherConversation(false),
   };
 
   const { thread, messages } = await runConversationTest(page, config, testId);
@@ -35,8 +35,8 @@ test('Personal Assistant weather workflow end-to-end', async ({ page }) => {
   expect(finalUserMessages[3].content).toBe('and in Atlanta?');
 
   // Verify we have weather-related tool messages
-  const toolMessages = messages.filter((m: any) => m.role === 'tool');
-  expect(toolMessages.length).toBeGreaterThanOrEqual(3); // At least 3 weather results
+  const finalToolMessages = messages.filter((m: any) => m.role === 'tool');
+  expect(finalToolMessages.length).toBeGreaterThanOrEqual(3); // At least 3 weather results
 
-  console.log(`✓ Personal Assistant test completed with ${messages.length} messages`);
+  console.log(`✓ Weather Assistant test completed with ${messages.length} messages`);
 });
