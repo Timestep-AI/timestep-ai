@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bot, MessageCircle } from 'lucide-react';
 
-const Home = () => {
+const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -116,6 +116,10 @@ const Home = () => {
         icon: "settings-cog",
         onClick: () => alert("Profile settings"),
       },
+      rightAction: {
+        icon: "home",
+        onClick: () => alert("Home"),
+      },
     },
     startScreen: {
       greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
@@ -215,4 +219,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Chat;

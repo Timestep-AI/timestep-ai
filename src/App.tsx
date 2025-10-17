@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
-import Home from "./pages/Home";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +22,7 @@ const App = () => (
             }}
           >
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Chat />} />
             </Routes>
           </BrowserRouter>
         </div>
