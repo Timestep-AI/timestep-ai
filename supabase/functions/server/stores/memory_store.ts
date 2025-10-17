@@ -339,7 +339,7 @@ export class MemoryStore<TContext = any> {
         type: 'user_message',
         id: message.id,
         thread_id: threadId,
-        content: [{ type: 'input_text', text: message.content?.text || '' }],
+        content: [{ type: 'input_text', text: message.content || '' }],
         created_at: createdAt,
         attachments: []
       } as any;
@@ -358,7 +358,9 @@ export class MemoryStore<TContext = any> {
       }
       
       // Otherwise, treat as regular assistant message
-      const content = message.content?.text ? [{ type: 'output_text', text: message.content.text, annotations: [] }] : [];
+      // Note: content is stored as a string in the database, not as an object with .text
+      const contentText = typeof message.content === 'string' ? message.content : (message.content?.text || '');
+      const content = contentText ? [{ type: 'output_text', text: contentText, annotations: [] }] : [];
       
       return {
         type: 'assistant_message',

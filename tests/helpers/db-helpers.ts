@@ -21,39 +21,27 @@ export async function initializeAuth() {
 export async function getLatestThread() {
   // Retry up to 5 times with 1 second delay to wait for data to be stored
   for (let i = 0; i < 5; i++) {
-    console.log(`Attempt ${i + 1}: Looking for threads...`);
-    
     const { data, error } = await supabase
       .from('threads')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
-    
+
     if (data) {
-      console.log('Found thread:', data);
       return data;
     }
-    
+
     if (error) {
-      console.log('Error:', error);
       if (error.code !== 'PGRST116') {
         throw error;
       }
     }
-    
+
     // Wait 1 second before retrying
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  
-  // Let's also try to get all threads to see what's in the database
-  const { data: allThreads, error: allError } = await supabase
-    .from('threads')
-    .select('*');
-  
-  console.log('All threads in database:', allThreads);
-  console.log('All threads error:', allError);
-  
+
   throw new Error('No thread found after 5 retries');
 }
 
@@ -63,10 +51,8 @@ export async function getThreadMessages(threadId: string) {
     .select('*')
     .eq('thread_id', threadId)
     .order('message_index', { ascending: true });
-  
+
   if (error) throw error;
-  
-  console.log(`Messages for thread ${threadId}:`, data);
   return data;
 }
 

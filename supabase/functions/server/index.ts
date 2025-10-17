@@ -27,11 +27,17 @@ const corsHeaders = {
 
 // Helper to extract message text from UserMessageItem
 function userMessageText(item: UserMessageItem): string {
-  return item.content
-    .filter((part) => part.type === 'input_text')
-    .map((part) => part.text)
-    .join(' ')
-    .trim();
+  // Handle both array format and string format
+  if (typeof item.content === 'string') {
+    return item.content.trim();
+  } else if (Array.isArray(item.content)) {
+    return item.content
+      .filter((part) => part.type === 'input_text')
+      .map((part) => part.text)
+      .join(' ')
+      .trim();
+  }
+  return '';
 }
 
 // Custom ChatKit server implementation
@@ -54,32 +60,37 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
       return;
     }
 
-    console.log('[TimestepChatKitServer] Processing message:', messageText, 'for thread:', thread.id, 'with agent:', context.agentId);
 
     try {
       // Load conversation history from the thread
       const threadItems = await this.store.loadThreadItems(thread.id, null, 100, 'asc');
       
-      console.log('[TimestepChatKitServer] Loaded', threadItems.data.length, 'thread items');
-      
       // Convert thread items to OpenAI messages format
       const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
       for (const threadItem of threadItems.data) {
-        console.log('[TimestepChatKitServer] Processing item:', threadItem.type, 'content type:', typeof threadItem.content);
         
-        if (threadItem.type === 'user_message') {
+        if ((threadItem as any).type === 'user_message') {
           const text = userMessageText(threadItem as UserMessageItem);
           if (text) {
             messages.push({ role: 'user', content: text });
           }
-        } else if (threadItem.type === 'assistant_message') {
+        } else if ((threadItem as any).type === 'assistant_message') {
           const assistantItem = threadItem as any;
-          const content = Array.isArray(assistantItem.content) ? assistantItem.content : [];
-          const text = content
-            .filter((part: any) => part.type === 'output_text')
-            .map((part: any) => part.text)
-            .join(' ')
-            .trim();
+          let text = '';
+          
+          // Handle different content formats
+          if (typeof assistantItem.content === 'string') {
+            // Simple string content
+            text = assistantItem.content.trim();
+          } else if (Array.isArray(assistantItem.content)) {
+            // Array of content parts
+            text = assistantItem.content
+              .filter((part: any) => part.type === 'output_text')
+              .map((part: any) => part.text)
+              .join(' ')
+              .trim();
+          }
+          
           if (text) {
             messages.push({ role: 'assistant', content: text });
           }
@@ -91,7 +102,6 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
         }
       }
 
-      console.log('[TimestepChatKitServer] Loaded', messages.length, 'previous messages from thread');
 
       // Load agent configuration from database using AgentFactory
       const agent = await this.agentFactory.createAgent(context.agentId, context.userId);
@@ -121,14 +131,8 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
         }
       });
 
-      // Add the current message
-      inputItems.push({
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text: messageText }]
-      });
-
-      console.log('[TimestepChatKitServer] Sending', inputItems.length, 'messages to agent');
+      // Note: The current message is already included in the conversation history loaded from the database
+      // No need to add it again here
 
       // Set up OpenAI model provider
       const modelProvider = new OpenAIProvider({
