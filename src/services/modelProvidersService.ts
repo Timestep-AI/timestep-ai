@@ -13,7 +13,11 @@ export interface ModelProvider {
 
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -28,7 +32,7 @@ class ModelProvidersService {
   async getAll(): Promise<ModelProvider[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/model_providers`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/model_providers`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch model providers: ${response.statusText}`);
       }

@@ -1,7 +1,11 @@
 import { MCPServer } from '@/types/mcpServer';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -23,7 +27,7 @@ class MCPServersService {
       const headers = await getAuthHeaders();
       // Add cache-busting parameter to ensure we get fresh data
       const cacheBuster = `?t=${Date.now()}`;
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers${cacheBuster}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/mcp_servers${cacheBuster}`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch MCP servers: ${response.statusText}`);
       }
@@ -62,7 +66,7 @@ class MCPServersService {
       const headers = await getAuthHeaders();
       // Add cache-busting parameter to ensure we get fresh data
       const cacheBuster = `?t=${Date.now()}`;
-      const response = await fetch(`${SERVER_BASE_URL}/mcp_servers/${id}${cacheBuster}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/mcp_servers/${id}${cacheBuster}`, { headers });
       if (response.status === 404) {
         return null;
       }
@@ -115,7 +119,7 @@ class MCPServersService {
       };
       
       const headers = await getAuthHeaders();
-      const url = `${SERVER_BASE_URL}/mcp_servers/${id}`;
+      const url = `${getServerBaseUrl()}/mcp_servers/${id}`;
       const response = await fetch(url, {
         method: 'PUT',
         headers,

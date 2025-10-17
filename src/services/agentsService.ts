@@ -1,7 +1,11 @@
 import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -15,9 +19,9 @@ const getAuthHeaders = async () => {
 class AgentsService {
   async getAll(): Promise<Agent[]> {
     try {
-      console.log('AgentsService: Fetching from', `${SERVER_BASE_URL}/agents`);
+      console.log('AgentsService: Fetching from', `${getServerBaseUrl()}/agents`);
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/agents`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/agents`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);
       }
@@ -94,7 +98,7 @@ class AgentsService {
   async deleteAll(): Promise<void> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/agents`, {
+      const response = await fetch(`${getServerBaseUrl()}/agents`, {
         method: 'DELETE',
         headers,
       });
@@ -121,7 +125,7 @@ class AgentsService {
   async search(query: string): Promise<Agent[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/agents/search?q=${encodeURIComponent(query)}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/agents/search?q=${encodeURIComponent(query)}`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to search agents: ${response.statusText}`);

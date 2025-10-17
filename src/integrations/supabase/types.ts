@@ -7,716 +7,213 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
-      agent_cards: {
-        Row: {
-          additional_interfaces: Json | null
-          agent_id: string
-          capabilities: Json
-          created_at: string | null
-          default_input_modes: Json
-          default_output_modes: Json
-          description: string
-          documentation_url: string | null
-          icon_url: string | null
-          id: string
-          name: string
-          preferred_transport: string | null
-          protocol_version: string
-          provider: Json | null
-          security: Json | null
-          security_schemes: Json | null
-          signatures: Json | null
-          skills: Json
-          supports_authenticated_extended_card: boolean | null
-          updated_at: string | null
-          url: string
-          version: string
-        }
-        Insert: {
-          additional_interfaces?: Json | null
-          agent_id: string
-          capabilities?: Json
-          created_at?: string | null
-          default_input_modes?: Json
-          default_output_modes?: Json
-          description: string
-          documentation_url?: string | null
-          icon_url?: string | null
-          id?: string
-          name: string
-          preferred_transport?: string | null
-          protocol_version?: string
-          provider?: Json | null
-          security?: Json | null
-          security_schemes?: Json | null
-          signatures?: Json | null
-          skills?: Json
-          supports_authenticated_extended_card?: boolean | null
-          updated_at?: string | null
-          url: string
-          version?: string
-        }
-        Update: {
-          additional_interfaces?: Json | null
-          agent_id?: string
-          capabilities?: Json
-          created_at?: string | null
-          default_input_modes?: Json
-          default_output_modes?: Json
-          description?: string
-          documentation_url?: string | null
-          icon_url?: string | null
-          id?: string
-          name?: string
-          preferred_transport?: string | null
-          protocol_version?: string
-          provider?: Json | null
-          security?: Json | null
-          security_schemes?: Json | null
-          signatures?: Json | null
-          skills?: Json
-          supports_authenticated_extended_card?: boolean | null
-          updated_at?: string | null
-          url?: string
-          version?: string
-        }
-        Relationships: []
-      }
       agents: {
         Row: {
           created_at: string | null
-          handoff_description: string | null
-          handoff_ids: Json | null
+          handoff_ids: string[]
           id: string
           instructions: string
-          model: string
-          model_settings: Json
           name: string
-          tool_ids: Json | null
+          tool_ids: string[]
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
-          handoff_description?: string | null
-          handoff_ids?: Json | null
-          id?: string
-          instructions: string
-          model: string
-          model_settings?: Json
-          name: string
-          tool_ids?: Json | null
+          handoff_ids?: string[]
+          id: string
+          instructions?: string
+          name?: string
+          tool_ids?: string[]
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
-          handoff_description?: string | null
-          handoff_ids?: Json | null
+          handoff_ids?: string[]
           id?: string
           instructions?: string
-          model?: string
-          model_settings?: Json
           name?: string
-          tool_ids?: Json | null
+          tool_ids?: string[]
           updated_at?: string | null
           user_id?: string
-        }
-        Relationships: []
-      }
-      api_keys: {
-        Row: {
-          created_at: string
-          id: string
-          key_encrypted: string
-          name: string
-          provider: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key_encrypted: string
-          name: string
-          provider: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key_encrypted?: string
-          name?: string
-          provider?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      artifacts: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          metadata: Json | null
-          name: string
-          task_id: string
-          updated_at: string | null
-          user_id: string
-          version: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name: string
-          task_id: string
-          updated_at?: string | null
-          user_id: string
-          version?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name?: string
-          task_id?: string
-          updated_at?: string | null
-          user_id?: string
-          version?: string | null
-        }
-        Relationships: []
-      }
-      contexts: {
-        Row: {
-          agent_id: string
-          context_id: string
-          created_at: string | null
-          id: string
-          task_histories: Json | null
-          task_states: Json | null
-          tasks: Json | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          agent_id: string
-          context_id: string
-          created_at?: string | null
-          id?: string
-          task_histories?: Json | null
-          task_states?: Json | null
-          tasks?: Json | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          agent_id?: string
-          context_id?: string
-          created_at?: string | null
-          id?: string
-          task_histories?: Json | null
-          task_states?: Json | null
-          tasks?: Json | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      invites: {
-        Row: {
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          token: string
-          updated_at: string
-          used_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          token: string
-          updated_at?: string
-          used_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          token?: string
-          updated_at?: string
-          used_at?: string | null
         }
         Relationships: []
       }
       mcp_servers: {
         Row: {
-          auth_token: string | null
-          created_at: string
-          description: string | null
-          enabled: boolean | null
+          auth_config: Json | null
+          created_at: string | null
           id: string
           name: string
-          server_url: string | null
-          updated_at: string
+          updated_at: string | null
+          url: string
           user_id: string
         }
         Insert: {
-          auth_token?: string | null
-          created_at?: string
-          description?: string | null
-          enabled?: boolean | null
-          id?: string
+          auth_config?: Json | null
+          created_at?: string | null
+          id: string
           name: string
-          server_url?: string | null
-          updated_at?: string
+          updated_at?: string | null
+          url: string
           user_id: string
         }
         Update: {
-          auth_token?: string | null
-          created_at?: string
-          description?: string | null
-          enabled?: boolean | null
+          auth_config?: Json | null
+          created_at?: string | null
           id?: string
           name?: string
-          server_url?: string | null
-          updated_at?: string
+          updated_at?: string | null
+          url?: string
           user_id?: string
         }
         Relationships: []
-      }
-      model_providers: {
-        Row: {
-          api_key: string | null
-          base_url: string
-          created_at: string | null
-          id: string
-          models_url: string
-          provider: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          api_key?: string | null
-          base_url: string
-          created_at?: string | null
-          id: string
-          models_url: string
-          provider: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          api_key?: string | null
-          base_url?: string
-          created_at?: string | null
-          id?: string
-          models_url?: string
-          provider?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      parts: {
-        Row: {
-          artifact_id: string
-          content: Json | null
-          created_at: string | null
-          file_bytes: string | null
-          file_name: string | null
-          file_uri: string | null
-          id: string
-          kind: string
-          metadata: Json | null
-          mime_type: string | null
-          reference_artifacts: Json | null
-          user_id: string
-        }
-        Insert: {
-          artifact_id: string
-          content?: Json | null
-          created_at?: string | null
-          file_bytes?: string | null
-          file_name?: string | null
-          file_uri?: string | null
-          id?: string
-          kind: string
-          metadata?: Json | null
-          mime_type?: string | null
-          reference_artifacts?: Json | null
-          user_id: string
-        }
-        Update: {
-          artifact_id?: string
-          content?: Json | null
-          created_at?: string | null
-          file_bytes?: string | null
-          file_name?: string | null
-          file_uri?: string | null
-          id?: string
-          kind?: string
-          metadata?: Json | null
-          mime_type?: string | null
-          reference_artifacts?: Json | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parts_artifact_id_fkey"
-            columns: ["artifact_id"]
-            isOneToOne: false
-            referencedRelation: "artifacts"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {
           avatar_url: string | null
+          created_at: string | null
+          email: string | null
           full_name: string | null
           id: string
           updated_at: string | null
-          username: string | null
-          website: string | null
         }
         Insert: {
           avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
           updated_at?: string | null
-          username?: string | null
-          website?: string | null
         }
         Update: {
           avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
           updated_at?: string | null
-          username?: string | null
-          website?: string | null
         }
         Relationships: []
       }
-      push_notification_configs: {
+      thread_messages: {
         Row: {
-          created_at: string | null
-          headers: Json | null
-          id: string
-          status: string
-          task_id: string
-          updated_at: string | null
-          user_id: string
-          webhook_url: string
-        }
-        Insert: {
-          created_at?: string | null
-          headers?: Json | null
-          id?: string
-          status?: string
-          task_id: string
-          updated_at?: string | null
-          user_id: string
-          webhook_url: string
-        }
-        Update: {
-          created_at?: string | null
-          headers?: Json | null
-          id?: string
-          status?: string
-          task_id?: string
-          updated_at?: string | null
-          user_id?: string
-          webhook_url?: string
-        }
-        Relationships: []
-      }
-      spans: {
-        Row: {
-          attributes: Json | null
-          created_at: string | null
-          duration_ms: number | null
-          end_time: string | null
-          error_message: string | null
-          events: Json | null
-          id: string
-          input_data: Json | null
-          kind: string
-          links: Json | null
-          name: string
-          operation_details: Json | null
-          operation_type: string | null
-          output_data: Json | null
-          parent_span_id: string | null
-          span_id: string
-          start_time: string
-          status: string
-          token_usage: Json | null
-          trace_id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          attributes?: Json | null
-          created_at?: string | null
-          duration_ms?: number | null
-          end_time?: string | null
-          error_message?: string | null
-          events?: Json | null
-          id?: string
-          input_data?: Json | null
-          kind?: string
-          links?: Json | null
-          name: string
-          operation_details?: Json | null
-          operation_type?: string | null
-          output_data?: Json | null
-          parent_span_id?: string | null
-          span_id: string
-          start_time: string
-          status?: string
-          token_usage?: Json | null
-          trace_id: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          attributes?: Json | null
-          created_at?: string | null
-          duration_ms?: number | null
-          end_time?: string | null
-          error_message?: string | null
-          events?: Json | null
-          id?: string
-          input_data?: Json | null
-          kind?: string
-          links?: Json | null
-          name?: string
-          operation_details?: Json | null
-          operation_type?: string | null
-          output_data?: Json | null
-          parent_span_id?: string | null
-          span_id?: string
-          start_time?: string
-          status?: string
-          token_usage?: Json | null
-          trace_id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "spans_trace_id_fkey"
-            columns: ["trace_id"]
-            isOneToOne: false
-            referencedRelation: "traces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_artifact_events: {
-        Row: {
-          artifact_id: string
-          change_data: Json | null
-          created_at: string | null
-          event_type: string
-          id: string
-          metadata: Json | null
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          artifact_id: string
-          change_data?: Json | null
-          created_at?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          artifact_id?: string
-          change_data?: Json | null
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_artifact_events_artifact_id_fkey"
-            columns: ["artifact_id"]
-            isOneToOne: false
-            referencedRelation: "artifacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_status_events: {
-        Row: {
-          created_at: string | null
-          id: string
-          metadata: Json | null
-          new_status: string
-          previous_status: string | null
-          reason: string | null
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          metadata?: Json | null
-          new_status: string
-          previous_status?: string | null
-          reason?: string | null
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          metadata?: Json | null
-          new_status?: string
-          previous_status?: string | null
-          reason?: string | null
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      tasks: {
-        Row: {
-          created_at: string | null
-          id: string
-          task_data: Json
-          task_id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          task_data: Json
-          task_id: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          task_data?: Json
-          task_id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      traces: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          attributes: Json | null
-          context: Json | null
-          context_id: string | null
-          created_at: string | null
-          duration_ms: number | null
-          end_time: string | null
-          error_message: string | null
-          id: string
-          model_name: string | null
-          name: string
-          span_count: number | null
-          start_time: string
-          status: string
-          trace_data: Json | null
-          trace_id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_name?: string | null
-          attributes?: Json | null
-          context?: Json | null
-          context_id?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          end_time?: string | null
-          error_message?: string | null
-          id?: string
-          model_name?: string | null
-          name: string
-          span_count?: number | null
-          start_time: string
-          status?: string
-          trace_data?: Json | null
-          trace_id: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          agent_id?: string | null
-          agent_name?: string | null
-          attributes?: Json | null
-          context?: Json | null
-          context_id?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          end_time?: string | null
-          error_message?: string | null
-          id?: string
-          model_name?: string | null
-          name?: string
-          span_count?: number | null
-          start_time?: string
-          status?: string
-          trace_data?: Json | null
-          trace_id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_invites: {
-        Row: {
+          content: string | null
           created_at: string
           id: string
-          invites_remaining: number
+          message_index: number
+          name: string | null
+          role: string
+          thread_id: string
+          tool_call_id: string | null
+          tool_calls: Json | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id: string
+          message_index: number
+          name?: string | null
+          role: string
+          thread_id: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          message_index?: number
+          name?: string | null
+          role?: string
+          thread_id?: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      thread_run_states: {
+        Row: {
+          state_data: string
+          thread_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          created_at?: string
-          id?: string
-          invites_remaining?: number
+          state_data: string
+          thread_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          created_at?: string
+          state_data?: string
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      threads: {
+        Row: {
+          created_at: number
+          id: string
+          metadata: Json | null
+          object: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at: number
+          id: string
+          metadata?: Json | null
+          object?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: number
           id?: string
-          invites_remaining?: number
+          metadata?: Json | null
+          object?: string
           updated_at?: string
           user_id?: string
         }
@@ -727,104 +224,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_email_signup: {
-        Args: { check_email: string }
-        Returns: boolean
-      }
-      create_encrypted_api_key: {
-        Args: {
-          p_key: string
-          p_name: string
-          p_passphrase: string
-          p_provider: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key_encrypted: string
-          name: string
-          provider: string
-          updated_at: string
-          user_id: string
-        }
-      }
-      create_invite: {
-        Args: { invite_email: string }
-        Returns: {
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          token: string
-          updated_at: string
-          used_at: string | null
-        }
-      }
-      create_invite_for_email: {
-        Args: { invite_email: string }
-        Returns: {
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          token: string
-          updated_at: string
-          used_at: string | null
-        }
-      }
-      decrease_user_invites: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      get_decrypted_api_key: {
-        Args: { p_id: string; p_passphrase: string }
-        Returns: string
-      }
-      get_decrypted_api_key_service_role: {
-        Args: { p_id: string; p_passphrase: string }
-        Returns: string
-      }
-      initialize_first_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_encrypted_api_key: {
-        Args: {
-          p_id: string
-          p_key?: string
-          p_name?: string
-          p_passphrase?: string
-          p_provider?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key_encrypted: string
-          name: string
-          provider: string
-          updated_at: string
-          user_id: string
-        }
-      }
-      use_invite: {
-        Args: { invite_token: string }
-        Returns: {
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          token: string
-          updated_at: string
-          used_at: string | null
-        }
-      }
-      use_invite_and_setup_user: {
-        Args: { user_email: string; user_id: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
@@ -953,7 +353,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

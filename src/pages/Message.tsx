@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageSquare, Calendar, User, Bot, Settings, Edit, Trash2, Paperclip } from 'lucide-react';
 import { Message as MessageType } from '@/types/message';
-import { messagesService } from '@/services/messagesService';
 import { chatsService } from '@/services/chatsService';
 
 export const Message = () => {

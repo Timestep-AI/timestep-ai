@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AuthProvider } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
+import Home from "./pages/Home";
 import Agents from "./pages/Agents";
 import Agent from "./pages/Agent";
 import ModelProviders from "./pages/ModelProviders";
@@ -40,6 +41,7 @@ const App = () => (
             }}
           >
             <Routes>
+              <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/agents" element={<AuthGuard><Agents /></AuthGuard>} />
               <Route path="/agents/:id" element={<AuthGuard><Agent /></AuthGuard>} />
@@ -57,7 +59,6 @@ const App = () => (
               <Route path="/tool_providers/:id" element={<AuthGuard><MCPServerDetails /></AuthGuard>} />
               <Route path="/model_providers/:id" element={<AuthGuard><ModelProviderDetails /></AuthGuard>} />
               <Route path="/logout" element={<AuthGuard><Logout /></AuthGuard>} />
-              <Route path="/" element={<AuthGuard><Agents /></AuthGuard>} />
             </Routes>
           </BrowserRouter>
         </div>

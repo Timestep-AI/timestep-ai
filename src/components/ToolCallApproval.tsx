@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Settings, Eye } from 'lucide-react';
-import { PendingToolCall } from '@/types/a2a';
+import { PendingToolCall } from '@/types/toolCall';
 
 interface ToolCallApprovalProps {
   toolCall: PendingToolCall;

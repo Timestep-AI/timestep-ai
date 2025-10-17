@@ -22,7 +22,8 @@ export const useVersion = () => {
           return;
         }
 
-        const response = await fetch('https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server/version', {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+        const response = await fetch(`${supabaseUrl}/functions/v1/server/version`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'

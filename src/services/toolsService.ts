@@ -1,7 +1,11 @@
 import { Tool, CreateToolRequest, UpdateToolRequest } from '@/types/tool';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -16,7 +20,7 @@ export const toolsService = {
   async getAll(): Promise<Tool[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/tools`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/tools`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch tools: ${response.statusText}`);
       }
@@ -44,7 +48,7 @@ export const toolsService = {
   async getById(id: string): Promise<Tool | undefined> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/tools/${id}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/tools/${id}`, { headers });
       if (response.status === 404) {
         return undefined;
       }
@@ -86,7 +90,7 @@ export const toolsService = {
   async deleteAll(): Promise<void> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/tools`, {
+      const response = await fetch(`${getServerBaseUrl()}/tools`, {
         method: 'DELETE',
         headers,
       });
@@ -103,7 +107,7 @@ export const toolsService = {
   async callTool(name: string, args: Record<string, any> = {}): Promise<string> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/tools/${name}/call`, {
+      const response = await fetch(`${getServerBaseUrl()}/tools/${name}/call`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ arguments: args }),

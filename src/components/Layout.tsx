@@ -2,7 +2,6 @@ import { ReactNode, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { BottomNav } from './BottomNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -50,12 +49,11 @@ export const Layout = ({ children }: LayoutProps) => {
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
           />
-          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 w-full overflow-y-auto pb-24 md:pb-6">
+          <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 w-full overflow-y-auto">
             {children}
           </main>
         </div>
       </div>
-      <BottomNav />
     </div>
   );
 };

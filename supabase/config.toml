@@ -1,4 +1,32 @@
 project_id = "ohzbghitbjryfpmucgju"
 
+[edge_runtime]
+enabled = true
+
+[edge_runtime.secrets]
+OPENAI_API_KEY = "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"
+
+[auth]
+enabled = true
+# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
+# in emails.
+site_url = "http://localhost:8080"
+# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
+additional_redirect_urls = ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
+# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
+jwt_expiry = 3600
+# Path to JWT signing key. DO NOT commit your signing keys file to git.
+# signing_keys_path = "./signing_keys.json"
+# If disabled, the refresh token will never expire.
+enable_refresh_token_rotation = true
+# Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
+# Requires enable_refresh_token_rotation = true.
+refresh_token_reuse_interval = 10
+# Allow/disallow new user signups to your project.
+enable_signup = true
+# Allow/disallow anonymous sign-ins to your project.
+enable_anonymous_sign_ins = true
+
 [functions.server]
-verify_jwt = false
+verify_jwt = true
+import_map = "./functions/server/deno.json"

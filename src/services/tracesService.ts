@@ -1,7 +1,11 @@
 import { Trace, CreateTraceRequest, UpdateTraceRequest } from '@/types/trace';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -16,7 +20,7 @@ export const tracesService = {
   async getAll(): Promise<Trace[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/traces`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/traces`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch traces: ${response.statusText}`);
       }
@@ -31,7 +35,7 @@ export const tracesService = {
   async getById(id: string): Promise<Trace | undefined> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/traces/${id}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/traces/${id}`, { headers });
       if (response.status === 404) {
         return undefined;
       }

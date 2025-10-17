@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { 
+  Terminal,
   Users, 
   MessageSquare, 
   Cpu, 
@@ -20,6 +21,7 @@ interface SidebarProps {
 }
 
 const navItems = [
+  { icon: Terminal, label: 'Home', path: '/' },
   { icon: Users, label: 'Agents', path: '/agents' },
   { icon: MessageSquare, label: 'Chats', path: '/chats' },
   { icon: Server, label: 'Model Providers', path: '/model_providers' },
@@ -38,8 +40,8 @@ export const Sidebar = ({ isCollapsed, onClose }: SidebarProps) => {
   const { version, loading } = useVersion();
 
   const isActive = (path: string) => {
-    if (path === '/agents') {
-      return location.pathname === '/' || location.pathname === '/agents';
+    if (path === '/') {
+      return location.pathname === '/';
     }
     return location.pathname === path;
   };

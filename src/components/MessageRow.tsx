@@ -90,8 +90,7 @@ export const MessageRow = ({ message, contextId, taskId }: MessageRowProps) => {
         } else if (typeof parsed === 'string') {
           responseText = parsed;
         } else {
-          // Fallback to JSON if no text found
-          responseText = JSON.stringify(parsed, null, 2);
+          throw new Error('Unable to extract text from message content');
         }
       } catch {
         responseText = message.content;

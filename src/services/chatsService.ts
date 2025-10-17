@@ -2,7 +2,11 @@ import { Chat, CreateChatRequest, UpdateChatRequest } from '@/types/chat';
 import { Message } from '@/types/message';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -38,10 +42,10 @@ class ChatsService {
 
   async getAll(): Promise<Chat[]> {
     try {
-      console.log('ChatsService: Fetching chats from', `${SERVER_BASE_URL}/chats`);
+      console.log('ChatsService: Fetching chats from', `${getServerBaseUrl()}/chats`);
       const headers = await getAuthHeaders();
       console.log('ChatsService: Auth headers:', headers);
-      const response = await fetch(`${SERVER_BASE_URL}/chats`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/chats`, { headers });
       console.log('ChatsService: Response status:', response.status);
       if (!response.ok) {
         throw new Error(`Failed to fetch chats: ${response.statusText}`);
@@ -104,7 +108,7 @@ class ChatsService {
       
       // Get the raw context data from the server
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/chats`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/chats`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch contexts: ${response.statusText}`);
       }
@@ -124,7 +128,7 @@ class ChatsService {
     try {
       // Use the dedicated history endpoint like the CLI does
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/contexts/${chatId}/history`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/contexts/${chatId}/history`, { headers });
       
       if (!response.ok) {
         console.error(`Failed to fetch conversation history: ${response.statusText}`);
@@ -251,7 +255,7 @@ class ChatsService {
           status: 'sent' as const,
           timestamp: new Date().toISOString(),
           isToolCall,
-          rawMessage: rawMessage || msg // Use processed rawMessage or fallback to original msg
+          rawMessage: rawMessage
         };
       });
     } catch (error) {
@@ -263,7 +267,7 @@ class ChatsService {
   async getById(id: string): Promise<Chat | null> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/chats/${id}`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/chats/${id}`, { headers });
       if (response.status === 404) {
         return null;
       }

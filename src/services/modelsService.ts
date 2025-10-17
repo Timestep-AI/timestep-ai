@@ -1,7 +1,11 @@
 import { Model, CreateModelRequest, UpdateModelRequest } from '@/types/model';
 import { supabase } from '@/integrations/supabase/client';
 
-const SERVER_BASE_URL = 'https://ohzbghitbjryfpmucgju.supabase.co/functions/v1/server';
+// Use environment-based URL for server functions
+const getServerBaseUrl = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+  return `${supabaseUrl}/functions/v1/server`;
+};
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -16,7 +20,7 @@ class ModelsService {
   async getAll(): Promise<Model[]> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${SERVER_BASE_URL}/models`, { headers });
+      const response = await fetch(`${getServerBaseUrl()}/models`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }

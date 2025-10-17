@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { 
+  Terminal,
   Users, 
   MessageSquare, 
   Cpu, 
@@ -9,6 +10,7 @@ import {
 import { useLocation, Link } from 'react-router-dom';
 
 const navItems = [
+  { icon: Terminal, label: 'Sandbox', path: '/sandbox' },
   { icon: Users, label: 'Agents', path: '/agents' },
   { icon: MessageSquare, label: 'Chats', path: '/chats' },
   { icon: Cpu, label: 'Models', path: '/models' },
@@ -20,8 +22,8 @@ export const BottomNav = () => {
   const location = useLocation();
 
   const isActive = (path: string) => {
-    if (path === '/agents') {
-      return location.pathname === '/' || location.pathname === '/agents';
+    if (path === '/sandbox') {
+      return location.pathname === '/' || location.pathname === '/sandbox';
     }
     return location.pathname === path;
   };

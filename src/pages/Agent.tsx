@@ -68,9 +68,11 @@ export const Agent = () => {
     if (lastDotIndex !== -1 && lastDotIndex < toolId.length - 1) {
       return toolId.substring(lastDotIndex + 1);
     }
-    // Fallback to trying to find in tools list or return the full ID
     const foundTool = allTools.find(t => t.id === toolId);
-    return foundTool?.name || toolId;
+    if (!foundTool) {
+      throw new Error(`Tool not found: ${toolId}`);
+    }
+    return foundTool.name;
   };
 
   const handleEdit = () => {

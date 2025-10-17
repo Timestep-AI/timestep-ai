@@ -66,13 +66,11 @@ export const ToolTestingForm = ({ tool }: ToolTestingFormProps) => {
           else if (parsed.result && typeof parsed.result === 'string') {
             setResult(parsed.result);
           }
-          // Fallback to raw response
           else {
-            setResult(response);
+            throw new Error('Unable to parse tool response');
           }
-        } catch {
-          // If parsing fails, show the raw response
-          setResult(response);
+        } catch (error) {
+          throw new Error(`Failed to parse tool response: ${error}`);
         }
       } else if (typeof response === 'object' && response !== null) {
         // Handle object response directly
