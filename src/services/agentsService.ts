@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 // Use environment-based URL for server functions
 const getServerBaseUrl = () => {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
-  return `${supabaseUrl}/functions/v1/server`;
+  return `${supabaseUrl}/functions/v1/agent-chat`;
 };
 
 // Helper function to get auth headers

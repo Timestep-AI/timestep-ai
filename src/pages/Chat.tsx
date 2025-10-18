@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
 import { Agent } from '@/types/agent';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot } from 'lucide-react';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSelect, IonSelectOption, IonIcon, IonSpinner, IonButtons } from '@ionic/react';
+import { personCircleOutline } from 'ionicons/icons';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,7 +16,7 @@ const Chat = () => {
   // Get server base URL
   const getServerBaseUrl = () => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
-    return `${supabaseUrl}/functions/v1/server`;
+    return `${supabaseUrl}/functions/v1/agent-chat`;
   };
 
   // Load agents
@@ -76,7 +76,8 @@ const Chat = () => {
   };
 
   // Handle agent switching
-  const handleAgentChange = (agentId: string) => {
+  const handleAgentChange = (e: CustomEvent) => {
+    const agentId = e.detail.value;
     const agent = agents.find(a => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
@@ -154,44 +155,49 @@ const Chat = () => {
 
   if (!isAuthenticated || loadingAgents) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {!isAuthenticated ? 'Initializing chat...' : 'Loading agents...'}
-          </p>
-        </div>
-      </div>
+      <IonPage>
+        <IonContent className="ion-padding">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <IonSpinner name="crescent" />
+            <p style={{ marginTop: '1rem' }}>
+              {!isAuthenticated ? 'Initializing chat...' : 'Loading agents...'}
+            </p>
+          </div>
+        </IonContent>
+      </IonPage>
     );
   }
 
   return (
-    <div className="h-screen w-screen relative">
-      {/* Agent Selection Dropdown */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="flex items-center gap-2 bg-background/95 backdrop-blur-sm border rounded-lg px-3 py-2 shadow-lg">
-          <Bot className="w-4 h-4 text-muted-foreground" />
-          <Select value={selectedAgent?.id || ""} onValueChange={handleAgentChange}>
-            <SelectTrigger className="w-48 h-8 text-sm border-0 bg-transparent shadow-none">
-              <SelectValue placeholder="Select Agent" />
-            </SelectTrigger>
-            <SelectContent>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Timestep AI</IonTitle>
+          <IonButtons slot="end">
+            <IonIcon icon={personCircleOutline} style={{ fontSize: '24px', marginRight: '8px' }} />
+            <IonSelect
+              value={selectedAgent?.id || ""}
+              placeholder="Select Agent"
+              onIonChange={handleAgentChange}
+              interface="popover"
+            >
               {agents.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id}>
+                <IonSelectOption key={agent.id} value={agent.id}>
                   {agent.name}
-                </SelectItem>
+                </IonSelectOption>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <ChatKit 
-        key={selectedAgent?.id || 'default'} 
-        control={control} 
-        className="h-full w-full" 
-      />
-    </div>
+            </IonSelect>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent fullscreen>
+        <ChatKit
+          key={selectedAgent?.id || 'default'}
+          control={control}
+          className="h-full w-full"
+        />
+      </IonContent>
+    </IonPage>
   );
 };
 

@@ -6,6 +6,7 @@ import { AgentFactory } from './services/agent_service.ts'
 import { Runner, RunConfig } from '@openai/agents-core'
 import { OpenAIProvider, setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/agents-openai'
 import type { ThreadMetadata, UserMessageItem, ThreadStreamEvent } from './types/chatkit-types.ts'
+import { addTimestepAITraceProcessor } from './services/tracing_service.ts'
 
 // Configure OpenAI API key and tracing exporter
 const DEFAULT_OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -19,6 +20,12 @@ setDefaultOpenAITracingExporter();
 
 console.log('[TimestepChatKitServer] ✅ OpenAI HTTP Tracing Exporter configured');
 console.log('[TimestepChatKitServer] Traces will be sent to: https://api.openai.com/v1/traces/ingest');
+
+// Add Timestep AI trace processor to send traces to our Supabase edge function
+addTimestepAITraceProcessor(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,7 +66,6 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
     if (!messageText) {
       return;
     }
-
 
     try {
       // Load conversation history from the thread
@@ -214,7 +220,7 @@ serve(async (req) => {
     console.log('Request path:', path)
 
     // Handle different path patterns (Supabase strips /functions/v1 prefix)
-    if (path === '/server' || path === '/server/') {
+    if (path === '/agent-chat' || path === '/agent-chat/') {
       return new Response(
         JSON.stringify({ message: "Welcome to the Timestep AI ChatKit Server!" }),
         { 
@@ -225,7 +231,7 @@ serve(async (req) => {
     }
 
     // Agents API endpoints
-    if (path === '/server/agents' && req.method === 'GET') {
+    if (path === '/agent-chat/agents' && req.method === 'GET') {
       try {
         console.log('Agents API request for user:', userId);
         
@@ -262,7 +268,7 @@ serve(async (req) => {
     }
 
     // Agent-specific ChatKit API endpoints
-    if (path.startsWith('/server/agents/') && path.includes('/chatkit')) {
+    if (path.startsWith('/agent-chat/agents/') && path.includes('/chatkit')) {
       try {
         // Extract agent ID from path: /server/agents/{agentId}/chatkit
         const pathParts = path.split('/');
@@ -346,9 +352,9 @@ serve(async (req) => {
               userJwt: req.headers.get('Authorization') ?? '',
               agentId: agentId // Use the agent ID from the URL
             };
-            
+
             const chatKitServer = new TimestepChatKitServer(store, agentFactory, context);
-            
+
             // Process the request
             const result = await chatKitServer.process(JSON.stringify(body), context);
             
@@ -388,20 +394,20 @@ serve(async (req) => {
     }
 
     // Legacy ChatKit API endpoints (for backward compatibility)
-    if (path.startsWith('/server/api/chatkit')) {
+    if (path.startsWith('/agent-chat/api/chatkit')) {
       try {
         // Handle ChatKit session creation
-        if (path === '/server/api/chatkit/session' && req.method === 'POST') {
+        if (path === '/agent-chat/api/chatkit/session' && req.method === 'POST') {
           throw new Error('ChatKit session creation not implemented - requires real OpenAI API integration');
         }
 
         // Handle ChatKit upload
-        if (path === '/server/api/chatkit/upload' && req.method === 'POST') {
+        if (path === '/agent-chat/api/chatkit/upload' && req.method === 'POST') {
           throw new Error('ChatKit upload not implemented - requires real file storage integration');
         }
 
         // Handle main ChatKit API requests
-        if (path === '/server/api/chatkit' || path.startsWith('/server/api/chatkit/')) {
+        if (path === '/agent-chat/api/chatkit' || path.startsWith('/agent-chat/api/chatkit/')) {
           console.log('ChatKit API request for user:', userId, 'Method:', req.method, 'Path:', path)
           
           if (req.method === 'POST') {

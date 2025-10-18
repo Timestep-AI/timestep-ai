@@ -49,21 +49,29 @@ export async function runConversationTest(
   // Step 1: Navigate and select agent
   await page.goto('/');
   await expect(page.locator('iframe[name="chatkit"]')).toBeVisible();
-  await expect(page.locator('[role="combobox"]')).toBeVisible();
+
+  // Wait for IonSelect to be visible
+  await expect(page.locator('ion-select')).toBeVisible();
 
   // Wait for agents to load (only for Weather Assistant which needs more time)
   if (agentName === 'Weather Assistant') {
     await page.waitForTimeout(5000);
   }
 
-  await page.locator('[role="combobox"]').click();
+  // Click the IonSelect to open the popover
+  await page.locator('ion-select').click();
+
+  // Wait for the popover to appear
+  await page.waitForSelector('ion-popover', { state: 'visible', timeout: 5000 });
 
   // Wait for options to load (only for Weather Assistant)
   if (agentName === 'Weather Assistant') {
     await page.waitForTimeout(2000);
   }
 
-  await page.locator(`[role="option"]:has-text("${agentName}")`).click();
+  // Click the option within the popover
+  // The options are rendered inside the ion-popover overlay
+  await page.locator('ion-popover').getByText(agentName, { exact: true }).click();
 
   const chatFrame = page.frameLocator('iframe[name="chatkit"]');
   await expect(chatFrame.locator('h2')).toContainText(
