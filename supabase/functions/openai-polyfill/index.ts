@@ -3,10 +3,11 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleEmbeddingsRequest } from './apis/embeddings_api.ts';
 import { handleIngestRequest } from './apis/traces_api.ts';
+import { handleVectorStoresRequest } from './apis/vector_stores_api.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey, openai-beta',
 };
 
@@ -68,11 +69,14 @@ serve(async (req) => {
     } else if (url.pathname.endsWith('/ingest')) {
       // Handle OpenAI Agents SDK format: { data: [ {...trace/span...}, ... ] }
       return await handleIngestRequest(req, supabaseClient, user.id);
+    } else if (url.pathname.includes('/vector_stores')) {
+      // Handle OpenAI Vector Stores API endpoints
+      return await handleVectorStoresRequest(req, supabaseClient, user.id, url.pathname);
     } else {
       // Return 404 for unknown endpoints
       return new Response(
         JSON.stringify({
-          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest'
+          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest, /vector_stores'
         }),
         {
           status: 404,
