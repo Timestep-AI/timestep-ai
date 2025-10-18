@@ -4,6 +4,7 @@ project_id = "ohzbghitbjryfpmucgju"
 enabled = true
 
 [edge_runtime.secrets]
+HF_TOKEN = "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"
 OPENAI_API_KEY = "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"
 
 [auth]
