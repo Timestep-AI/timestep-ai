@@ -4,6 +4,7 @@ import { setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/ag
 import { addTimestepAITraceProcessor } from './services/tracing_service.ts'
 import { handleAgentsRequest } from './apis/agent_api.ts'
 import { handleAgentChatKitRequest } from './apis/chatkit_api.ts'
+import { handleTracesRequest } from './apis/traces_api.ts'
 
 // Configure OpenAI API key and tracing exporter
 const DEFAULT_OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -33,25 +34,40 @@ serve(async (req) => {
   }
 
   try {
+    // Get the Authorization header
+    const authHeader = req.headers.get('Authorization');
+
     // Create a Supabase client with the Auth context of the function
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader || '' } } }
     )
 
     // Get the session or user object
     const {
-      data: { user },
+      data: { user }
     } = await supabaseClient.auth.getUser()
 
-    // For development with --no-verify-jwt, create a mock user if none exists
-    let userId = user?.id;
-    if (!userId) {
-      // Create a mock user ID for development - use a consistent UUID
-      userId = '701c71d2-a48a-421a-a89b-b3aacb9fbde3';
-      console.log('[Server] No user found, using mock user ID for development:', userId);
+      // Require authentication (including anonymous users)
+      if (!user?.id) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+
+    const userId = user.id;
+
+    // Extract JWT token for trace processor
+    const userJwt = authHeader.replace('Bearer ', '');
+    
+    // Add trace processor for this user/request
+    addTimestepAITraceProcessor(Deno.env.get('SUPABASE_URL') ?? '', userJwt);
+    console.log(`[TimestepChatKitServer] ✅ Trace processor added for user: ${userId}`);
 
     const url = new URL(req.url)
     const path = url.pathname
@@ -72,6 +88,11 @@ serve(async (req) => {
     // Agents API endpoints
     if (path === '/agent-chat/agents' && req.method === 'GET') {
       return await handleAgentsRequest(userId, req.headers.get('Authorization') ?? '');
+    }
+
+    // Traces API endpoints
+    if (path === '/agent-chat/traces' && req.method === 'GET') {
+      return await handleTracesRequest(req, supabaseClient, userId);
     }
 
     // Agent-specific ChatKit API endpoints

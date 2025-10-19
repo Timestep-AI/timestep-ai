@@ -528,7 +528,7 @@ You are an AI agent acting as a personal assistant.`,
       return;
     }
 
-    // Create it
+    // Create it using the user's JWT (respects RLS)
     const { error } = await supabase.from('mcp_servers').insert({
       id: defaultServerId,
       user_id: userId,

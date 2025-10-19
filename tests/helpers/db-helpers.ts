@@ -80,12 +80,84 @@ export async function getThreadRunStates(threadId: string) {
   return data;
 }
 
+export async function getTracesForThread(threadId: string) {
+  const { data, error } = await supabase
+    .from('traces')
+    .select('*')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getLatestTraceForThread(threadId: string) {
+  const { data, error } = await supabase
+    .from('traces')
+    .select('*')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllTraces() {
+  const { data, error } = await supabase
+    .from('traces')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getSpansForTrace(traceId: string) {
+  const { data, error } = await supabase
+    .from('spans')
+    .select('*')
+    .eq('trace_id', traceId)
+    .order('start_time', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getResponsesForThread(threadId: string) {
+  const { data, error } = await supabase
+    .from('responses')
+    .select('*')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
 /**
  * Clean up test data for a specific thread.
  * This is more selective than clearing all data, allowing parallel tests to run safely.
  */
 export async function cleanupThreadData(threadId: string) {
-  // Delete in order: messages first, then run states, then thread
+  // Delete in order: spans, traces, responses, messages, run states, then thread
+  await supabase
+    .from('spans')
+    .delete()
+    .eq('thread_id', threadId);
+
+  await supabase
+    .from('traces')
+    .delete()
+    .eq('thread_id', threadId);
+
+  await supabase
+    .from('responses')
+    .delete()
+    .eq('thread_id', threadId);
+
   await supabase
     .from('thread_messages')
     .delete()
@@ -118,6 +190,24 @@ export async function cleanupOldTestData() {
 
   if (oldThreads && oldThreads.length > 0) {
     const threadIds = oldThreads.map(t => t.id);
+
+    // Delete spans
+    await supabase
+      .from('spans')
+      .delete()
+      .in('thread_id', threadIds);
+
+    // Delete traces
+    await supabase
+      .from('traces')
+      .delete()
+      .in('thread_id', threadIds);
+
+    // Delete responses
+    await supabase
+      .from('responses')
+      .delete()
+      .in('thread_id', threadIds);
 
     // Delete messages
     await supabase

@@ -6,6 +6,7 @@ import { handleIngestRequest } from './apis/traces_api.ts';
 import { handleVectorStoresRequest } from './apis/vector_stores_api.ts';
 import { handleFilesRequest } from './apis/files_api.ts';
 import { handleUploadsRequest } from './apis/uploads_api.ts';
+import { handleCreateResponse, handleRetrieveResponse, handleDeleteResponse } from './apis/responses_api.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,11 +84,35 @@ serve(async (req) => {
     } else if (url.pathname.includes('/files')) {
       // Handle OpenAI Files API endpoints
       return await handleFilesRequest(req, supabaseClient, user.id, url.pathname, userJwt);
+    } else if (url.pathname.includes('/responses')) {
+      // Handle OpenAI Responses API endpoints
+      const pathParts = url.pathname.split('/');
+      const responsesIndex = pathParts.findIndex(part => part === 'responses');
+      const responseId = pathParts[responsesIndex + 1];
+
+      if (req.method === 'POST' && !responseId) {
+        // POST /v1/responses - Create response
+        return await handleCreateResponse(req, supabaseClient, user.id);
+      } else if (req.method === 'GET' && responseId) {
+        // GET /v1/responses/:id - Retrieve response
+        return await handleRetrieveResponse(responseId, supabaseClient, user.id);
+      } else if (req.method === 'DELETE' && responseId) {
+        // DELETE /v1/responses/:id - Delete response
+        return await handleDeleteResponse(responseId, supabaseClient, user.id);
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Invalid responses endpoint' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
     } else {
       // Return 404 for unknown endpoints
       return new Response(
         JSON.stringify({
-          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest, /vector_stores, /uploads, /files'
+          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest, /vector_stores, /uploads, /files, /responses'
         }),
         {
           status: 404,

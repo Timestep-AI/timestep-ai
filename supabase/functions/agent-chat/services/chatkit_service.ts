@@ -108,12 +108,19 @@ export abstract class ChatKitServer<TContext = any> {
           modelProvider: modelProvider,
           traceIncludeSensitiveData: true,
           tracingDisabled: false,
+          metadata: {
+            thread_id: thread.id,
+            user_id: (this.context as any).userId,
+          },
         };
 
         const runner = new Runner(runConfig);
 
         // Resume the agent with the loaded state
-        const result = await runner.run(agent, runState, { stream: true });
+        const result = await runner.run(agent, runState, { 
+          context: { threadId: thread.id, userId: (this.context as any).userId },
+          stream: true 
+        });
         
         // Clear the run state after resuming so it doesn't interfere with new messages
         await this.store.clearRunState(thread.id);
@@ -172,12 +179,19 @@ export abstract class ChatKitServer<TContext = any> {
           modelProvider: modelProvider,
           traceIncludeSensitiveData: true,
           tracingDisabled: false,
+          metadata: {
+            thread_id: thread.id,
+            user_id: (this.context as any).userId,
+          },
         };
 
         const runner = new Runner(runConfig);
 
         // Resume the agent with the loaded state
-        const result = await runner.run(agent, runState, { stream: true });
+        const result = await runner.run(agent, runState, { 
+          context: { threadId: thread.id, userId: (this.context as any).userId },
+          stream: true 
+        });
         
         // Clear the run state after resuming so it doesn't interfere with new messages
         await this.store.clearRunState(thread.id);
@@ -452,7 +466,10 @@ export async function* streamAgentResponse(
   result: AsyncIterable<any>,
   threadId: string,
   store: MemoryStore<any>,
-  runner?: any
+  runner?: any,
+  supabaseUrl?: string,
+  userJwt?: string,
+  inputMessages?: any[]
 ): AsyncIterable<ThreadStreamEvent> {
   console.log('[streamAgentResponse] Starting with runner:', runner ? 'present' : 'absent');
   let fullText = '';
@@ -1079,6 +1096,54 @@ export async function* streamAgentResponse(
         }
       }
       continue;
+    }
+
+    // Handle model events with response.completed to save response data for trace enrichment
+    if (eventType === 'model') {
+      const innerEvent = data?.event || (event as any).data?.event;
+      if (innerEvent?.type === 'response.completed' && innerEvent?.response) {
+        const response = innerEvent.response;
+        console.log('[streamAgentResponse] 📊 Saving response data for trace enrichment:', response.id);
+
+        // Use the OpenAI-compatible responses API to store the response
+        if (supabaseUrl && userJwt) {
+          try {
+            const responsesEndpoint = `${supabaseUrl}/functions/v1/openai-polyfill/responses`;
+            console.log('[streamAgentResponse] POST to responses API:', responsesEndpoint);
+
+            const saveResponse = await fetch(responsesEndpoint, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${userJwt}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: response.id,
+                thread_id: threadId,
+                model: response.model,
+                instructions: response.instructions,
+                usage: response.usage,
+                tools: response.tools,
+                messages: inputMessages || null, // Input messages passed from the caller
+                output: response.output,
+                output_type: response.text?.format?.type || 'text',
+                metadata: response.metadata || {},
+              }),
+            });
+
+            if (!saveResponse.ok) {
+              const errorText = await saveResponse.text();
+              console.error('[streamAgentResponse] Failed to save response:', saveResponse.status, errorText);
+            } else {
+              console.log('[streamAgentResponse] ✅ Response data saved successfully via API');
+            }
+          } catch (error) {
+            console.error('[streamAgentResponse] ❌ Error calling responses API:', error);
+          }
+        } else {
+          console.warn('[streamAgentResponse] ⚠️ Missing supabaseUrl or userJwt, cannot save response');
+        }
+      }
     }
 
     // Handle direct text deltas (if not wrapped)

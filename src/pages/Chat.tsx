@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
 import { Agent } from '@/types/agent';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSelect, IonSelectOption, IonIcon, IonSpinner, IonButtons } from '@ionic/react';
-import { personCircleOutline } from 'ionicons/icons';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSelect, IonSelectOption, IonIcon, IonSpinner, IonButtons, IonButton } from '@ionic/react';
+import { personCircleOutline, analyticsOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
@@ -13,6 +13,7 @@ const Chat = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -64,27 +65,78 @@ const Chat = () => {
     }
   };
 
-  // Anonymous sign-in and load agents on component mount
+  // Load the most recent thread for the current user
+  const loadMostRecentThread = async () => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`${getServerBaseUrl()}/threads/list?limit=1&order=desc`, {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && data.data.length > 0) {
+          const mostRecentThread = data.data[0];
+          console.log('Loading most recent thread:', mostRecentThread.id);
+          setCurrentThreadId(mostRecentThread.id);
+          return mostRecentThread.id;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading most recent thread:', error);
+    }
+    return null;
+  };
+
+  // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
-    const signInAnonymously = async () => {
+    const initializeAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) {
-          console.error('Anonymous sign-in error:', error);
-          toast.error('Failed to initialize chat');
-        } else {
-          console.log('Anonymous sign-in successful:', data);
-          setIsAuthenticated(true);
-          // Load agents after successful authentication
+        // First, check if there's already a valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+          if (session && !sessionError) {
+            // We have a valid session, use it
+            setIsAuthenticated(true);
           await loadAgents();
+          // Load the most recent thread to continue the conversation
+          await loadMostRecentThread();
+        } else {
+          // No valid session, sign in anonymously
+          const { data, error } = await supabase.auth.signInAnonymously();
+          if (error) {
+            console.error('Anonymous sign-in error:', error);
+            toast.error('Failed to initialize chat');
+          } else {
+            setIsAuthenticated(true);
+            await loadAgents();
+            // Load the most recent thread to continue the conversation
+            await loadMostRecentThread();
+          }
         }
       } catch (error) {
-        console.error('Anonymous sign-in error:', error);
+        console.error('Auth initialization error:', error);
         toast.error('Failed to initialize chat');
       }
     };
 
-    signInAnonymously();
+    initializeAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        // Optionally sign in anonymously again
+        supabase.auth.signInAnonymously();
+      } else if (event === 'SIGNED_IN' && session) {
+        setIsAuthenticated(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Load agent details when selected agent changes
@@ -242,6 +294,9 @@ const Chat = () => {
           <IonToolbar>
             <IonTitle>Timestep AI</IonTitle>
             <IonButtons slot="end">
+              <IonButton fill="clear" routerLink="/traces">
+                <IonIcon icon={analyticsOutline} />
+              </IonButton>
               <IonIcon icon={personCircleOutline} style={{ fontSize: '24px', marginRight: '8px' }} />
               <IonSelect
                 value={selectedAgent?.id || ""}

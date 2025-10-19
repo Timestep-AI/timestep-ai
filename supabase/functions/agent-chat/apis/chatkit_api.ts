@@ -3,8 +3,8 @@ import { ChatKitServer, streamAgentResponse } from '../services/chatkit_service.
 import { MemoryStore } from '../stores/memory_store.ts'
 import { AgentFactory } from '../services/agent_service.ts'
 import { Runner, RunConfig } from '@openai/agents-core'
-import { OpenAIProvider, setDefaultOpenAITracingExporter } from '@openai/agents-openai'
-import { createUserTracingExporter } from '../services/tracing_service.ts'
+import { OpenAIProvider } from '@openai/agents-openai'
+import { addTimestepAITraceProcessor } from '../services/tracing_service.ts'
 import type { ThreadMetadata, UserMessageItem, ThreadStreamEvent } from '../types/chatkit-types.ts'
 
 // Helper to extract message text from UserMessageItem
@@ -120,9 +120,7 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
         apiKey: Deno.env.get('OPENAI_API_KEY') || '',
       });
 
-      // Set up user-specific tracing exporter for this request
-      const userTracingExporter = createUserTracingExporter(context.supabaseUrl, context.userJwt);
-      setDefaultOpenAITracingExporter(userTracingExporter);
+      // Trace processor is now added at the request level in index.ts
 
       // Configure the runner with the model provider
       const runConfig: RunConfig = {
@@ -131,6 +129,10 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
         traceIncludeSensitiveData: true,
         tracingDisabled: false,
         workflowName: `Agent workflow (${Date.now()})`,
+        metadata: {
+          thread_id: thread.id,
+          user_id: context.userId,
+        },
       };
 
       // Run the agent with streaming and full conversation history
@@ -154,7 +156,7 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
 
       // Convert Agents SDK events to ChatKit events
       try {
-        yield* streamAgentResponse(result as any, thread.id, this.store, runner);
+        yield* streamAgentResponse(result as any, thread.id, this.store, runner, context.supabaseUrl, context.userJwt, inputItems);
       } catch (streamError) {
         console.error('[TimestepChatKitServer] Stream error:', streamError);
         throw streamError;
@@ -246,7 +248,7 @@ export async function handleAgentChatKitRequest(
           userId: currentUserId,
           supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
           anonKey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          userJwt: req.headers.get('Authorization') ?? '',
+          userJwt: userJwt, // Use the clean JWT without "Bearer " prefix
           agentId: agentId // Use the agent ID from the URL
         };
 

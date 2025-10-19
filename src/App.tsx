@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { IonApp, setupIonicReact } from '@ionic/react';
 import { Toaster } from 'sonner';
 import Chat from "./pages/Chat";
+import Traces from "./pages/Traces";
+import TraceDetail from "./pages/TraceDetail";
+import ResponseDetail from "./pages/ResponseDetail";
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -32,9 +35,12 @@ const App = () => (
     <IonApp>
       <Toaster />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Chat />} />
-        </Routes>
+      <Routes>
+        <Route path="/" element={<Chat />} />
+        <Route path="/traces" element={<Traces />} />
+        <Route path="/traces/:traceId" element={<TraceDetail />} />
+        <Route path="/responses/:responseId" element={<ResponseDetail />} />
+      </Routes>
       </BrowserRouter>
     </IonApp>
   </QueryClientProvider>

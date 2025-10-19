@@ -423,32 +423,43 @@ export class MemoryStore<TContext = any> {
     const createdAt = Math.floor(new Date(message.created_at).getTime() / 1000);
 
     if (message.role === 'user') {
+      // Parse the content properly - it should be an array of content parts
+      let content;
+      try {
+        content = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
+        // Ensure it's an array
+        if (!Array.isArray(content)) {
+          content = [{ type: 'input_text', text: String(message.content || '') }];
+        }
+      } catch (e) {
+        content = [{ type: 'input_text', text: String(message.content || '') }];
+      }
+      
       return {
         type: 'user_message',
         id: message.id,
         thread_id: threadId,
-        content: [{ type: 'input_text', text: message.content || '' }],
+        content: content,
         created_at: createdAt,
         attachments: []
       } as any;
     } else if (message.role === 'assistant') {
-      // Check if this is a widget item by looking at the content structure
-      let parsedContent;
+      // Parse the content properly - it should be an array of content parts
+      let content;
       try {
-        parsedContent = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
+        content = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
+        // Ensure it's an array
+        if (!Array.isArray(content)) {
+          content = [{ type: 'output_text', text: String(message.content || ''), annotations: [] }];
+        }
       } catch (e) {
-        parsedContent = message.content;
+        content = [{ type: 'output_text', text: String(message.content || ''), annotations: [] }];
       }
       
-      // If it's a widget item, return it as a widget
-      if (parsedContent && parsedContent.type === 'widget') {
-        return parsedContent as any;
+      // Check if this is a widget item by looking at the content structure
+      if (content && content.length === 1 && content[0] && content[0].type === 'widget') {
+        return content[0] as any;
       }
-      
-      // Otherwise, treat as regular assistant message
-      // Note: content is stored as a string in the database, not as an object with .text
-      const contentText = typeof message.content === 'string' ? message.content : (message.content?.text || '');
-      const content = contentText ? [{ type: 'output_text', text: contentText, annotations: [] }] : [];
       
       return {
         type: 'assistant_message',
@@ -649,7 +660,7 @@ export class MemoryStore<TContext = any> {
     };
 
     const messagesPage = await this.loadThreadItems(threadId, null, 100, 'asc');
-    const threadItems: ThreadItem[] = messagesPage.data.map(msg => this.convertThreadMessageToChatKit(msg, threadId));
+    const threadItems: ThreadItem[] = messagesPage.data; // Already converted in loadThreadItems
 
     return {
       id: thread.id,
@@ -882,5 +893,47 @@ export class MemoryStore<TContext = any> {
       role: 'assistant' as const,
       content: JSON.stringify(dbMessage),
     };
+  }
+
+  /**
+   * Save response data for trace enrichment
+   */
+  async saveResponse(responseData: {
+    id: string;
+    thread_id?: string;
+    model?: string;
+    instructions?: string;
+    usage?: any;
+    tools?: any;
+    messages?: any;
+    output?: any;
+    output_type?: string;
+    metadata?: any;
+  }): Promise<void> {
+    console.log(`[MemoryStore] Saving response data: ${responseData.id}`);
+
+    const { error } = await this.supabase
+      .from('responses')
+      .upsert({
+        id: responseData.id,
+        user_id: this.userId,
+        thread_id: responseData.thread_id || null,
+        model: responseData.model || null,
+        instructions: responseData.instructions || null,
+        usage: responseData.usage || null,
+        tools: responseData.tools || null,
+        messages: responseData.messages || null,
+        output: responseData.output || null,
+        output_type: responseData.output_type || null,
+        metadata: responseData.metadata || {},
+        created_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[MemoryStore] Error saving response:', error);
+      throw error;
+    }
+
+    console.log(`[MemoryStore] ✅ Saved response: ${responseData.id}`);
   }
 }

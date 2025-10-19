@@ -1,11 +1,13 @@
-project_id = "ohzbghitbjryfpmucgju"
+project_id = "your-project-id"
 
 [edge_runtime]
 enabled = true
 
 [edge_runtime.secrets]
-HF_TOKEN = "hf_xyz"
-OPENAI_API_KEY = "sk-proj-xyz"
+# Add your Hugging Face token here for AI features
+HF_TOKEN = "your-huggingface-token"
+# Add your OpenAI API key here for agent functionality
+OPENAI_API_KEY = "your-openai-api-key"
 
 [auth]
 enabled = true
