@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
@@ -6,12 +6,24 @@ import { agentsService } from '@/services/agentsService';
 import { Agent } from '@/types/agent';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSelect, IonSelectOption, IonIcon, IonSpinner, IonButtons } from '@ionic/react';
 import { personCircleOutline } from 'ionicons/icons';
+import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  
+  // Settings state
+  const [darkMode, setDarkMode] = useState(true);
+  
+  // Agent details state
+  const [agentDetails, setAgentDetails] = useState<Agent | null>(null);
+  const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
+  
+  // Menu refs
+  const leftMenuRef = useRef<HTMLIonMenuElement>(null);
+  const rightMenuRef = useRef<HTMLIonMenuElement>(null);
 
   // Get server base URL
   const getServerBaseUrl = () => {
@@ -38,6 +50,20 @@ const Chat = () => {
     }
   };
 
+  // Load agent details
+  const loadAgentDetails = async (agentId: string) => {
+    try {
+      setLoadingAgentDetails(true);
+      const details = await agentsService.getById(agentId);
+      setAgentDetails(details);
+    } catch (error) {
+      console.error('Error loading agent details:', error);
+      toast.error('Failed to load agent details');
+    } finally {
+      setLoadingAgentDetails(false);
+    }
+  };
+
   // Anonymous sign-in and load agents on component mount
   useEffect(() => {
     const signInAnonymously = async () => {
@@ -60,6 +86,13 @@ const Chat = () => {
 
     signInAnonymously();
   }, []);
+
+  // Load agent details when selected agent changes
+  useEffect(() => {
+    if (selectedAgent?.id) {
+      loadAgentDetails(selectedAgent.id);
+    }
+  }, [selectedAgent?.id]);
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -118,32 +151,42 @@ const Chat = () => {
       domainKey: "localhost-dev",
     },
     composer: {
-      placeholder: "Type your question…",
-      tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
+      placeholder: `Message your ${selectedAgent?.name} AI agent...`,
+      // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
     },
     header: {
       leftAction: {
-        icon: "settings-cog",
-        onClick: () => alert("Profile settings"),
+        icon: "sidebar-left",
+        onClick: async () => {
+          // Open the left settings menu
+          if (leftMenuRef.current) {
+            await leftMenuRef.current.open();
+          }
+        },
       },
       rightAction: {
-        icon: "home",
-        onClick: () => alert("Home"),
+        icon: "sidebar-right",
+        onClick: async () => {
+          // Open the right menu
+          if (rightMenuRef.current) {
+            await rightMenuRef.current.open();
+          }
+        },
       },
     },
     startScreen: {
-      greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
-      prompts: [
-        {
-          prompt: "How many R's are there in the word 'strawberry'?", label: "How many R's are there in the word 'strawberry'?"
-        },
-        {
-          prompt: "What's the weather in Oakland and San Francisco?", label: "What's the weather in Oakland and San Francisco?"
-        }
-      ]
+      // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
+      // prompts: [
+      //   {
+      //     prompt: "How many R's are there in the word 'strawberry'?", label: "How many R's are there in the word 'strawberry'?"
+      //   },
+      //   {
+      //     prompt: "What's the weather in Oakland and San Francisco?", label: "What's the weather in Oakland and San Francisco?"
+      //   }
+      // ]
     },
     theme: {
-      colorScheme: "dark",
+      colorScheme: darkMode ? "dark" : "light",
       color: { accent: { primary: "#D7263D", level: 2 } },
       radius: "round",
       density: "normal",
@@ -169,35 +212,61 @@ const Chat = () => {
   }
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Timestep AI</IonTitle>
-          <IonButtons slot="end">
-            <IonIcon icon={personCircleOutline} style={{ fontSize: '24px', marginRight: '8px' }} />
-            <IonSelect
-              value={selectedAgent?.id || ""}
-              placeholder="Select Agent"
-              onIonChange={handleAgentChange}
-              interface="popover"
-            >
-              {agents.map((agent) => (
-                <IonSelectOption key={agent.id} value={agent.id}>
-                  {agent.name}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent fullscreen>
-        <ChatKit
-          key={selectedAgent?.id || 'default'}
-          control={control}
-          className="h-full w-full"
-        />
-      </IonContent>
-    </IonPage>
+    <>
+      <SidebarMenu
+        ref={leftMenuRef}
+        id="left-menu"
+        side="start"
+        title="Settings"
+        color="primary"
+        darkMode={darkMode}
+        onDarkModeChange={setDarkMode}
+        agentDetails={agentDetails}
+        loadingAgentDetails={loadingAgentDetails}
+      />
+
+      <SidebarMenu
+        ref={rightMenuRef}
+        id="right-menu"
+        side="end"
+        title="Settings"
+        color="primary"
+        darkMode={darkMode}
+        onDarkModeChange={setDarkMode}
+        agentDetails={agentDetails}
+        loadingAgentDetails={loadingAgentDetails}
+      />
+
+      <IonPage id="main-content">
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Timestep AI</IonTitle>
+            <IonButtons slot="end">
+              <IonIcon icon={personCircleOutline} style={{ fontSize: '24px', marginRight: '8px' }} />
+              <IonSelect
+                value={selectedAgent?.id || ""}
+                placeholder="Select Agent"
+                onIonChange={handleAgentChange}
+                interface="popover"
+              >
+                {agents.map((agent) => (
+                  <IonSelectOption key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent fullscreen>
+          <ChatKit
+            key={selectedAgent?.id || 'default'}
+            control={control}
+            className="h-full w-full"
+          />
+        </IonContent>
+      </IonPage>
+    </>
   );
 };
 
