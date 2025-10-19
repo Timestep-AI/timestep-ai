@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleEmbeddingsRequest } from './apis/embeddings_api.ts';
 import { handleIngestRequest } from './apis/traces_api.ts';
 import { handleVectorStoresRequest } from './apis/vector_stores_api.ts';
+import { handleFilesRequest } from './apis/files_api.ts';
+import { handleUploadsRequest } from './apis/uploads_api.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,23 +62,32 @@ serve(async (req) => {
       );
     }
 
+    // Extract JWT token from Authorization header (remove "Bearer " prefix)
+    const userJwt = authHeader.replace(/^Bearer\s+/i, '');
+
     // Route requests based on endpoint
     const url = new URL(req.url);
 
     if (url.pathname.endsWith('/embeddings')) {
       // Handle OpenAI Embeddings API endpoint
-      return await handleEmbeddingsRequest(req, supabaseClient, user.id);
+      return await handleEmbeddingsRequest(req, supabaseClient, user.id, userJwt);
     } else if (url.pathname.endsWith('/ingest')) {
       // Handle OpenAI Agents SDK format: { data: [ {...trace/span...}, ... ] }
       return await handleIngestRequest(req, supabaseClient, user.id);
     } else if (url.pathname.includes('/vector_stores')) {
       // Handle OpenAI Vector Stores API endpoints
-      return await handleVectorStoresRequest(req, supabaseClient, user.id, url.pathname);
+      return await handleVectorStoresRequest(req, supabaseClient, user.id, url.pathname, userJwt);
+    } else if (url.pathname.includes('/uploads')) {
+      // Handle OpenAI Uploads API endpoints (multipart uploads)
+      return await handleUploadsRequest(req, supabaseClient, user.id, url.pathname);
+    } else if (url.pathname.includes('/files')) {
+      // Handle OpenAI Files API endpoints
+      return await handleFilesRequest(req, supabaseClient, user.id, url.pathname, userJwt);
     } else {
       // Return 404 for unknown endpoints
       return new Response(
         JSON.stringify({
-          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest, /vector_stores'
+          error: 'Endpoint not found. Available endpoints: /embeddings, /traces/ingest, /vector_stores, /uploads, /files'
         }),
         {
           status: 404,

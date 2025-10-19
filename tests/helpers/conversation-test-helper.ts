@@ -75,7 +75,7 @@ export async function runConversationTest(
 
   const chatFrame = page.frameLocator('iframe[name="chatkit"]');
   await expect(chatFrame.locator('h2')).toContainText(
-    `Welcome to Timestep AI! You're chatting with ${agentName}`
+    'What can I help with today?'
   );
 
   // Initialize database auth
@@ -87,11 +87,11 @@ export async function runConversationTest(
   for (const step of steps) {
     if (step.type === 'message') {
       // Send a message
-      await chatFrame.getByRole('textbox', { name: 'Type your question…' }).fill(step.message!);
+      await chatFrame.getByRole('textbox', { name: `Message your ${agentName} AI agent...` }).fill(step.message!);
 
       // Use Enter for Weather Assistant, Send button for Personal Assistant
       if (agentName === 'Weather Assistant') {
-        await chatFrame.getByRole('textbox', { name: 'Type your question…' }).press('Enter');
+        await chatFrame.getByRole('textbox', { name: `Message your ${agentName} AI agent...` }).press('Enter');
       } else {
         await chatFrame.getByRole('button', { name: 'Send message' }).click();
       }

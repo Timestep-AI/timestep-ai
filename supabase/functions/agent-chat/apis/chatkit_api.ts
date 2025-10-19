@@ -3,7 +3,8 @@ import { ChatKitServer, streamAgentResponse } from '../services/chatkit_service.
 import { MemoryStore } from '../stores/memory_store.ts'
 import { AgentFactory } from '../services/agent_service.ts'
 import { Runner, RunConfig } from '@openai/agents-core'
-import { OpenAIProvider } from '@openai/agents-openai'
+import { OpenAIProvider, setDefaultOpenAITracingExporter } from '@openai/agents-openai'
+import { createUserTracingExporter } from '../services/tracing_service.ts'
 import type { ThreadMetadata, UserMessageItem, ThreadStreamEvent } from '../types/chatkit-types.ts'
 
 // Helper to extract message text from UserMessageItem
@@ -118,6 +119,10 @@ class TimestepChatKitServer extends ChatKitServer<{ userId: string; supabaseUrl:
       const modelProvider = new OpenAIProvider({
         apiKey: Deno.env.get('OPENAI_API_KEY') || '',
       });
+
+      // Set up user-specific tracing exporter for this request
+      const userTracingExporter = createUserTracingExporter(context.supabaseUrl, context.userJwt);
+      setDefaultOpenAITracingExporter(userTracingExporter);
 
       // Configure the runner with the model provider
       const runConfig: RunConfig = {

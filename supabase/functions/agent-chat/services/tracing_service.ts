@@ -29,3 +29,11 @@ export function addTimestepAITraceProcessor(supabaseUrl: string, userJwt: string
   console.log(`[TracingService] ✅ Timestep AI trace processor added`);
   console.log(`[TracingService] Traces will be sent to: ${supabaseUrl}/functions/v1/openai-polyfill/traces/ingest`);
 }
+
+/**
+ * Creates a user-specific tracing exporter for per-request tracing.
+ * This allows each request to use its own user JWT token for authentication.
+ */
+export function createUserTracingExporter(supabaseUrl: string, userJwt: string): TimestepAITracingExporter {
+  return new TimestepAITracingExporter(supabaseUrl, userJwt);
+}

@@ -37,7 +37,7 @@ const corsHeaders = {
  * POST /embeddings
  * Creates vector embeddings from input text using Hugging Face endpoint
  */
-export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any, _userId: string) {
+export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any, _userId: string, _userJwt?: string) {
   try {
     const body: CreateEmbeddingRequest = await req.json();
     console.log('[Embeddings] Received request for model:', body.model);

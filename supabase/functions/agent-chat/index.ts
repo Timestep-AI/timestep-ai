@@ -18,11 +18,8 @@ setDefaultOpenAITracingExporter();
 console.log('[TimestepChatKitServer] ✅ OpenAI HTTP Tracing Exporter configured');
 console.log('[TimestepChatKitServer] Traces will be sent to: https://api.openai.com/v1/traces/ingest');
 
-// Add Timestep AI trace processor to send traces to our Supabase edge function
-addTimestepAITraceProcessor(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-);
+// Note: Tracing is now set up per-request with user-specific JWT tokens in chatkit_api.ts
+// This ensures each user's traces are properly authenticated
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
