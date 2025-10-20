@@ -104,24 +104,17 @@ export async function handleUploadsRequest(
     return await cancelUpload(req, supabaseClient, userId, uploadId);
   }
 
-  return new Response(
-    JSON.stringify({ error: 'Uploads endpoint not found' }),
-    {
-      status: 404,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    }
-  );
+  return new Response(JSON.stringify({ error: 'Uploads endpoint not found' }), {
+    status: 404,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 /**
  * POST /uploads
  * Create a new multipart upload
  */
-async function createUpload(
-  req: Request,
-  supabaseClient: any,
-  userId: string
-): Promise<Response> {
+async function createUpload(req: Request, supabaseClient: any, userId: string): Promise<Response> {
   try {
     const body: CreateUploadRequest = await req.json();
 
@@ -134,7 +127,7 @@ async function createUpload(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -152,7 +145,7 @@ async function createUpload(
             type: 'invalid_request_error',
             param: 'bytes',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -160,8 +153,6 @@ async function createUpload(
         }
       );
     }
-
-    console.log('[Uploads] Creating upload:', body.filename, 'size:', body.bytes);
 
     const uploadId = `upload-${generateId()}`;
     const now = Math.floor(Date.now() / 1000);
@@ -185,9 +176,7 @@ async function createUpload(
       bytes_uploaded: 0,
     };
 
-    const { error: dbError } = await supabaseClient
-      .from('uploads')
-      .insert([uploadMetadata]);
+    const { error: dbError } = await supabaseClient.from('uploads').insert([uploadMetadata]);
 
     if (dbError) {
       console.error('[Uploads] Error creating upload:', dbError);
@@ -204,8 +193,6 @@ async function createUpload(
       status: 'pending',
       expires_at: expiresAt,
     };
-
-    console.log('[Uploads] Created upload:', uploadId);
 
     return new Response(JSON.stringify(response), {
       status: 200,
@@ -228,8 +215,6 @@ async function addUploadPart(
   uploadId: string
 ): Promise<Response> {
   try {
-    console.log('[Uploads] Adding part to upload:', uploadId);
-
     // Get upload metadata
     const { data: uploadMeta, error: fetchError } = await supabaseClient
       .from('uploads')
@@ -246,7 +231,7 @@ async function addUploadPart(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -264,7 +249,7 @@ async function addUploadPart(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -285,7 +270,7 @@ async function addUploadPart(
             type: 'invalid_request_error',
             param: 'data',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -303,7 +288,7 @@ async function addUploadPart(
             type: 'invalid_request_error',
             param: 'data',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -320,8 +305,7 @@ async function addUploadPart(
     const partBuffer = await dataPart.arrayBuffer();
     const partPath = `${userId}/uploads/${uploadId}/${partId}.part`;
 
-    const { error: uploadError } = await supabaseClient
-      .storage
+    const { error: uploadError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .upload(partPath, partBuffer, {
         contentType: 'application/octet-stream',
@@ -360,8 +344,6 @@ async function addUploadPart(
       upload_id: uploadId,
     };
 
-    console.log('[Uploads] Added part:', partId, 'size:', dataPart.size);
-
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -385,8 +367,6 @@ async function completeUpload(
   try {
     const body: CompleteUploadRequest = await req.json();
 
-    console.log('[Uploads] Completing upload:', uploadId);
-
     // Get upload metadata
     const { data: uploadMeta, error: fetchError } = await supabaseClient
       .from('uploads')
@@ -403,7 +383,7 @@ async function completeUpload(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -421,7 +401,7 @@ async function completeUpload(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -439,7 +419,7 @@ async function completeUpload(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -454,8 +434,7 @@ async function completeUpload(
 
     for (const partId of partIds) {
       const partPath = `${userId}/uploads/${uploadId}/${partId}.part`;
-      const { data: partData, error: downloadError } = await supabaseClient
-        .storage
+      const { data: partData, error: downloadError } = await supabaseClient.storage
         .from(STORAGE_BUCKET)
         .download(partPath);
 
@@ -482,8 +461,7 @@ async function completeUpload(
     const now = Math.floor(Date.now() / 1000);
     const finalPath = `${userId}/${fileId}.dat`;
 
-    const { error: uploadError } = await supabaseClient
-      .storage
+    const { error: uploadError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .upload(finalPath, combinedFile, {
         contentType: uploadMeta.mime_type,
@@ -508,9 +486,7 @@ async function completeUpload(
       content_type: uploadMeta.mime_type,
     };
 
-    const { error: fileError } = await supabaseClient
-      .from('files')
-      .insert([fileMetadata]);
+    const { error: fileError } = await supabaseClient.from('files').insert([fileMetadata]);
 
     if (fileError) {
       console.error('[Uploads] Error creating file:', fileError);
@@ -560,8 +536,6 @@ async function completeUpload(
       file: fileObject,
     };
 
-    console.log('[Uploads] Completed upload:', uploadId, 'file:', fileId);
-
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -583,8 +557,6 @@ async function cancelUpload(
   uploadId: string
 ): Promise<Response> {
   try {
-    console.log('[Uploads] Cancelling upload:', uploadId);
-
     // Get upload metadata
     const { data: uploadMeta, error: fetchError } = await supabaseClient
       .from('uploads')
@@ -601,7 +573,7 @@ async function cancelUpload(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -639,8 +611,6 @@ async function cancelUpload(
       status: 'cancelled',
       expires_at: uploadMeta.expires_at,
     };
-
-    console.log('[Uploads] Cancelled upload:', uploadId);
 
     return new Response(JSON.stringify(response), {
       status: 200,

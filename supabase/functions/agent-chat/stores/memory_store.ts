@@ -22,14 +22,14 @@ export interface Thread {
 
 export interface UserMessage {
   id: string;
-  role: "user";
+  role: 'user';
   content: string; // Text input from the user
   name?: string; // Optional user identifier
 }
 
 export interface AssistantMessage {
   id: string;
-  role: "assistant";
+  role: 'assistant';
   content?: string; // Text response from the assistant (optional if using tool calls)
   name?: string; // Optional assistant identifier
   toolCalls?: ToolCall[]; // Optional tool calls made by the assistant
@@ -37,14 +37,14 @@ export interface AssistantMessage {
 
 export interface ToolMessage {
   id: string;
-  role: "tool";
+  role: 'tool';
   content: string; // Result from the tool execution
   toolCallId: string; // ID of the tool call this message responds to
 }
 
 export interface ToolCall {
   id: string; // Unique ID for this tool call
-  type: "function"; // Type of tool call
+  type: 'function'; // Type of tool call
   function: {
     name: string; // Name of the function to call
     arguments: string; // JSON-encoded string of arguments
@@ -68,9 +68,9 @@ export class MemoryStore<TContext = any> {
     this.supabase = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {
-          Authorization: `Bearer ${userJwt}`
-        }
-      }
+          Authorization: `Bearer ${userJwt}`,
+        },
+      },
     });
 
     // Create OpenAI client pointing to our polyfill for vector stores, files, etc.
@@ -98,21 +98,55 @@ export class MemoryStore<TContext = any> {
       throw new Error(`Thread not found: ${threadId}`);
     }
 
+    // Ensure thread has a vector store
+    if (!data.vector_store_id) {
+      console.log(`[MemoryStore] Thread ${threadId} missing vector store, creating one`);
+      try {
+        const vectorStore = await this.openai.vectorStores.create({
+          name: `Thread ${threadId}`,
+          metadata: {
+            thread_id: threadId,
+            user_id: this.userId,
+          },
+        });
+
+        // Update thread with vector store ID
+        const { error: updateError } = await this.supabase
+          .from('threads')
+          .update({ vector_store_id: vectorStore.id })
+          .eq('id', threadId)
+          .eq('user_id', this.userId);
+
+        if (updateError) {
+          console.error('[MemoryStore] Error updating thread with vector store:', updateError);
+          throw updateError;
+        }
+
+        console.log(
+          `[MemoryStore] Created vector store ${vectorStore.id} for existing thread ${threadId}`
+        );
+      } catch (error) {
+        console.error(`[MemoryStore] Failed to create vector store for thread ${threadId}:`, error);
+        throw error;
+      }
+    }
+
     const thread: ThreadMetadata = {
       id: data.id,
       title: data.metadata?.title || 'New Chat',
       created_at: new Date(data.created_at * 1000), // Convert Unix timestamp to Date
       status: { type: 'active' },
-      metadata: data.metadata || {}
+      metadata: data.metadata || {},
     };
     return thread;
   }
 
   async saveThread(thread: ThreadMetadata): Promise<void> {
     // Handle both Date objects and Unix timestamps
-    const createdAt = thread.created_at instanceof Date
-      ? Math.floor(thread.created_at.getTime() / 1000)
-      : Math.floor(thread.created_at / 1000);
+    const createdAt =
+      thread.created_at instanceof Date
+        ? Math.floor(thread.created_at.getTime() / 1000)
+        : Math.floor(thread.created_at / 1000);
 
     // Check if thread already exists to get vector_store_id
     const { data: existingThread } = await this.supabase
@@ -126,38 +160,43 @@ export class MemoryStore<TContext = any> {
 
     // Create vector store if this is a new thread
     if (!vectorStoreId) {
-      console.log('[MemoryStore] Creating vector store for thread:', thread.id);
-      const vectorStore = await this.openai.vectorStores.create({
-        name: `Thread ${thread.id}`,
-        metadata: {
-          thread_id: thread.id,
-          user_id: this.userId,
-        },
-      });
-      vectorStoreId = vectorStore.id;
-      console.log('[MemoryStore] Created vector store:', vectorStoreId);
+      console.log(`[MemoryStore] Creating vector store for thread ${thread.id}`);
+      try {
+        const vectorStore = await this.openai.vectorStores.create({
+          name: `Thread ${thread.id}`,
+          metadata: {
+            thread_id: thread.id,
+            user_id: this.userId,
+          },
+        });
+        vectorStoreId = vectorStore.id;
+        console.log(`[MemoryStore] Created vector store ${vectorStoreId} for thread ${thread.id}`);
+      } catch (error) {
+        console.error(
+          `[MemoryStore] Failed to create vector store for thread ${thread.id}:`,
+          error
+        );
+        throw error;
+      }
     }
 
-    const { error } = await this.supabase
-      .from('threads')
-      .upsert({
-        id: thread.id,
-        user_id: this.userId,
-        created_at: createdAt,
-        vector_store_id: vectorStoreId,
-        metadata: {
-          ...thread.metadata,
-          title: (thread as any).title || null
-        },
-        object: 'thread',
-        updated_at: new Date().toISOString()
-      });
+    const { error } = await this.supabase.from('threads').upsert({
+      id: thread.id,
+      user_id: this.userId,
+      created_at: createdAt,
+      vector_store_id: vectorStoreId,
+      metadata: {
+        ...thread.metadata,
+        title: (thread as any).title || null,
+      },
+      object: 'thread',
+      updated_at: new Date().toISOString(),
+    });
 
     if (error) {
       console.error('[MemoryStore] Error saving thread:', error);
       throw error;
     }
-    console.log('[MemoryStore] Saved thread to database:', thread.id);
   }
 
   async loadThreadItems(
@@ -205,7 +244,7 @@ export class MemoryStore<TContext = any> {
     return {
       data: items,
       has_more: false,
-      after: null
+      after: null,
     };
   }
 
@@ -219,40 +258,29 @@ export class MemoryStore<TContext = any> {
     await this.saveThreadMessage(threadMessage);
   }
 
-  private async saveThreadMessage(message: ThreadMessage & { thread_id: string; user_id: string; message_index: number }): Promise<void> {
+  private async saveThreadMessage(
+    message: ThreadMessage & { thread_id: string; user_id: string; message_index: number }
+  ): Promise<void> {
     // Check if message already exists to prevent duplicates
-    const { data: existingMessage, error: checkError } = await this.supabase
+    const { data: existingMessage } = await this.supabase
       .from('thread_messages')
-      .select('id, file_id')
+      .select('id')
       .eq('id', message.id)
+      .eq('thread_id', message.thread_id)
+      .eq('user_id', this.userId)
       .maybeSingle();
 
     if (existingMessage) {
-      console.log('[MemoryStore] Thread message already exists, skipping save:', message.id);
-      return;
+      return; // Message already exists, skip
     }
 
-    // Get the next message index
-    const { data: existingMessages } = await this.supabase
-      .from('thread_messages')
-      .select('message_index')
-      .eq('thread_id', message.thread_id)
-      .order('message_index', { ascending: false })
-      .limit(1);
-
-    const nextIndex = existingMessages && existingMessages.length > 0
-      ? existingMessages[0].message_index + 1
-      : 0;
-
-    console.log('[MemoryStore] Saving thread message with ID:', message.id, 'thread:', message.thread_id, 'role:', message.role);
-
     // Get thread's vector store ID
-    const { data: thread } = await this.supabase
+    const { data: thread } = (await this.supabase
       .from('threads')
       .select('vector_store_id')
       .eq('id', message.thread_id)
       .eq('user_id', this.userId)
-      .single() as { data: { vector_store_id: string | null } | null };
+      .single()) as { data: { vector_store_id: string | null } | null };
 
     if (!thread?.vector_store_id) {
       throw new Error(`Thread ${message.thread_id} does not have a vector store`);
@@ -263,28 +291,27 @@ export class MemoryStore<TContext = any> {
 
     // Store message as a file in the vector store for semantic search
     if (message.content) {
-      console.log('[MemoryStore] Uploading message as file to vector store...');
-
       // Create JSONL representation of the message
       const messageJson = JSON.stringify({
         id: message.id,
         thread_id: message.thread_id,
         role: message.role,
         content: message.content,
-        ...((message.role === 'user' || message.role === 'assistant') && (message as UserMessage | AssistantMessage).name
+        ...((message.role === 'user' || message.role === 'assistant') &&
+        (message as UserMessage | AssistantMessage).name
           ? { name: (message as UserMessage | AssistantMessage).name }
           : {}),
         ...(message.role === 'assistant' && (message as AssistantMessage).toolCalls
           ? { tool_calls: (message as AssistantMessage).toolCalls }
           : {}),
-        ...(message.role === 'tool'
-          ? { tool_call_id: (message as ToolMessage).toolCallId }
-          : {}),
+        ...(message.role === 'tool' ? { tool_call_id: (message as ToolMessage).toolCallId } : {}),
       });
 
       // Create a File object from the message JSONL
       const blob = new Blob([messageJson], { type: 'application/jsonl' });
-      const file = new File([blob], `message_${message.id}.jsonl`, { type: 'application/jsonl' });
+      const file = new File([blob], `message_${message.id}.jsonl`, {
+        type: 'application/jsonl',
+      });
 
       // Upload file using OpenAI client
       const uploadedFile = await this.openai.files.create({
@@ -293,48 +320,98 @@ export class MemoryStore<TContext = any> {
       });
 
       fileId = uploadedFile.id;
-      console.log('[MemoryStore] Uploaded message as file:', fileId);
 
       // Add file to vector store
       await this.openai.vectorStores.files.create(vectorStoreId, {
         file_id: fileId,
       });
-
-      console.log('[MemoryStore] Added file to vector store:', vectorStoreId);
     }
 
-    const messageData: any = {
-      id: message.id,
-      thread_id: message.thread_id,
-      user_id: this.userId,
-      message_index: nextIndex,
-      role: message.role,
-      content: message.content,
-      name: message.name,
-      file_id: fileId,
-      created_at: new Date().toISOString()
-    };
+    // Insert the message with atomic index calculation
+    // Use retry logic to handle any remaining race conditions
 
-    // Add role-specific fields
-    if (message.role === 'assistant' && (message as AssistantMessage).toolCalls) {
-      messageData.tool_calls = (message as AssistantMessage).toolCalls;
-    }
-    if (message.role === 'tool') {
-      messageData.tool_call_id = (message as ToolMessage).toolCallId;
+    const maxRetries = 3;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Get the next message index using the database function with locking
+        const { data: nextIndex, error: indexError } = await this.supabase.rpc(
+          'get_next_message_index',
+          { p_thread_id: message.thread_id }
+        );
+
+        if (indexError || nextIndex === null || nextIndex === undefined) {
+          console.error('[MemoryStore] Error getting next message index:', indexError);
+          throw new Error(
+            `Failed to get next message index: ${indexError?.message || 'unknown error'}`
+          );
+        }
+
+        const { data, error } = await this.supabase
+          .from('thread_messages')
+          .insert({
+            id: message.id,
+            thread_id: message.thread_id,
+            user_id: this.userId,
+            message_index: nextIndex,
+            role: message.role,
+            content: message.content,
+            name: message.name,
+            tool_calls:
+              message.role === 'assistant' && (message as AssistantMessage).toolCalls
+                ? (message as AssistantMessage).toolCalls
+                : null,
+            tool_call_id: message.role === 'tool' ? (message as ToolMessage).toolCallId : null,
+            file_id: fileId,
+            created_at: new Date().toISOString(),
+          })
+          .select('message_index')
+          .single();
+
+        if (error) {
+          // Check if it's a constraint violation (duplicate index)
+          if (
+            error.code === '23505' &&
+            error.message.includes('thread_messages_thread_id_message_index_key')
+          ) {
+            console.warn(
+              `[MemoryStore] Index constraint violation on attempt ${attempt + 1}, retrying...`
+            );
+            lastError = error;
+            // Small delay before retry
+            await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+            continue;
+          } else if (error.code === '23505') {
+            // Duplicate message ID - this is expected, skip
+            console.log(`[MemoryStore] Message ${message.id} already exists, skipping`);
+            return;
+          } else {
+            throw error;
+          }
+        }
+
+        // Success
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt === maxRetries - 1) {
+          console.error('[MemoryStore] Error saving thread message after retries:', error);
+          throw error;
+        }
+        // Small delay before retry
+        await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+      }
     }
 
-    const { error } = await this.supabase
-      .from('thread_messages')
-      .insert(messageData);
-
-    if (error) {
-      console.error('[MemoryStore] Error saving thread message:', error);
-      throw error;
-    }
-    console.log('[MemoryStore] Saved thread message to database:', message.id);
+    // If we get here, all retries failed
+    throw lastError;
   }
 
-  private convertChatKitToThreadMessage(item: ThreadItem, threadId: string): ThreadMessage & { thread_id: string; user_id: string; message_index: number } {
+  private convertChatKitToThreadMessage(
+    item: ThreadItem,
+    threadId: string
+  ): ThreadMessage & { thread_id: string; user_id: string; message_index: number } {
     const baseMessage = {
       id: item.id,
       thread_id: threadId,
@@ -344,50 +421,53 @@ export class MemoryStore<TContext = any> {
 
     if (item.type === 'user_message') {
       const userItem = item as any;
-      const textContent = userItem.content
-        ?.filter((part: any) => part.type === 'input_text')
-        ?.map((part: any) => part.text)
-        ?.join(' ') || '';
-      
+      const textContent =
+        userItem.content
+          ?.filter((part: any) => part.type === 'input_text')
+          ?.map((part: any) => part.text)
+          ?.join(' ') || '';
+
       return {
         ...baseMessage,
         role: 'user' as const,
         content: textContent,
-        name: undefined
+        name: undefined,
       };
     } else if (item.type === 'assistant_message') {
       const assistantItem = item as any;
-      const textContent = assistantItem.content
-        ?.filter((part: any) => part.type === 'output_text')
-        ?.map((part: any) => part.text)
-        ?.join(' ') || '';
-      
+      const textContent =
+        assistantItem.content
+          ?.filter((part: any) => part.type === 'output_text')
+          ?.map((part: any) => part.text)
+          ?.join(' ') || '';
+
       return {
         ...baseMessage,
         role: 'assistant' as const,
         content: textContent,
         name: undefined,
-        toolCalls: assistantItem.tool_calls || undefined
+        toolCalls: assistantItem.tool_calls || undefined,
       };
     } else if (item.type === 'tool_message') {
       const toolItem = item as any;
-      
+
       return {
         ...baseMessage,
         role: 'tool' as const,
         content: toolItem.content,
-        toolCallId: toolItem.tool_call_id
+        toolCallId: toolItem.tool_call_id,
       };
     } else if (item.type === 'client_tool_call') {
       const toolItem = item as any;
-      
+
       // If it has output, it's a tool message
       if (toolItem.output) {
         return {
           ...baseMessage,
           role: 'tool' as const,
-          content: typeof toolItem.output === 'string' ? toolItem.output : JSON.stringify(toolItem.output),
-          toolCallId: toolItem.call_id
+          content:
+            typeof toolItem.output === 'string' ? toolItem.output : JSON.stringify(toolItem.output),
+          toolCallId: toolItem.call_id,
         };
       } else {
         // Otherwise, it's an assistant message with tool calls
@@ -396,16 +476,16 @@ export class MemoryStore<TContext = any> {
           type: 'function',
           function: {
             name: toolItem.name,
-            arguments: toolItem.arguments
-          }
+            arguments: toolItem.arguments,
+          },
         };
-        
+
         return {
           ...baseMessage,
           role: 'assistant' as const,
           content: undefined,
           name: undefined,
-          toolCalls: [toolCall]
+          toolCalls: [toolCall],
         };
       }
     }
@@ -415,7 +495,7 @@ export class MemoryStore<TContext = any> {
       ...baseMessage,
       role: 'assistant' as const,
       content: JSON.stringify(item),
-      name: undefined
+      name: undefined,
     };
   }
 
@@ -426,7 +506,8 @@ export class MemoryStore<TContext = any> {
       // Parse the content properly - it should be an array of content parts
       let content;
       try {
-        content = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
+        content =
+          typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
         // Ensure it's an array
         if (!Array.isArray(content)) {
           content = [{ type: 'input_text', text: String(message.content || '') }];
@@ -434,20 +515,21 @@ export class MemoryStore<TContext = any> {
       } catch (e) {
         content = [{ type: 'input_text', text: String(message.content || '') }];
       }
-      
+
       return {
         type: 'user_message',
         id: message.id,
         thread_id: threadId,
         content: content,
         created_at: createdAt,
-        attachments: []
+        attachments: [],
       } as any;
     } else if (message.role === 'assistant') {
       // Parse the content properly - it should be an array of content parts
       let content;
       try {
-        content = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
+        content =
+          typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
         // Ensure it's an array
         if (!Array.isArray(content)) {
           content = [{ type: 'output_text', text: String(message.content || ''), annotations: [] }];
@@ -455,18 +537,18 @@ export class MemoryStore<TContext = any> {
       } catch (e) {
         content = [{ type: 'output_text', text: String(message.content || ''), annotations: [] }];
       }
-      
+
       // Check if this is a widget item by looking at the content structure
       if (content && content.length === 1 && content[0] && content[0].type === 'widget') {
         return content[0] as any;
       }
-      
+
       return {
         type: 'assistant_message',
         id: message.id,
         thread_id: threadId,
         content: content,
-        created_at: createdAt
+        created_at: createdAt,
       } as any;
     } else if (message.role === 'tool') {
       return {
@@ -478,7 +560,7 @@ export class MemoryStore<TContext = any> {
         tool_call_id: message.tool_call_id,
         arguments: '',
         output: message.content?.text || '',
-        status: 'completed'
+        status: 'completed',
       } as any;
     }
 
@@ -488,7 +570,7 @@ export class MemoryStore<TContext = any> {
       id: message.id,
       thread_id: threadId,
       content: [{ type: 'output_text', text: JSON.stringify(message), annotations: [] }],
-      created_at: createdAt
+      created_at: createdAt,
     } as any;
   }
 
@@ -520,13 +602,10 @@ export class MemoryStore<TContext = any> {
         .single();
 
       if (!messageData) {
-        console.log('[MemoryStore] No thread message found for item:', itemId, 'thread:', threadId);
         return null;
       }
-      
-      console.log('[MemoryStore] Loading thread message data:', JSON.stringify(messageData, null, 2));
+
       const result = this.convertThreadMessageToChatKit(messageData, threadId);
-      console.log('[MemoryStore] Converted to ChatKit item:', JSON.stringify(result, null, 2));
       return result;
     } catch (error) {
       console.error('[MemoryStore] Error loading thread item:', error);
@@ -534,24 +613,19 @@ export class MemoryStore<TContext = any> {
     }
   }
 
-
   // Run state methods - using thread_run_states table
   async saveRunState(threadId: string, state: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('thread_run_states')
-      .upsert({
-        thread_id: threadId,
-        user_id: this.userId,
-        state_data: state,
-        updated_at: new Date().toISOString()
-      });
+    const { error } = await this.supabase.from('thread_run_states').upsert({
+      thread_id: threadId,
+      user_id: this.userId,
+      state_data: state,
+      updated_at: new Date().toISOString(),
+    });
 
     if (error) {
       console.error('[MemoryStore] Error saving run state:', error);
       throw error;
     }
-    
-    console.log('[MemoryStore] Saved run state to database for thread:', threadId);
   }
 
   async loadRunState(threadId: string): Promise<string | null> {
@@ -565,14 +639,12 @@ export class MemoryStore<TContext = any> {
     if (error) {
       if (error.code === 'PGRST116') {
         // No run state found
-        console.log('[MemoryStore] No run state found for thread:', threadId);
         return null;
       }
       console.error('[MemoryStore] Error loading run state:', error);
       throw error;
     }
 
-    console.log('[MemoryStore] Loaded run state from database for thread:', threadId);
     return data.state_data;
   }
 
@@ -587,12 +659,14 @@ export class MemoryStore<TContext = any> {
       console.error('[MemoryStore] Error clearing run state:', error);
       throw error;
     }
-
-    console.log('[MemoryStore] Cleared run state from database for thread:', threadId);
   }
 
   // Additional methods required by ChatKit API
-  async loadThreads(limit: number, after: string | null, order: string): Promise<Page<ThreadMetadata>> {
+  async loadThreads(
+    limit: number,
+    after: string | null,
+    order: string
+  ): Promise<Page<ThreadMetadata>> {
     let query = this.supabase
       .from('threads')
       .select('*')
@@ -628,7 +702,7 @@ export class MemoryStore<TContext = any> {
       title: thread.metadata?.title || 'New Chat',
       created_at: new Date(thread.created_at * 1000), // Convert Unix timestamp to Date
       status: { type: 'active' },
-      metadata: thread.metadata || {}
+      metadata: thread.metadata || {},
     }));
 
     return {
@@ -656,7 +730,7 @@ export class MemoryStore<TContext = any> {
       title: threadData.metadata?.title || 'New Chat',
       created_at: new Date(threadData.created_at * 1000),
       status: { type: 'active' },
-      metadata: threadData.metadata || {}
+      metadata: threadData.metadata || {},
     };
 
     const messagesPage = await this.loadThreadItems(threadId, null, 100, 'asc');
@@ -698,7 +772,6 @@ export class MemoryStore<TContext = any> {
       console.error('[MemoryStore] Error deleting thread:', threadError);
       throw threadError;
     }
-    console.log('[MemoryStore] Deleted thread and its messages:', threadId);
   }
 
   /**
@@ -715,9 +788,9 @@ export class MemoryStore<TContext = any> {
     threadId: string,
     userMessage: string,
     options: {
-      recentCount?: number;      // N - number of recent messages (default: 10)
-      similarCount?: number;      // K - number of similar messages (default: 5)
-      scoreThreshold?: number;    // Minimum similarity score (default: 0.7)
+      recentCount?: number; // N - number of recent messages (default: 10)
+      similarCount?: number; // K - number of similar messages (default: 5)
+      scoreThreshold?: number; // Minimum similarity score (default: 0.7)
     } = {}
   ): Promise<{
     recentMessages: ThreadMessage[];
@@ -727,9 +800,6 @@ export class MemoryStore<TContext = any> {
     const recentCount = options.recentCount ?? 10;
     const similarCount = options.similarCount ?? 5;
     const scoreThreshold = options.scoreThreshold ?? 0.7;
-
-    console.log('[MemoryStore] Getting conversation context for thread:', threadId);
-    console.log('[MemoryStore] Parameters:', { recentCount, similarCount, scoreThreshold });
 
     // Get N most recent messages
     const { data: recentMessagesData } = await this.supabase
@@ -742,17 +812,15 @@ export class MemoryStore<TContext = any> {
 
     const recentMessages: ThreadMessage[] = (recentMessagesData || [])
       .reverse() // Put back in chronological order
-      .map(msg => this.dbMessageToThreadMessage(msg));
-
-    console.log('[MemoryStore] Found', recentMessages.length, 'recent messages');
+      .map((msg) => this.dbMessageToThreadMessage(msg));
 
     // Get thread's vector store for semantic search
-    const { data: thread, error: threadError } = await this.supabase
+    const { data: thread, error: threadError } = (await this.supabase
       .from('threads')
       .select('vector_store_id')
       .eq('id', threadId)
       .eq('user_id', this.userId)
-      .single() as { data: { vector_store_id: string | null } | null; error: Error | null };
+      .single()) as { data: { vector_store_id: string | null } | null; error: Error | null };
 
     if (threadError || !thread) {
       throw new Error(`Thread ${threadId} not found`);
@@ -764,8 +832,6 @@ export class MemoryStore<TContext = any> {
 
     const vectorStoreId = thread.vector_store_id;
 
-    console.log('[MemoryStore] Performing semantic search in vector store:', vectorStoreId);
-
     // Search vector store for similar messages using fetch since SDK might not have search method
     const searchResponse = await fetch(
       `${this.supabaseUrl}/functions/v1/openai-polyfill/vector_stores/${vectorStoreId}/search`,
@@ -773,7 +839,7 @@ export class MemoryStore<TContext = any> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.userJwt}`,
+          Authorization: `Bearer ${this.userJwt}`,
         },
         body: JSON.stringify({
           query: userMessage,
@@ -791,8 +857,6 @@ export class MemoryStore<TContext = any> {
     }
 
     const searchResults = await searchResponse.json();
-
-    console.log('[MemoryStore] Found', searchResults.data.length, 'similar messages');
 
     const similarMessages: Array<ThreadMessage & { similarity_score: number }> = [];
 
@@ -841,12 +905,10 @@ export class MemoryStore<TContext = any> {
 
     // Sort combined messages chronologically
     combinedMessages.sort((a, b) => {
-      const indexA = recentMessagesData?.findIndex(m => m.id === a.id) ?? -1;
-      const indexB = recentMessagesData?.findIndex(m => m.id === b.id) ?? -1;
+      const indexA = recentMessagesData?.findIndex((m) => m.id === a.id) ?? -1;
+      const indexB = recentMessagesData?.findIndex((m) => m.id === b.id) ?? -1;
       return (indexA >= 0 ? indexA : Infinity) - (indexB >= 0 ? indexB : Infinity);
     });
-
-    console.log('[MemoryStore] Combined context has', combinedMessages.length, 'unique messages');
 
     return {
       recentMessages,
@@ -910,11 +972,8 @@ export class MemoryStore<TContext = any> {
     output_type?: string;
     metadata?: any;
   }): Promise<void> {
-    console.log(`[MemoryStore] Saving response data: ${responseData.id}`);
-
-    const { error } = await this.supabase
-      .from('responses')
-      .upsert({
+    const { error } = await this.supabase.from('responses').upsert(
+      {
         id: responseData.id,
         user_id: this.userId,
         thread_id: responseData.thread_id || null,
@@ -927,13 +986,13 @@ export class MemoryStore<TContext = any> {
         output_type: responseData.output_type || null,
         metadata: responseData.metadata || {},
         created_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
+      },
+      { onConflict: 'id' }
+    );
 
     if (error) {
       console.error('[MemoryStore] Error saving response:', error);
       throw error;
     }
-
-    console.log(`[MemoryStore] ✅ Saved response: ${responseData.id}`);
   }
 }

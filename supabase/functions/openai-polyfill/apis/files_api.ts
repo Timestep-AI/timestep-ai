@@ -70,13 +70,10 @@ export async function handleFilesRequest(
   // Find where 'files' starts in the path
   const filesIndex = pathParts.indexOf('files');
   if (filesIndex === -1) {
-    return new Response(
-      JSON.stringify({ error: 'Files endpoint not found in path' }),
-      {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ error: 'Files endpoint not found in path' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   // Get the parts after 'files'
@@ -103,7 +100,11 @@ export async function handleFilesRequest(
   }
 
   // /files/{file_id}/content
-  if (relativeParts.length === 3 && relativeParts[0] === 'files' && relativeParts[2] === 'content') {
+  if (
+    relativeParts.length === 3 &&
+    relativeParts[0] === 'files' &&
+    relativeParts[2] === 'content'
+  ) {
     const fileId = relativeParts[1];
 
     if (req.method === 'GET') {
@@ -111,24 +112,17 @@ export async function handleFilesRequest(
     }
   }
 
-  return new Response(
-    JSON.stringify({ error: 'Files endpoint not found' }),
-    {
-      status: 404,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    }
-  );
+  return new Response(JSON.stringify({ error: 'Files endpoint not found' }), {
+    status: 404,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 /**
  * GET /files
  * List files
  */
-async function listFiles(
-  req: Request,
-  supabaseClient: any,
-  userId: string
-): Promise<Response> {
+async function listFiles(req: Request, supabaseClient: any, userId: string): Promise<Response> {
   try {
     const url = new URL(req.url);
     const purpose = url.searchParams.get('purpose');
@@ -136,11 +130,8 @@ async function listFiles(
     const order = url.searchParams.get('order') || 'desc';
     const after = url.searchParams.get('after');
 
-    console.log('[Files] Listing files', { purpose, limit, order, after, userId });
-
     // List files from Supabase Storage
-    const { data: storageFiles, error: listError } = await supabaseClient
-      .storage
+    const { data: storageFiles, error: listError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .list(userId, {
         limit,
@@ -155,11 +146,7 @@ async function listFiles(
     // Fetch metadata from database
     const fileIds = storageFiles?.map((f: any) => f.name.replace('.dat', '')) || [];
 
-    let query = supabaseClient
-      .from('files')
-      .select('*')
-      .eq('user_id', userId)
-      .in('id', fileIds);
+    let query = supabaseClient.from('files').select('*').eq('user_id', userId).in('id', fileIds);
 
     if (purpose) {
       query = query.eq('purpose', purpose);
@@ -234,7 +221,7 @@ async function uploadFile(
             type: 'invalid_request_error',
             param: 'file',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -251,7 +238,7 @@ async function uploadFile(
             type: 'invalid_request_error',
             param: 'purpose',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -259,8 +246,6 @@ async function uploadFile(
         }
       );
     }
-
-    console.log('[Files] Uploading file:', file.name, 'purpose:', purpose, 'size:', file.size);
 
     // Generate file ID
     const fileId = `file-${generateId()}`;
@@ -275,8 +260,7 @@ async function uploadFile(
 
     // Upload to Supabase Storage
     const fileBuffer = await file.arrayBuffer();
-    const { error: uploadError } = await supabaseClient
-      .storage
+    const { error: uploadError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .upload(`${userId}/${fileId}.dat`, fileBuffer, {
         contentType: file.type || 'application/octet-stream',
@@ -292,11 +276,8 @@ async function uploadFile(
     let embedding: number[] | null = null;
     try {
       const fileText = await file.text();
-      console.log('[Files] Generating embedding for file content...');
 
       embedding = await generateEmbedding(fileText, userJwt);
-
-      console.log('[Files] Generated embedding with', embedding?.length, 'dimensions');
     } catch (error) {
       console.error('[Files] Error generating embedding:', error);
       // Continue without embedding - it's not critical for file upload
@@ -320,9 +301,7 @@ async function uploadFile(
       fileMetadata.embedding = embedding;
     }
 
-    const { error: dbError } = await supabaseClient
-      .from('files')
-      .insert([fileMetadata]);
+    const { error: dbError } = await supabaseClient.from('files').insert([fileMetadata]);
 
     if (dbError) {
       console.error('[Files] Error saving file metadata:', dbError);
@@ -341,8 +320,6 @@ async function uploadFile(
       purpose,
       status: 'uploaded',
     };
-
-    console.log('[Files] Successfully uploaded file:', fileId);
 
     return new Response(JSON.stringify(response), {
       status: 200,
@@ -365,8 +342,6 @@ async function retrieveFile(
   fileId: string
 ): Promise<Response> {
   try {
-    console.log('[Files] Retrieving file:', fileId);
-
     const { data: fileMetadata, error: dbError } = await supabaseClient
       .from('files')
       .select('*')
@@ -383,7 +358,7 @@ async function retrieveFile(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -425,8 +400,6 @@ async function deleteFile(
   fileId: string
 ): Promise<Response> {
   try {
-    console.log('[Files] Deleting file:', fileId);
-
     // Check if file exists and belongs to user
     const { data: fileMetadata, error: checkError } = await supabaseClient
       .from('files')
@@ -444,7 +417,7 @@ async function deleteFile(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -454,8 +427,7 @@ async function deleteFile(
     }
 
     // Delete from storage
-    const { error: storageError } = await supabaseClient
-      .storage
+    const { error: storageError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .remove([`${userId}/${fileId}.dat`]);
 
@@ -481,8 +453,6 @@ async function deleteFile(
       deleted: true,
     };
 
-    console.log('[Files] Successfully deleted file:', fileId);
-
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -504,8 +474,6 @@ async function retrieveFileContent(
   fileId: string
 ): Promise<Response> {
   try {
-    console.log('[Files] Retrieving file content:', fileId);
-
     // Check if file exists and belongs to user
     const { data: fileMetadata, error: checkError } = await supabaseClient
       .from('files')
@@ -523,7 +491,7 @@ async function retrieveFileContent(
             type: 'invalid_request_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 404,
@@ -533,8 +501,7 @@ async function retrieveFileContent(
     }
 
     // Download from storage
-    const { data: fileData, error: downloadError } = await supabaseClient
-      .storage
+    const { data: fileData, error: downloadError } = await supabaseClient.storage
       .from(STORAGE_BUCKET)
       .download(`${userId}/${fileId}.dat`);
 
@@ -542,8 +509,6 @@ async function retrieveFileContent(
       console.error('[Files] Error downloading file:', downloadError);
       return createErrorResponse(downloadError);
     }
-
-    console.log('[Files] Successfully retrieved file content:', fileId);
 
     // Return the file content with appropriate headers
     return new Response(fileData, {
@@ -573,7 +538,7 @@ async function generateEmbedding(text: string, userJwt: string): Promise<number[
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${userJwt}`,
+        Authorization: `Bearer ${userJwt}`,
       },
       body: JSON.stringify({
         input: text.substring(0, 8000), // Limit to ~8k chars to avoid token limits

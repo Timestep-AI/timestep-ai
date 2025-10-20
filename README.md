@@ -105,7 +105,7 @@ The app will be available at `http://localhost:5173`.
 In a separate terminal:
 
 ```bash
-npx supabase functions serve --no-verify-jwt
+npx supabase functions serve
 ```
 
 ## Project Structure
@@ -140,7 +140,7 @@ timestep-ai/
 The app supports genuine anonymous users through Supabase's anonymous sign-in feature:
 
 ```typescript
-const { data, error } = await supabase.auth.signInAnonymously()
+const { data, error } = await supabase.auth.signInAnonymously();
 ```
 
 Users can start chatting immediately without creating an account.

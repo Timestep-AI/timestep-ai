@@ -4,8 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
 import { Agent } from '@/types/agent';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSelect, IonSelectOption, IonIcon, IonSpinner, IonButtons, IonButton } from '@ionic/react';
-import { personCircleOutline, analyticsOutline } from 'ionicons/icons';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonSelect,
+  IonSelectOption,
+  IonIcon,
+  IonSpinner,
+  IonButtons,
+} from '@ionic/react';
+import { personCircleOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
@@ -14,21 +25,21 @@ const Chat = () => {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
-  
+
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
-  
+
   // Agent details state
   const [agentDetails, setAgentDetails] = useState<Agent | null>(null);
   const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
-  
+
   // Menu refs
   const leftMenuRef = useRef<HTMLIonMenuElement>(null);
   const rightMenuRef = useRef<HTMLIonMenuElement>(null);
 
   // Get server base URL
   const getServerBaseUrl = () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ohzbghitbjryfpmucgju.supabase.co";
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
     return `${supabaseUrl}/functions/v1/agent-chat`;
   };
 
@@ -38,7 +49,7 @@ const Chat = () => {
       setLoadingAgents(true);
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
-      
+
       // Auto-select the first agent if available
       if (agentsData.length > 0 && !selectedAgent) {
         setSelectedAgent(agentsData[0]);
@@ -94,11 +105,14 @@ const Chat = () => {
     const initializeAuth = async () => {
       try {
         // First, check if there's already a valid session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-          if (session && !sessionError) {
-            // We have a valid session, use it
-            setIsAuthenticated(true);
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (session && !sessionError) {
+          // We have a valid session, use it
+          setIsAuthenticated(true);
           await loadAgents();
           // Load the most recent thread to continue the conversation
           await loadMostRecentThread();
@@ -124,7 +138,9 @@ const Chat = () => {
     initializeAuth();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         // Optionally sign in anonymously again
@@ -148,22 +164,24 @@ const Chat = () => {
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session?.access_token) {
       throw new Error('No valid session found. Please sign in.');
     }
-    
+
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`
+      Authorization: `Bearer ${session.access_token}`,
     };
   };
 
   // Handle agent switching
   const handleAgentChange = (e: CustomEvent) => {
     const agentId = e.detail.value;
-    const agent = agents.find(a => a.id === agentId);
+    const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
@@ -173,17 +191,23 @@ const Chat = () => {
   };
 
   // ChatKit configuration
-  const chatKitUrl = selectedAgent ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit` : `${getServerBaseUrl()}/api/chatkit`;
+  const chatKitUrl = selectedAgent
+    ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit`
+    : `${getServerBaseUrl()}/api/chatkit`;
   console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
-  
+
   const { control } = useChatKit({
+    onThreadChange: ({ threadId }) => {
+      console.log('Thread changed:', threadId);
+      setCurrentThreadId(threadId);
+    },
     api: {
       url: chatKitUrl,
 
       // Custom fetch with auth injection
       async fetch(url: string, options: RequestInit) {
         const auth = await getAuthHeaders();
-        
+
         return fetch(url, {
           ...options,
           headers: {
@@ -195,12 +219,14 @@ const Chat = () => {
 
       // Upload strategy for attachments
       uploadStrategy: {
-        type: "direct",
-        uploadUrl: selectedAgent ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit/upload` : `${getServerBaseUrl()}/api/chatkit/upload`,
+        type: 'direct',
+        uploadUrl: selectedAgent
+          ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit/upload`
+          : `${getServerBaseUrl()}/api/chatkit/upload`,
       },
 
       // Domain key for security
-      domainKey: "localhost-dev",
+      domainKey: 'localhost-dev',
     },
     composer: {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
@@ -208,7 +234,7 @@ const Chat = () => {
     },
     header: {
       leftAction: {
-        icon: "sidebar-left",
+        icon: 'sidebar-left',
         onClick: async () => {
           // Open the left settings menu
           if (leftMenuRef.current) {
@@ -217,7 +243,7 @@ const Chat = () => {
         },
       },
       rightAction: {
-        icon: "sidebar-right",
+        icon: 'sidebar-right',
         onClick: async () => {
           // Open the right menu
           if (rightMenuRef.current) {
@@ -238,11 +264,11 @@ const Chat = () => {
       // ]
     },
     theme: {
-      colorScheme: darkMode ? "dark" : "light",
-      color: { accent: { primary: "#D7263D", level: 2 } },
-      radius: "round",
-      density: "normal",
-      typography: { fontFamily: "Open Sans, sans-serif" },
+      colorScheme: darkMode ? 'dark' : 'light',
+      color: { accent: { primary: '#D7263D', level: 2 } },
+      radius: 'round',
+      density: 'normal',
+      typography: { fontFamily: 'Open Sans, sans-serif' },
     },
   });
 
@@ -252,7 +278,15 @@ const Chat = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+            }}
+          >
             <IonSpinner name="crescent" />
             <p style={{ marginTop: '1rem' }}>
               {!isAuthenticated ? 'Initializing chat...' : 'Loading agents...'}
@@ -294,12 +328,12 @@ const Chat = () => {
           <IonToolbar>
             <IonTitle>Timestep AI</IonTitle>
             <IonButtons slot="end">
-              <IonButton fill="clear" routerLink="/traces">
-                <IonIcon icon={analyticsOutline} />
-              </IonButton>
-              <IonIcon icon={personCircleOutline} style={{ fontSize: '24px', marginRight: '8px' }} />
+              <IonIcon
+                icon={personCircleOutline}
+                style={{ fontSize: '24px', marginRight: '8px' }}
+              />
               <IonSelect
-                value={selectedAgent?.id || ""}
+                value={selectedAgent?.id || ''}
                 placeholder="Select Agent"
                 onIonChange={handleAgentChange}
                 interface="popover"
@@ -314,11 +348,7 @@ const Chat = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
-          <ChatKit
-            key={selectedAgent?.id || 'default'}
-            control={control}
-            className="h-full w-full"
-          />
+          <ChatKit control={control} className="h-full w-full" />
         </IonContent>
       </IonPage>
     </>

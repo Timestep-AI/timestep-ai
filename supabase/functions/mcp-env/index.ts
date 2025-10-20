@@ -10,7 +10,7 @@ const mcpServer = new McpServer({
 });
 
 // Register all tools
-tools.forEach(tool => {
+tools.forEach((tool) => {
   mcpServer.registerTool(tool.name, tool.definition, tool.handler);
 });
 
@@ -18,8 +18,7 @@ function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '';
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers':
-      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   };
 
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -28,7 +27,7 @@ function corsHeaders(req: Request) {
   return headers;
 }
 
-console.log('MCP Server starting');
+//
 
 Deno.serve(async (req: Request) => {
   // CORS preflight
@@ -113,14 +112,14 @@ Deno.serve(async (req: Request) => {
       });
 
       // Register all tools on this instance
-      tools.forEach(tool => {
+      tools.forEach((tool) => {
         serverForRequest.registerTool(tool.name, tool.definition, tool.handler);
       });
 
       await serverForRequest.connect(transport);
 
       // Create a promise that resolves when the response is complete
-      responsePromise = new Promise<void>(resolve => {
+      responsePromise = new Promise<void>((resolve) => {
         responseResolve = resolve;
       });
 
@@ -130,10 +129,7 @@ Deno.serve(async (req: Request) => {
 
       // Build headers, including authorization from query parameter if present
       const headers: Record<string, string> = {
-        accept:
-          req.method === 'GET'
-            ? 'text/event-stream'
-            : 'application/json, text/event-stream',
+        accept: req.method === 'GET' ? 'text/event-stream' : 'application/json, text/event-stream',
         'content-type': req.method === 'POST' ? 'application/json' : undefined,
         ...Object.fromEntries(req.headers.entries()),
       };
@@ -150,11 +146,7 @@ Deno.serve(async (req: Request) => {
         body: req.method === 'POST' ? await req.json() : undefined,
       };
 
-      await transport.handleRequest(
-        mockReq as any,
-        mockRes as unknown as any,
-        mockReq.body
-      );
+      await transport.handleRequest(mockReq as any, mockRes as unknown as any, mockReq.body);
 
       // Wait for the response to be complete (when end() is called)
       await responsePromise;
@@ -165,13 +157,10 @@ Deno.serve(async (req: Request) => {
       });
     } catch (error) {
       console.error('[MCP] Error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to handle MCP request' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-        }
-      );
+      return new Response(JSON.stringify({ error: 'Failed to handle MCP request' }), {
+        status: 500,
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      });
     }
   }
 

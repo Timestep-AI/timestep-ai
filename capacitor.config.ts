@@ -6,9 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     url: 'https://d77d4214-d9ca-41fb-93e3-cd45315c5548.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    cleartext: true,
   },
-  bundledWebRuntime: false
+  bundledWebRuntime: false,
 };
 
 export default config;

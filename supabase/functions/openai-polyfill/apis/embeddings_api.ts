@@ -37,10 +37,14 @@ const corsHeaders = {
  * POST /embeddings
  * Creates vector embeddings from input text using Hugging Face endpoint
  */
-export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any, _userId: string, _userJwt?: string) {
+export async function handleEmbeddingsRequest(
+  req: Request,
+  _supabaseClient: any,
+  _userId: string,
+  _userJwt?: string
+) {
   try {
     const body: CreateEmbeddingRequest = await req.json();
-    console.log('[Embeddings] Received request for model:', body.model);
 
     // Validate required fields
     if (!body.input) {
@@ -51,7 +55,7 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
             type: 'invalid_request_error',
             param: 'input',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -68,7 +72,7 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
             type: 'invalid_request_error',
             param: 'model',
             code: null,
-          }
+          },
         }),
         {
           status: 400,
@@ -88,7 +92,7 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
             type: 'api_error',
             param: null,
             code: null,
-          }
+          },
         }),
         {
           status: 500,
@@ -103,8 +107,6 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
       apiKey: hfToken,
     });
 
-    console.log('[Embeddings] Creating embeddings with Hugging Face endpoint...');
-
     // Call the Hugging Face endpoint using OpenAI client
     const embeddingResponse = await client.embeddings.create({
       input: body.input,
@@ -114,16 +116,11 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
       user: body.user,
     } as any); // Cast to any to allow all fields through
 
-    console.log('[Embeddings] Successfully generated', embeddingResponse.data.length, 'embeddings');
-
     // Return the response from Hugging Face
-    return new Response(
-      JSON.stringify(embeddingResponse),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify(embeddingResponse), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[Embeddings] Error:', error);
 
@@ -136,7 +133,7 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
             type: error.type || 'api_error',
             param: (error as any).param || null,
             code: error.code || null,
-          }
+          },
         }),
         {
           status: error.status || 500,
@@ -153,7 +150,7 @@ export async function handleEmbeddingsRequest(req: Request, _supabaseClient: any
           type: 'api_error',
           param: null,
           code: null,
-        }
+        },
       }),
       {
         status: 500,

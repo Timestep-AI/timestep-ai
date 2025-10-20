@@ -13,11 +13,11 @@ export const getWeatherTool = {
       // Use Open-Meteo API (free, no API key required)
       // First, get coordinates for the city using geocoding
       const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
-      
+
       // Add 10 second timeout to prevent hanging
       const geocodeController = new AbortController();
       const geocodeTimeoutId = setTimeout(() => geocodeController.abort(), 10000);
-      
+
       let geocodeResponse;
       try {
         geocodeResponse = await fetch(geocodeUrl, {
@@ -56,11 +56,11 @@ export const getWeatherTool = {
 
       // Get weather data using coordinates
       const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=celsius`;
-      
+
       // Add 10 second timeout to prevent hanging
       const weatherController = new AbortController();
       const weatherTimeoutId = setTimeout(() => weatherController.abort(), 10000);
-      
+
       let response;
       try {
         response = await fetch(apiUrl, {
@@ -70,7 +70,9 @@ export const getWeatherTool = {
       } catch (fetchError) {
         clearTimeout(weatherTimeoutId);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error(`Weather API request timed out after 10 seconds for ${cityName}, ${country}`);
+          throw new Error(
+            `Weather API request timed out after 10 seconds for ${cityName}, ${country}`
+          );
         }
         throw fetchError;
       }
@@ -80,9 +82,7 @@ export const getWeatherTool = {
         console.error(
           `[Weather Tool] Weather API Error - Status: ${response.status}, Response: ${errorText}`
         );
-        throw new Error(
-          `Weather API error: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -131,10 +131,7 @@ export const getWeatherTool = {
         structuredContent: output,
       };
     } catch (error) {
-      console.error(
-        `[Weather Tool] Error fetching weather for ${city}:`,
-        error
-      );
+      console.error(`[Weather Tool] Error fetching weather for ${city}:`, error);
       throw error; // Re-throw the error so it's properly handled by the MCP framework
     }
   },

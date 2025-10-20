@@ -87,7 +87,7 @@ export function isStreamingReq(request: ChatKitRequest): boolean {
     'threads.create',
     'threads.add_user_message',
     'threads.action',
-    'threads.custom_action'
+    'threads.custom_action',
   ];
   return streamingTypes.includes(request.type);
 }

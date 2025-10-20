@@ -38,29 +38,37 @@ export class AgentFactory {
     this.supabaseClient = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {
-          Authorization: `Bearer ${this.userJwt}`
-        }
-      }
+          Authorization: `Bearer ${this.userJwt}`,
+        },
+      },
     });
   }
 
   async getAllAgents(userId: string): Promise<AgentRecord[]> {
     // Ensure default agents exist first
-    await this.ensureDefaultAgentInDatabase('00000000-0000-0000-0000-000000000000', userId, this.supabaseClient);
-    await this.ensureDefaultAgentInDatabase('ffffffff-ffff-ffff-ffff-ffffffffffff', userId, this.supabaseClient);
-    
+    await this.ensureDefaultAgentInDatabase(
+      '00000000-0000-0000-0000-000000000000',
+      userId,
+      this.supabaseClient
+    );
+    await this.ensureDefaultAgentInDatabase(
+      'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      userId,
+      this.supabaseClient
+    );
+
     // Fetch all agents for the user
     const { data: agents, error } = await this.supabaseClient
       .from('agents')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
-    
+
     if (error) {
       console.error('[AgentFactory] Error fetching agents:', error);
       throw error;
     }
-    
+
     return agents || [];
   }
 
@@ -74,7 +82,6 @@ export class AgentFactory {
 
     // If agent not found and it's a default agent ID, create it in the database
     if ((agentError || !agentData) && this.isDefaultAgentId(agentId)) {
-      console.log('[AgentFactory] Creating default agent in database:', agentId);
       await this.ensureDefaultAgentInDatabase(agentId, userId, this.supabaseClient);
 
       // Fetch the newly created agent - must match both id AND user_id for RLS
@@ -100,19 +107,15 @@ export class AgentFactory {
   }
 
   private async buildAgentFromData(agentData: AgentRecord, userId: string): Promise<Agent> {
-    console.log('[AgentFactory] Building agent:', agentData.name);
-
     // Build the agent configuration
     const instructions = agentData.instructions || 'You are a helpful AI assistant.';
-    
+
     // Get MCP tools if tool_ids are specified
     const tools = await this.getToolsFromDatabase(agentData.tool_ids, this.supabaseClient);
 
     // Recursively load handoff agents
     const handoffs: Agent[] = [];
     if (agentData.handoff_ids && agentData.handoff_ids.length > 0) {
-      console.log('[AgentFactory] Loading handoff agents:', agentData.handoff_ids);
-      
       for (const handoffId of agentData.handoff_ids) {
         try {
           const handoffAgent = await this.createAgent(handoffId, userId);
@@ -123,8 +126,6 @@ export class AgentFactory {
         }
       }
     }
-
-    console.log('[AgentFactory] Loaded', tools.length, 'tools and', handoffs.length, 'handoffs for agent');
 
     // Create the agent
     return new Agent({
@@ -144,7 +145,7 @@ export class AgentFactory {
     supabase: SupabaseClient
   ): Promise<ReturnType<typeof tool>[]> {
     if (!toolIds || toolIds.length === 0) {
-      console.log('[AgentFactory] No tool IDs specified, returning empty tools array');
+      console.warn('[AgentFactory] No tool IDs specified, returning empty tools array');
       return [];
     }
 
@@ -187,10 +188,7 @@ export class AgentFactory {
       const requestedTools = serverToolMap.get(server.id);
       if (!requestedTools) continue;
 
-      const tools = await this.getMcpToolsFromServer(
-        server.url,
-        Array.from(requestedTools)
-      );
+      const tools = await this.getMcpToolsFromServer(server.url, Array.from(requestedTools));
       allTools.push(...tools);
     }
 
@@ -224,13 +222,6 @@ export class AgentFactory {
     // Resolve relative URLs
     const resolvedUrl = this.resolveUrl(serverUrl);
 
-    console.log(
-      '[AgentFactory] Creating tool wrappers for MCP server at:',
-      resolvedUrl,
-      'tools:',
-      requestedToolNames
-    );
-
     const agentTools: ReturnType<typeof tool>[] = [];
 
     for (const toolName of requestedToolNames) {
@@ -244,16 +235,9 @@ export class AgentFactory {
       const originalFetch = globalThis.fetch;
       const mcpServerHost = new URL(resolvedUrl).host;
 
-      globalThis.fetch = (
-        input: string | URL | Request,
-        init?: RequestInit
-      ) => {
+      globalThis.fetch = (input: string | URL | Request, init?: RequestInit) => {
         const url =
-          typeof input === 'string'
-            ? input
-            : input instanceof URL
-              ? input.href
-              : input.url;
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
         if (url.includes(mcpServerHost)) {
           const headers = new Headers(init?.headers);
@@ -271,28 +255,19 @@ export class AgentFactory {
       };
 
       try {
-        const schemaTransport = new StreamableHTTPClientTransport(
-          new URL(resolvedUrl)
-        );
+        const schemaTransport = new StreamableHTTPClientTransport(new URL(resolvedUrl));
 
         await schemaClient.connect(schemaTransport);
 
         try {
           // List tools to get the schema for this specific tool
           const { tools: mcpTools } = await schemaClient.listTools();
-          const mcpTool = mcpTools.find(t => t.name === toolName);
+          const mcpTool = mcpTools.find((t) => t.name === toolName);
 
           if (!mcpTool) {
-            console.warn(
-              `[AgentFactory] Tool '${toolName}' not found in MCP server`
-            );
+            console.warn(`[AgentFactory] Tool '${toolName}' not found in MCP server`);
             continue;
           }
-
-          console.log(
-            `[AgentFactory] Found schema for tool '${toolName}':`,
-            JSON.stringify(mcpTool.inputSchema)
-          );
 
           // Use the MCP JSON schema directly
           const jsonSchema = mcpTool.inputSchema as Record<string, unknown>;
@@ -305,16 +280,10 @@ export class AgentFactory {
             description: mcpTool.description || `MCP tool: ${toolName}`,
             parameters: jsonSchema,
             needsApproval: async () => {
-              console.log('[AgentFactory] needsApproval called for tool:', toolName);
               // Always require approval for MCP tools
               return true;
             },
             async execute(params: Record<string, unknown>) {
-              console.log(
-                `[AgentFactory] Executing MCP tool ${toolName} with params:`,
-                params
-              );
-
               // Create a new client for tool execution
               const execClient = new Client({
                 name: 'timestep-mcp-client',
@@ -325,16 +294,9 @@ export class AgentFactory {
               const originalFetch = globalThis.fetch;
               const mcpServerHost = new URL(resolvedUrl).host;
 
-              globalThis.fetch = (
-                input: string | URL | Request,
-                init?: RequestInit
-              ) => {
+              globalThis.fetch = (input: string | URL | Request, init?: RequestInit) => {
                 const url =
-                  typeof input === 'string'
-                    ? input
-                    : input instanceof URL
-                      ? input.href
-                      : input.url;
+                  typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
                 if (url.includes(mcpServerHost)) {
                   const headers = new Headers(init?.headers);
@@ -352,9 +314,7 @@ export class AgentFactory {
               };
 
               try {
-                const execTransport = new StreamableHTTPClientTransport(
-                  new URL(resolvedUrl)
-                );
+                const execTransport = new StreamableHTTPClientTransport(new URL(resolvedUrl));
 
                 await execClient.connect(execTransport);
 
@@ -363,11 +323,6 @@ export class AgentFactory {
                     name: toolName,
                     arguments: params,
                   });
-
-                  console.log(
-                    `[AgentFactory] Tool ${toolName} execution result:`,
-                    result
-                  );
 
                   // Extract text content from result
                   const content = result.content || [];
@@ -385,10 +340,7 @@ export class AgentFactory {
               } catch (error) {
                 // Restore original fetch on error
                 globalThis.fetch = originalFetch;
-                console.error(
-                  `[AgentFactory] Error executing MCP tool ${toolName}:`,
-                  error
-                );
+                console.error(`[AgentFactory] Error executing MCP tool ${toolName}:`, error);
                 throw error;
               }
             },
@@ -403,10 +355,7 @@ export class AgentFactory {
       } catch (error) {
         // Restore original fetch on error
         globalThis.fetch = originalFetch;
-        console.error(
-          `[AgentFactory] Error creating tool wrapper for ${toolName}:`,
-          error
-        );
+        console.error(`[AgentFactory] Error creating tool wrapper for ${toolName}:`, error);
       }
     }
 
@@ -441,7 +390,6 @@ export class AgentFactory {
       .single();
 
     if (existingAgent) {
-      console.log('[AgentFactory] Default agent already exists for this user');
       return;
     }
 
@@ -469,7 +417,6 @@ You are an AI agent acting as a personal assistant.`,
             console.error('[AgentFactory] Error creating default Personal Assistant:', error);
             throw new Error(`Failed to create default agent: ${error.message}`);
           }
-          console.log('[AgentFactory] Default Personal Assistant already exists (concurrent creation)');
         }
         break;
       }
@@ -480,7 +427,8 @@ You are an AI agent acting as a personal assistant.`,
           id: agentId,
           user_id: userId,
           name: 'Weather Assistant',
-          instructions: 'You are a helpful AI assistant that can answer questions about weather. When asked about weather, you MUST use the get_weather tool to get accurate, real-time weather information.',
+          instructions:
+            'You are a helpful AI assistant that can answer questions about weather. When asked about weather, you MUST use the get_weather tool to get accurate, real-time weather information.',
           tool_ids: [
             '00000000-0000-0000-0000-000000000000.get_weather',
             '00000000-0000-0000-0000-000000000000.think',
@@ -494,7 +442,6 @@ You are an AI agent acting as a personal assistant.`,
             console.error('[AgentFactory] Error creating default Weather Assistant:', error);
             throw new Error(`Failed to create default agent: ${error.message}`);
           }
-          console.log('[AgentFactory] Default Weather Assistant already exists (concurrent creation)');
         }
         break;
       }
@@ -502,17 +449,12 @@ You are an AI agent acting as a personal assistant.`,
       default:
         throw new Error(`Unknown default agent ID: ${agentId}`);
     }
-
-    console.log('[AgentFactory] Successfully created default agent:', agentId);
   }
 
   /**
    * Ensure the default MCP server exists for the given user
    */
-  private async ensureDefaultMcpServer(
-    userId: string,
-    supabase: SupabaseClient
-  ): Promise<void> {
+  private async ensureDefaultMcpServer(userId: string, supabase: SupabaseClient): Promise<void> {
     const defaultServerId = '00000000-0000-0000-0000-000000000000';
 
     // Check if it exists for this user
@@ -524,7 +466,6 @@ You are an AI agent acting as a personal assistant.`,
       .single();
 
     if (existing) {
-      console.log('[AgentFactory] Default MCP server already exists for user');
       return;
     }
 
@@ -539,13 +480,10 @@ You are an AI agent acting as a personal assistant.`,
     if (error) {
       // Ignore duplicate key errors - it means another process created it
       if (error.code === '23505') {
-        console.log('[AgentFactory] Default MCP server already exists (concurrent creation)');
         return;
       }
       console.error('[AgentFactory] Error creating default MCP server:', error);
       throw new Error(`Failed to create default MCP server: ${error.message}`);
     }
-
-    console.log('[AgentFactory] Successfully created default MCP server for user');
   }
 }

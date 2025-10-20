@@ -1,5 +1,20 @@
 import { forwardRef } from 'react';
-import { IonMenu, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonIcon, IonToggle, IonSpinner, IonCard, IonCardContent, IonChip } from '@ionic/react';
+import {
+  IonMenu,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonIcon,
+  IonToggle,
+  IonSpinner,
+  IonCard,
+  IonCardContent,
+  IonChip,
+} from '@ionic/react';
 import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
 import { Agent } from '@/types/agent';
 
@@ -15,7 +30,10 @@ interface SidebarMenuProps {
 }
 
 const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
-  ({ id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails }, ref) => {
+  (
+    { id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails },
+    ref
+  ) => {
     return (
       <IonMenu ref={ref} id={id} contentId="main-content" type="reveal" side={side}>
         <IonHeader>
@@ -49,7 +67,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   <p>{agentDetails.name}</p>
                 </IonLabel>
               </IonItem>
-              
+
               {agentDetails.model && (
                 <IonItem>
                   <IonIcon icon={cogOutline} slot="start" />
@@ -59,7 +77,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               {agentDetails.instructions && (
                 <IonItem>
                   <IonLabel>
@@ -68,7 +86,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               {agentDetails.handoffDescription && (
                 <IonItem>
                   <IonLabel>
@@ -77,7 +95,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               {agentDetails.handoffIds && agentDetails.handoffIds.length > 0 && (
                 <IonItem>
                   <IonLabel>
@@ -86,7 +104,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               {agentDetails.toolIds && agentDetails.toolIds.length > 0 && (
                 <IonItem>
                   <IonLabel>
@@ -95,7 +113,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               {agentDetails.modelSettings && Object.keys(agentDetails.modelSettings).length > 0 && (
                 <IonItem>
                   <IonLabel>
@@ -104,7 +122,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   </IonLabel>
                 </IonItem>
               )}
-              
+
               <IonItem>
                 <IonLabel>
                   <h3>Created At</h3>
@@ -124,8 +142,8 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
             <IonItem>
               <IonIcon icon={colorPaletteOutline} slot="start" />
               <IonLabel>Dark Mode</IonLabel>
-              <IonToggle 
-                slot="end" 
+              <IonToggle
+                slot="end"
                 checked={darkMode}
                 onIonChange={(e) => onDarkModeChange?.(e.detail.checked)}
               />

@@ -57,15 +57,15 @@
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
-    
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 45%) 100%);
     --gradient-surface: linear-gradient(135deg, hsl(220 13% 12%) 0%, hsl(220 13% 9%) 100%);
-    
+
     /* Shadows */
     --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.3);
     --shadow-elevated: 0 8px 32px hsl(220 13% 3% / 0.4);
-    
+
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -134,66 +134,68 @@
   body {
     @apply bg-background text-foreground dark;
   }
-  
+
   /* Apply dark theme by default */
   html {
     @apply dark;
   }
-  
+
   /* Ensure Ionic components use dark theme */
   ion-app {
     @apply bg-background text-foreground;
   }
-  
+
   /* Dark theme for Ionic cards */
   ion-card {
     --background: hsl(var(--card));
     --color: hsl(var(--card-foreground));
   }
-  
+
   /* Dark theme for Ionic items */
   ion-item {
     --background: transparent;
     --color: hsl(var(--foreground));
   }
-  
+
   /* Dark theme for Ionic toolbar */
   ion-toolbar {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
   }
-  
+
   /* Dark theme for Ionic popovers */
   .dark-popover {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
   }
-  
+
   .dark-popover ion-backdrop {
     --background: rgba(0, 0, 0, 0.4);
   }
-  
+
   .dark-popover .popover-content {
     --background: hsl(var(--surface));
     border: 1px solid hsl(var(--border));
     border-radius: 8px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.3),
+      0 4px 6px -2px rgba(0, 0, 0, 0.1);
     z-index: 1000;
   }
-  
+
   /* Force dark styling for all Ionic popovers */
   ion-popover {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
   }
-  
+
   ion-popover ion-list {
     --background: hsl(var(--surface));
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
   }
-  
+
   ion-popover ion-item {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
@@ -201,16 +203,16 @@
     --inner-border-width: 0;
     margin: 0 !important;
   }
-  
+
   ion-popover ion-item:hover {
     --background: hsl(var(--surface-elevated));
   }
-  
+
   /* Responsive utilities */
   .pl-13 {
     @apply pl-12;
   }
-  
+
   @media (max-width: 640px) {
     .pl-13 {
       @apply pl-0;

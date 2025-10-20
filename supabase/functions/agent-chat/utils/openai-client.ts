@@ -13,7 +13,7 @@ export function createOpenAIClient(supabaseUrl: string, userJwt: string): OpenAI
     apiKey: userJwt, // Use JWT as API key for authentication
     baseURL,
     defaultHeaders: {
-      'Authorization': `Bearer ${userJwt}`,
+      Authorization: `Bearer ${userJwt}`,
     },
   });
 }
