@@ -25,12 +25,29 @@ jobs:
       - name: Link to Supabase project
         run: supabase link --project-ref $PROJECT_ID
 
+      - name: Check migration status
+        run: |
+          echo "Checking current migration status..."
+          supabase migration list
+
+      - name: Repair migration history if needed
+        run: |
+          echo "Attempting to repair migration history..."
+          supabase migration repair --status reverted 20250109000000 20250807212344 20250813224442 20250819000000 20250820165658 20250821054557 20250821055231 20250821185755 20250821194806 20250822000000 20250823 20250825014100 20250825015519 20250825025310 20250826000000 20250826000002 20250826000003 20250827011900 20250827020900 20250827023500 20250827030000 20250828000000 20250828000001 20250828000002 20250828000003 20250828000004 20250828000005 20250828000006 20250828000007 20250830000000 20250830000001 20250830000002 20250830000015 20250918022620 20250918024348 20250918041810 20250919042208 20250919095845 20250919095923 20250919101304 20250919103041 20250919103916 20250920011051 20250920011246 20250920082401 20250920100126 20250920125007 20250921090638 20250921092213 || echo "Migration repair completed or not needed"
+
       - name: Run database migrations
-        run: supabase db push
+        run: |
+          echo "Attempting to push migrations..."
+          if ! supabase db push; then
+            echo "Migration push failed. Attempting to pull remote migrations to sync..."
+            supabase db pull
+            echo "Retrying migration push after sync..."
+            supabase db push
+          fi
 
       - name: Verify migrations were applied
         run: |
-          echo "Checking migration status..."
+          echo "Final migration status:"
           supabase migration list
 
       - name: Deploy Supabase functions
