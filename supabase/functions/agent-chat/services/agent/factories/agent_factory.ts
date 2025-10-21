@@ -2,7 +2,6 @@ import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentStore } from '../../../stores/agent_store.ts';
 import { McpServerStore } from '../../../stores/mcp_server_store.ts';
-import { McpServerRecord } from '../../../types/mcp_server.ts';
 import { McpService } from '../../mcp/service.ts';
 import { AgentRecord } from '../../../types/agent.ts';
 

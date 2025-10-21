@@ -6,12 +6,12 @@ import type {
   ThreadStreamEvent,
   ThreadUpdatedEvent,
 } from '../../../types/chatkit.ts';
-import { AgentFactory } from '../../agent/factories/agent_factory.ts';
+import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
   constructor(
     private store: MemoryStore<any>,
-    private agentFactory: AgentFactory,
+    private agent: Agent,
     private context: any
   ) {}
 
@@ -63,7 +63,7 @@ export class ToolHandler {
       return;
     }
 
-    const agent = await this.agentFactory.createAgent(this.context.agentId, this.context.userId);
+    const agent = this.agent;
     const runState = await RunState.fromString(agent, serializedState);
 
     // Approve the specific tool call
@@ -98,7 +98,7 @@ export class ToolHandler {
       return;
     }
 
-    const agent = await this.agentFactory.createAgent(this.context.agentId, this.context.userId);
+    const agent = this.agent;
     const runState = await RunState.fromString(agent, serializedState);
 
     // Reject the specific tool call

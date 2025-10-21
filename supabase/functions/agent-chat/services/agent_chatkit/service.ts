@@ -1,7 +1,6 @@
 import type { MemoryStore } from '../../stores/memory_store.ts';
-import { Runner, RunState } from '@openai/agents-core';
+import { Runner, RunState, Agent } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
-import { AgentFactory } from '../agent/factories/agent_factory.ts';
 import {
   isStreamingReq,
   type ChatKitRequest,
@@ -46,14 +45,14 @@ export class AgentChatKitService {
   private modelStreamHandler: ModelStreamHandler;
 
   constructor(
-    private store: MemoryStore<any>,
-    private agentFactory: AgentFactory,
-    private context: any
+    private agent: Agent,
+    private context: any,
+    private store: MemoryStore<any>
   ) {
     this.itemFactory = new ItemFactory(store);
     this.messageProcessor = new MessageProcessor(store, this.itemFactory);
     this.streamProcessor = new StreamProcessor(store);
-    this.toolHandler = new ToolHandler(store, agentFactory, context);
+    this.toolHandler = new ToolHandler(store, agent, context);
 
     // Initialize event handlers
     this.toolCallOutputHandler = new ToolCallOutputHandler(store, this.itemFactory);
@@ -197,7 +196,7 @@ export class AgentChatKitService {
 
     try {
       const messages = await this.messageProcessor.loadConversationHistory(thread.id);
-      const agent = await this.agentFactory.createAgent(this.context.agentId, this.context.userId);
+      const agent = this.agent;
       const inputItems = this.messageProcessor.convertToAgentFormat(messages);
 
       const modelProvider = new OpenAIProvider({

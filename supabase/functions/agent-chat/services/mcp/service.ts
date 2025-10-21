@@ -7,7 +7,10 @@ export class McpService {
   constructor(
     private supabaseUrl: string,
     private userJwt: string
-  ) {}
+  ) {
+    this.supabaseUrl = supabaseUrl;
+    this.userJwt = userJwt;
+  }
 
   /**
    * Resolve a potentially relative URL to an absolute URL
@@ -93,10 +96,17 @@ export class McpService {
         const url =
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-        // Check if this request is going to our MCP server
-        if (url.startsWith(mcpServerUrl) || url.includes('/functions/v1/mcp-env')) {
+        // Check if this request is going to our MCP server or Supabase functions
+        const shouldAddAuth =
+          url.includes('/functions/v1/') ||
+          url.includes('mcp-env') ||
+          url.startsWith(mcpServerUrl) ||
+          (this.supabaseUrl && url.includes(this.supabaseUrl.replace(/\/$/, '')));
+
+        if (shouldAddAuth) {
           const headers = new Headers(init?.headers);
-          if (!headers.has('Authorization')) {
+          if (!headers.has('Authorization') && this.userJwt) {
+            console.log(`[McpService] Adding auth header to request: ${url}`);
             headers.set('Authorization', `Bearer ${this.userJwt}`);
           }
 
@@ -153,10 +163,19 @@ export class McpService {
                 const url =
                   typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-                // Check if this request is going to our MCP server
-                if (url.startsWith(mcpServerUrl) || url.includes('/functions/v1/mcp-env')) {
+                // Check if this request is going to our MCP server or Supabase functions
+                const shouldAddAuth =
+                  url.includes('/functions/v1/') ||
+                  url.includes('mcp-env') ||
+                  url.startsWith(mcpServerUrl) ||
+                  (this.supabaseUrl && url.includes(this.supabaseUrl.replace(/\/$/, '')));
+
+                if (shouldAddAuth) {
                   const headers = new Headers(init?.headers);
-                  if (!headers.has('Authorization')) {
+                  if (!headers.has('Authorization') && userJwt) {
+                    console.log(
+                      `[McpService] Adding auth header to tool execution request: ${url}`
+                    );
                     headers.set('Authorization', `Bearer ${userJwt}`);
                   }
 

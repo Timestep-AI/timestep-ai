@@ -6,9 +6,11 @@ import { MemoryStore } from '../../stores/memory_store.ts';
 
 export class AgentService {
   private agentFactory: AgentFactory;
+  private store: MemoryStore<any>;
 
-  constructor(supabaseUrl: string, anonKey: string, userJwt: string) {
+  constructor(supabaseUrl: string, anonKey: string, userJwt: string, store: MemoryStore<any>) {
     this.agentFactory = new AgentFactory(supabaseUrl, anonKey, userJwt);
+    this.store = store;
   }
 
   /**
@@ -29,21 +31,13 @@ export class AgentService {
    * Process a ChatKit request by delegating to AgentChatKitService
    */
   async processChatKitRequest(
-    _agentId: string,
-    _userId: string,
+    agentId: string,
+    userId: string,
     requestBody: string,
-    store: MemoryStore<any>,
     context: any
   ): Promise<{ streaming: boolean; result: any }> {
-    const chatKitService = new AgentChatKitService(store, this.agentFactory, context);
+    const agent = await this.createAgent(agentId, userId);
+    const chatKitService = new AgentChatKitService(agent, context, this.store);
     return await chatKitService.processRequest(requestBody);
-  }
-
-  /**
-   * Get the underlying AgentFactory for advanced usage
-   * This is primarily used by AgentChatKitService for complex agent operations
-   */
-  getAgentFactory(): AgentFactory {
-    return this.agentFactory;
   }
 }

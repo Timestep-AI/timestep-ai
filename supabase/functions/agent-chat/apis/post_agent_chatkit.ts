@@ -68,7 +68,8 @@ export async function handlePostAgentChatKitRequest(
         const agentService = new AgentService(
           Deno.env.get('SUPABASE_URL') ?? '',
           Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          userJwt // Use the clean JWT without "Bearer " prefix
+          userJwt, // Use the clean JWT without "Bearer " prefix
+          store
         );
 
         const context = {
@@ -84,7 +85,6 @@ export async function handlePostAgentChatKitRequest(
           agentId,
           currentUserId,
           JSON.stringify(body),
-          store,
           context
         );
 
