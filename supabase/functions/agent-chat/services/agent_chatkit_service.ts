@@ -1,4 +1,4 @@
-import type { MemoryStore } from '../../stores/memory_store.ts';
+import type { MemoryStore } from '../stores/memory_store.ts';
 import { Runner, RunState, Agent } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import {
@@ -13,21 +13,21 @@ import {
   type ThreadItemDoneEvent,
   type ThreadItemAddedEvent,
   type UserMessageInput,
-} from '../../types/chatkit.ts';
+} from '../types/chatkit.ts';
 
 // Import from organized modules
-import { ItemFactory } from './factories/item_factory.ts';
-import { WidgetFactory } from './factories/widget_factory.ts';
-import { MessageProcessor } from './processors/message_processor.ts';
-import { StreamProcessor } from './processors/stream_processor.ts';
-import { ToolHandler } from './handlers/tool_handler.ts';
-import { ToolCallOutputHandler } from './handlers/tool_call_output_handler.ts';
-import { ToolCalledHandler } from './handlers/tool_called_handler.ts';
-import { HandoffCallHandler } from './handlers/handoff_call_handler.ts';
-import { HandoffOutputHandler } from './handlers/handoff_output_handler.ts';
-import { ToolApprovalHandler } from './handlers/tool_approval_handler.ts';
-import { ModelStreamHandler } from './handlers/model_stream_handler.ts';
-import { streamAgentResponse } from './streaming/agent_response_streamer.ts';
+import { ItemFactory } from '../utils/agent_chatkit/factories/item_factory.ts';
+import { WidgetFactory } from '../utils/agent_chatkit/factories/widget_factory.ts';
+import { MessageProcessor } from '../utils/agent_chatkit/processors/message_processor.ts';
+import { StreamProcessor } from '../utils/agent_chatkit/processors/stream_processor.ts';
+import { ToolHandler } from '../utils/agent_chatkit/handlers/tool_handler.ts';
+import { ToolCallOutputHandler } from '../utils/agent_chatkit/handlers/tool_call_output_handler.ts';
+import { ToolCalledHandler } from '../utils/agent_chatkit/handlers/tool_called_handler.ts';
+import { HandoffCallHandler } from '../utils/agent_chatkit/handlers/handoff_call_handler.ts';
+import { HandoffOutputHandler } from '../utils/agent_chatkit/handlers/handoff_output_handler.ts';
+import { ToolApprovalHandler } from '../utils/agent_chatkit/handlers/tool_approval_handler.ts';
+import { ModelStreamHandler } from '../utils/agent_chatkit/handlers/model_stream_handler.ts';
+import { streamAgentResponse } from '../utils/agent_chatkit/streaming/agent_response_streamer.ts';
 
 // Event Handlers for different streaming event types
 export class AgentChatKitService {

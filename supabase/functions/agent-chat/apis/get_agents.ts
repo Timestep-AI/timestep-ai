@@ -1,4 +1,4 @@
-import { AgentService } from '../services/agent/service.ts';
+import { AgentService } from '../services/agent_service.ts';
 import { MemoryStore } from '../stores/memory_store.ts';
 
 // CORS headers

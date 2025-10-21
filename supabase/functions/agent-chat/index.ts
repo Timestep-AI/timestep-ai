@@ -55,7 +55,7 @@ serve(async (req) => {
     const path = url.pathname;
 
     // Handle different path patterns (Supabase strips /functions/v1 prefix)
-    if (path === '/agent-chat' || path === '/agent-chat/') {
+    if (path === '/agent-chat' || path === '/') {
       return new Response(
         JSON.stringify({ message: 'Welcome to the Timestep AI ChatKit Server!' }),
         {
@@ -72,7 +72,7 @@ serve(async (req) => {
 
     // Agent-specific ChatKit upload endpoints
     if (path.startsWith('/agent-chat/agents/') && path.endsWith('/chatkit/upload')) {
-      // Extract agent ID from path: /server/agents/{agentId}/chatkit/upload
+      // Extract agent ID from path: /agent-chat/agents/{agentId}/chatkit/upload
       const pathParts = path.split('/');
       const agentIndex = pathParts.indexOf('agents');
       const agentId = pathParts[agentIndex + 1];
@@ -89,7 +89,7 @@ serve(async (req) => {
 
     // Agent-specific ChatKit API endpoints
     if (path.startsWith('/agent-chat/agents/') && path.includes('/chatkit')) {
-      // Extract agent ID from path: /server/agents/{agentId}/chatkit
+      // Extract agent ID from path: /agent-chat/agents/{agentId}/chatkit
       const pathParts = path.split('/');
       const agentIndex = pathParts.indexOf('agents');
       const agentId = pathParts[agentIndex + 1];

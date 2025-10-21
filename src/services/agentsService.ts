@@ -37,18 +37,24 @@ class AgentsService {
 
       // Map server response to our Agent interface
       const agents: Agent[] = apiAgents.map((apiAgent: any) => {
+        // Determine if this agent is primarily a handoff agent (has handoff_ids but minimal instructions)
+        const isHandoff =
+          apiAgent.handoff_ids &&
+          apiAgent.handoff_ids.length > 0 &&
+          (!apiAgent.instructions || apiAgent.instructions.length < 100);
+
         return {
           id: apiAgent.id,
           name: apiAgent.name,
-          description: apiAgent.handoff_description || 'AI Agent', // Use real description from server
+          description: isHandoff ? `${apiAgent.name} - Handoff Agent` : 'AI Agent',
           instructions: apiAgent.instructions || '',
           handoffIds: apiAgent.handoff_ids || [],
-          handoffDescription: apiAgent.handoff_description || '',
+          handoffDescription: isHandoff ? apiAgent.instructions || '' : '',
           createdAt: apiAgent.created_at || new Date().toISOString(),
-          model: apiAgent.model,
-          modelSettings: apiAgent.model_settings || {},
+          model: 'gpt-4', // Default model
+          modelSettings: {},
           status: 'active' as const,
-          isHandoff: Boolean(apiAgent.handoff_description), // Agent is a handoff if it has a handoff description
+          isHandoff: isHandoff,
           toolIds: apiAgent.tool_ids || [],
         };
       });

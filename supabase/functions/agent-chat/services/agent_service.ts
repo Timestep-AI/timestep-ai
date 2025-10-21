@@ -1,11 +1,11 @@
 import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import { AgentRecord } from '../../types/agent.ts';
-import { AgentChatKitService } from '../agent_chatkit/service.ts';
-import { MemoryStore } from '../../stores/memory_store.ts';
-import { AgentStore } from '../../stores/agent_store.ts';
-import { McpServerStore } from '../../stores/mcp_server_store.ts';
-import { McpService } from '../mcp/service.ts';
+import { AgentRecord } from '../types/agent.ts';
+import { AgentChatKitService } from './agent_chatkit_service.ts';
+import { MemoryStore } from '../stores/memory_store.ts';
+import { AgentStore } from '../stores/agent_store.ts';
+import { McpServerStore } from '../stores/mcp_server_store.ts';
+import { McpService } from './mcp_service.ts';
 
 export class AgentService {
   private supabaseClient: SupabaseClient;
