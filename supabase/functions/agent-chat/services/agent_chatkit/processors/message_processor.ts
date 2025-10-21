@@ -3,7 +3,10 @@ import type { UserMessageItem } from '../../../types/chatkit.ts';
 import { ItemFactory } from '../factories/item_factory.ts';
 
 export class MessageProcessor {
-  constructor(private store: MemoryStore<any>, private itemFactory: ItemFactory) {}
+  constructor(
+    private store: MemoryStore<any>,
+    private itemFactory: ItemFactory
+  ) {}
 
   async extractMessageText(item: UserMessageItem): Promise<string> {
     if (typeof item.content === 'string') {
@@ -18,7 +21,9 @@ export class MessageProcessor {
     return '';
   }
 
-  async loadConversationHistory(threadId: string): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
+  async loadConversationHistory(
+    threadId: string
+  ): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
     const threadItems = await this.store.loadThreadItems(threadId, null, 100, 'asc');
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
@@ -57,7 +62,12 @@ export class MessageProcessor {
 
   buildUserMessageItem(input: any, thread: any): UserMessageItem {
     let content = Array.isArray(input.content) ? input.content : [input.content as any];
-    if (!content || content.length === 0 || !content[0] || typeof (content[0] as any).type !== 'string') {
+    if (
+      !content ||
+      content.length === 0 ||
+      !content[0] ||
+      typeof (content[0] as any).type !== 'string'
+    ) {
       content = [{ type: 'input_text', text: '' } as any];
     }
 

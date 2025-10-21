@@ -1,4 +1,4 @@
-import { AgentService } from '../../services/agent/service.ts';
+import { AgentService } from '../services/agent/service.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -7,7 +7,10 @@ const corsHeaders = {
 };
 
 // Handle agents API endpoint
-export async function handleAgentsRequest(userId: string, authHeader: string): Promise<Response> {
+export async function handleGetAgentsRequest(
+  userId: string,
+  authHeader: string
+): Promise<Response> {
   try {
     // Extract just the JWT token from Authorization header (remove "Bearer " prefix)
     const userJwt = authHeader.replace('Bearer ', '');

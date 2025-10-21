@@ -25,10 +25,18 @@ export class HandoffOutputHandler {
 
     // Create and emit handoff result widget
     const handoffResultWidget = WidgetFactory.createHandoffResultWidget(output);
-    const handoffResultItem = this.itemFactory.createWidgetItem(threadId, 'handoff_result', handoffResultWidget);
+    const handoffResultItem = this.itemFactory.createWidgetItem(
+      threadId,
+      'handoff_result',
+      handoffResultWidget
+    );
 
     // Save the handoff result to conversation history
-    const handoffResultToolItem = this.itemFactory.createHandoffResultToolItem(threadId, handoffCallId, output);
+    const handoffResultToolItem = this.itemFactory.createHandoffResultToolItem(
+      threadId,
+      handoffCallId,
+      output
+    );
     await this.store.saveThreadItem(threadId, handoffResultToolItem);
 
     yield {

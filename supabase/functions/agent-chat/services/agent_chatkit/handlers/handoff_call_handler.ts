@@ -29,7 +29,12 @@ export class HandoffCallHandler {
     const handoffItem = this.itemFactory.createWidgetItem(threadId, 'handoff', handoffWidget);
 
     // Save the handoff tool call to conversation history
-    const handoffToolCallItem = this.itemFactory.createHandoffToolCallItem(threadId, handoffName, handoffCallId, argumentsText);
+    const handoffToolCallItem = this.itemFactory.createHandoffToolCallItem(
+      threadId,
+      handoffName,
+      handoffCallId,
+      argumentsText
+    );
     await this.store.saveThreadItem(threadId, handoffToolCallItem);
 
     yield {

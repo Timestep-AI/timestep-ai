@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { ChatKitService } from '../../services/chatkit/service.ts';
-import { MemoryStore } from '../../stores/memory_store.ts';
-import { AgentService } from '../../services/agent/service.ts';
+import { MemoryStore } from '../stores/memory_store.ts';
+import { AgentService } from '../services/agent/service.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -9,26 +8,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Handle agent-specific ChatKit API requests
-export async function handleAgentChatKitRequest(
+// Handle main ChatKit API requests
+export async function handlePostAgentChatKitRequest(
   req: Request,
   userId: string,
   agentId: string,
   path: string
 ): Promise<Response> {
   try {
-    // Handle ChatKit session creation
-    if (path.endsWith('/chatkit/session') && req.method === 'POST') {
-      throw new Error(
-        'ChatKit session creation not implemented - requires real OpenAI API integration'
-      );
-    }
-
-    // Handle ChatKit upload
-    if (path.endsWith('/chatkit/upload') && req.method === 'POST') {
-      throw new Error('ChatKit upload not implemented - requires real file storage integration');
-    }
-
     // Handle main ChatKit API requests
     if (path.endsWith('/chatkit') || path.endsWith('/chatkit/')) {
       if (req.method === 'POST') {
@@ -92,10 +79,14 @@ export async function handleAgentChatKitRequest(
           agentId: agentId, // Use the agent ID from the URL
         };
 
-        const chatKitService = new ChatKitService(store, agentService, context);
-
-        // Process the request
-        const result = await chatKitService.processRequest(JSON.stringify(body));
+        // Process the request through AgentService which delegates to AgentChatKitService
+        const result = await agentService.processChatKitRequest(
+          agentId,
+          currentUserId,
+          JSON.stringify(body),
+          store,
+          context
+        );
 
         if (result.streaming) {
           // Return streaming response

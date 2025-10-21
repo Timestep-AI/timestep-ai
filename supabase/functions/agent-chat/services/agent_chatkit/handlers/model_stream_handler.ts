@@ -25,7 +25,11 @@ export class ModelStreamHandler {
       if (delta) {
         // First delta: emit thread.item.added
         if (!state.itemAdded) {
-          const assistantMessage = this.itemFactory.createAssistantMessageItem(threadId, state.itemId, state.createdAt);
+          const assistantMessage = this.itemFactory.createAssistantMessageItem(
+            threadId,
+            state.itemId,
+            state.createdAt
+          );
           yield {
             type: 'thread.item.added',
             item: assistantMessage,
@@ -81,7 +85,11 @@ export class ModelStreamHandler {
 
     // First delta: emit thread.item.added
     if (!state.itemAdded) {
-      const assistantMessage = this.itemFactory.createAssistantMessageItem(threadId, state.itemId, state.createdAt);
+      const assistantMessage = this.itemFactory.createAssistantMessageItem(
+        threadId,
+        state.itemId,
+        state.createdAt
+      );
       yield {
         type: 'thread.item.added',
         item: assistantMessage,

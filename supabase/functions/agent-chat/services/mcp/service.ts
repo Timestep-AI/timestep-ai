@@ -30,7 +30,10 @@ export class McpService {
    * Get tools from the database based on tool IDs
    * Tool IDs are in the format: "server-uuid.tool-name"
    */
-  async getToolsFromDatabase(toolIds: string[], servers: McpServerRecord[]): Promise<ReturnType<typeof tool>[]> {
+  async getToolsFromDatabase(
+    toolIds: string[],
+    servers: McpServerRecord[]
+  ): Promise<ReturnType<typeof tool>[]> {
     if (!toolIds || toolIds.length === 0) {
       console.warn('[McpService] No tool IDs specified, returning empty tools array');
       return [];
@@ -84,13 +87,14 @@ export class McpService {
 
       // Override fetch to add authorization
       const originalFetch = globalThis.fetch;
-      const mcpServerHost = new URL(resolvedUrl).host;
+      const mcpServerUrl = resolvedUrl;
 
       globalThis.fetch = (input: string | URL | Request, init?: RequestInit) => {
         const url =
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-        if (url.includes(mcpServerHost)) {
+        // Check if this request is going to our MCP server
+        if (url.startsWith(mcpServerUrl) || url.includes('/functions/v1/mcp-env')) {
           const headers = new Headers(init?.headers);
           if (!headers.has('Authorization')) {
             headers.set('Authorization', `Bearer ${this.userJwt}`);
@@ -143,13 +147,14 @@ export class McpService {
 
               // Override fetch for tool execution to add authorization
               const originalFetch = globalThis.fetch;
-              const mcpServerHost = new URL(resolvedUrl).host;
+              const mcpServerUrl = resolvedUrl;
 
               globalThis.fetch = (input: string | URL | Request, init?: RequestInit) => {
                 const url =
                   typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
-                if (url.includes(mcpServerHost)) {
+                // Check if this request is going to our MCP server
+                if (url.startsWith(mcpServerUrl) || url.includes('/functions/v1/mcp-env')) {
                   const headers = new Headers(init?.headers);
                   if (!headers.has('Authorization')) {
                     headers.set('Authorization', `Bearer ${userJwt}`);

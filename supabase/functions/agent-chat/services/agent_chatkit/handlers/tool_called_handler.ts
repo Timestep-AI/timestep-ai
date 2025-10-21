@@ -15,7 +15,12 @@ export class ToolCalledHandler {
     const argumentsText = tool?.arguments || '';
 
     // Save the tool call to conversation history
-    const toolCallItem = this.itemFactory.createToolCallItem(threadId, toolName, toolCallId, argumentsText);
+    const toolCallItem = this.itemFactory.createToolCallItem(
+      threadId,
+      toolName,
+      toolCallId,
+      argumentsText
+    );
     await this.store.saveThreadItem(threadId, toolCallItem);
   }
 }

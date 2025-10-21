@@ -17,12 +17,21 @@ export class ToolCallOutputHandler {
     const output = tool?.output || '';
 
     // Save the tool call output to conversation history
-    const toolCallOutputItem = this.itemFactory.createToolCallOutputItem(threadId, toolName, toolCallId, output);
+    const toolCallOutputItem = this.itemFactory.createToolCallOutputItem(
+      threadId,
+      toolName,
+      toolCallId,
+      output
+    );
     await this.store.saveThreadItem(threadId, toolCallOutputItem);
 
     // Create and emit tool result widget
     const toolResultWidget = WidgetFactory.createToolResultWidget(toolName, output);
-    const toolResultItem = this.itemFactory.createWidgetItem(threadId, 'tool_result', toolResultWidget);
+    const toolResultItem = this.itemFactory.createWidgetItem(
+      threadId,
+      'tool_result',
+      toolResultWidget
+    );
 
     yield {
       type: 'thread.item.added',

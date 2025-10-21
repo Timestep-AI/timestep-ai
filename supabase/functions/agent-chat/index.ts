@@ -1,8 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/agents-openai';
-import { handleAgentsRequest } from './apis/agent/agents_get.ts';
-import { handleAgentChatKitRequest } from './apis/chatkit/chatkit_post.ts';
+import { handleGetAgentsRequest } from './apis/get_agents.ts';
+import { handlePostAgentChatKitRequest } from './apis/post_agent_chatkit.ts';
+import { handlePostAgentChatKitUploadRequest } from './apis/post_agent_chatkit_upload.ts';
 
 // Configure OpenAI API key and tracing exporter
 const DEFAULT_OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -66,7 +67,24 @@ serve(async (req) => {
 
     // Agents API endpoints
     if (path === '/agent-chat/agents' && req.method === 'GET') {
-      return await handleAgentsRequest(userId, req.headers.get('Authorization') ?? '');
+      return await handleGetAgentsRequest(userId, req.headers.get('Authorization') ?? '');
+    }
+
+    // Agent-specific ChatKit upload endpoints
+    if (path.startsWith('/agent-chat/agents/') && path.endsWith('/chatkit/upload')) {
+      // Extract agent ID from path: /server/agents/{agentId}/chatkit/upload
+      const pathParts = path.split('/');
+      const agentIndex = pathParts.indexOf('agents');
+      const agentId = pathParts[agentIndex + 1];
+
+      if (!agentId) {
+        return new Response(JSON.stringify({ error: 'Agent ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return await handlePostAgentChatKitUploadRequest(req, userId, agentId, path);
     }
 
     // Agent-specific ChatKit API endpoints
@@ -83,7 +101,7 @@ serve(async (req) => {
         });
       }
 
-      return await handleAgentChatKitRequest(req, userId, agentId, path);
+      return await handlePostAgentChatKitRequest(req, userId, agentId, path);
     }
 
     return new Response(JSON.stringify({ error: 'Not found', path: path }), {

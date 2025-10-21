@@ -174,7 +174,12 @@ export class WidgetFactory {
     };
   }
 
-  static createToolApprovalWidget(toolName: string, argumentsText: string, toolCallId: string, approvalItemId: string): any {
+  static createToolApprovalWidget(
+    toolName: string,
+    argumentsText: string,
+    toolCallId: string,
+    approvalItemId: string
+  ): any {
     return {
       type: 'Card',
       size: 'sm',

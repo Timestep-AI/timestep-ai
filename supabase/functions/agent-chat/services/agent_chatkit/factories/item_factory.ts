@@ -18,7 +18,12 @@ export class ItemFactory {
     };
   }
 
-  createToolCallItem(threadId: string, toolName: string, toolCallId: string, argumentsText: string) {
+  createToolCallItem(
+    threadId: string,
+    toolName: string,
+    toolCallId: string,
+    argumentsText: string
+  ) {
     return {
       type: 'client_tool_call' as const,
       id: this.store.generateItemId('tool_call'),
@@ -33,7 +38,12 @@ export class ItemFactory {
     };
   }
 
-  createHandoffToolCallItem(threadId: string, handoffName: string, handoffCallId: string, argumentsText: string) {
+  createHandoffToolCallItem(
+    threadId: string,
+    handoffName: string,
+    handoffCallId: string,
+    argumentsText: string
+  ) {
     return {
       type: 'assistant_message' as const,
       id: this.store.generateItemId('assistant_message'),

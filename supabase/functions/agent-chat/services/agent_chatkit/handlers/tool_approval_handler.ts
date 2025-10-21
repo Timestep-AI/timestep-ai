@@ -25,7 +25,12 @@ export class ToolApprovalHandler {
 
     // Create approval widget
     const approvalItemId = this.itemFactory.createWidgetItem(threadId, 'widget', {}).id;
-    const widget = WidgetFactory.createToolApprovalWidget(toolName, argumentsText, toolCallId, approvalItemId);
+    const widget = WidgetFactory.createToolApprovalWidget(
+      toolName,
+      argumentsText,
+      toolCallId,
+      approvalItemId
+    );
 
     // Store the toolCallId in the approval store
     const { markApproved } = await import('../../../stores/approval_store.ts');
