@@ -42,11 +42,11 @@ jobs:
       - name: Run database migrations
         run: |
           echo "Attempting to push migrations..."
-          if ! supabase db push --yes; then
+          if ! supabase db push --yes --include-all; then
             echo "Migration push failed. Attempting to pull remote migrations to sync..."
             supabase db pull
             echo "Retrying migration push after sync..."
-            supabase db push --yes
+            supabase db push --yes --include-all
           fi
 
       - name: Verify migrations were applied
