@@ -1,6 +1,6 @@
 import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import { AgentRecord } from '../types/agent.ts';
+import { AgentRecord } from '../stores/agents_store.ts';
 import { AgentChatKitService } from './agent_chatkit_service.ts';
 import { ThreadsStore } from '../stores/threads_store.ts';
 import { AgentsStore } from '../stores/agents_store.ts';

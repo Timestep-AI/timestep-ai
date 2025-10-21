@@ -1,5 +1,14 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import { McpServerRecord } from '../types/mcp_server.ts';
+
+export interface McpServerRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  auth_config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
 
 export class McpServersStore {
   constructor(private supabaseClient: SupabaseClient) {}

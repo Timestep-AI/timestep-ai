@@ -1,5 +1,15 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import { AgentRecord } from '../types/agent.ts';
+
+export interface AgentRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  instructions: string;
+  tool_ids: string[];
+  handoff_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 export class AgentsStore {
   constructor(private supabaseClient: SupabaseClient) {}
