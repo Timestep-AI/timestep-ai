@@ -26,12 +26,12 @@ jobs:
         run: supabase link --project-ref $PROJECT_ID
 
       - name: Run database migrations
-        run: supabase db push --project-ref $PROJECT_ID
+        run: supabase db push
 
       - name: Verify migrations were applied
         run: |
           echo "Checking migration status..."
-          supabase migration list --project-ref $PROJECT_ID
+          supabase migration list
 
       - name: Deploy Supabase functions
         run: supabase functions deploy --project-ref $PROJECT_ID
