@@ -16,15 +16,6 @@ export class RunnerFactory {
 
     const modelProviderMap = new MultiProviderMap();
 
-    if (Deno.env.get('OLLAMA_API_KEY')) {
-      modelProviderMap.addProvider(
-        'ollama',
-        new OllamaModelProvider({
-          apiKey: Deno.env.get('OLLAMA_API_KEY') || '',
-        })
-      );
-    }
-
     // Add Anthropic provider using OpenAI interface
     if (Deno.env.get('ANTHROPIC_API_KEY')) {
       modelProviderMap.addProvider(
@@ -37,10 +28,41 @@ export class RunnerFactory {
       );
     }
 
+    if (Deno.env.get('HF_TOKEN')) {
+      modelProviderMap.addProvider(
+        'hf_inference_endpoints',
+        new OpenAIProvider({
+          apiKey: Deno.env.get('HF_TOKEN') || '',
+          baseURL: 'https://bb8igs5dnyzb8gu1.us-east-1.aws.endpoints.huggingface.cloud/v1/',
+          useResponses: false,
+        })
+      );
+
+      modelProviderMap.addProvider(
+        'hf_inference_providers',
+        new OpenAIProvider({
+          apiKey: Deno.env.get('HF_TOKEN') || '',
+          baseURL: 'https://router.huggingface.co/v1/',
+          useResponses: false,
+        })
+      );
+    }
+
+    if (Deno.env.get('OLLAMA_API_KEY')) {
+      modelProviderMap.addProvider(
+        'ollama',
+        new OllamaModelProvider({
+          apiKey: Deno.env.get('OLLAMA_API_KEY') || '',
+        })
+      );
+    }
+
     // Use MultiProvider for model selection - it will delegate to OpenAIProvider by default
     const modelProvider = new MultiProvider({
       provider_map: modelProviderMap,
+      openai_api_key: Deno.env.get('OPENAI_API_KEY') || '',
       openai_use_responses: true,
+      // openai_use_responses: false,
     });
 
     const runConfig = {

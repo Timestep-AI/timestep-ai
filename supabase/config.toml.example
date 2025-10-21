@@ -4,6 +4,8 @@ project_id = "your-project-id"
 enabled = true
 
 [edge_runtime.secrets]
+# Default model for agents
+DEFAULT_AGENT_MODEL = "hf_inference_endpoints/HuggingFaceTB/SmolLM3-3B"
 # Add your Hugging Face token here for AI features
 HF_TOKEN = "your-huggingface-token"
 # Add your OpenAI API key here for agent functionality

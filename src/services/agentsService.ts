@@ -1,4 +1,5 @@
-import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
+import { CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
+import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 import { supabase } from '@/integrations/supabase/client';
 
 // Use environment-based URL for server functions
@@ -36,7 +37,7 @@ class AgentsService {
       }
 
       // Map server response to our Agent interface
-      const agents: Agent[] = apiAgents.map((apiAgent: any) => {
+      const agents: AgentRecord[] = apiAgents.map((apiAgent: any) => {
         // Determine if this agent is primarily a handoff agent (has handoff_ids but minimal instructions)
         const isHandoff =
           apiAgent.handoff_ids &&
@@ -51,8 +52,8 @@ class AgentsService {
           handoffIds: apiAgent.handoff_ids || [],
           handoffDescription: isHandoff ? apiAgent.instructions || '' : '',
           createdAt: apiAgent.created_at || new Date().toISOString(),
-          model: 'gpt-4', // Default model
-          modelSettings: {},
+          model: apiAgent.model,
+          modelSettings: apiAgent.model_settings || {},
           status: 'active' as const,
           isHandoff: isHandoff,
           toolIds: apiAgent.tool_ids || [],

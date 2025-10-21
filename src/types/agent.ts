@@ -1,30 +1,14 @@
-export interface Agent {
-  id: string; // UUID in database but string in API
-  name: string;
-  description?: string;
-  instructions?: string;
-  handoffIds?: string[];
-  toolIds?: string[];
-  handoffDescription?: string;
-  createdAt: string;
-  model?: string;
-  modelSettings?: {
-    temperature?: number;
-  };
-  status: 'active' | 'inactive';
-  isHandoff: boolean;
-}
+import type { ModelSettings } from '@openai/agents-core';
 
 export interface CreateAgentRequest {
   name: string;
   description?: string;
   instructions?: string;
   handoffIds?: string[];
+  toolIds?: string[];
   handoffDescription?: string;
   model?: string;
-  modelSettings?: {
-    temperature?: number;
-  };
+  modelSettings?: ModelSettings;
   status?: 'active' | 'inactive';
   isHandoff?: boolean;
 }
@@ -34,11 +18,10 @@ export interface UpdateAgentRequest {
   description?: string;
   instructions?: string;
   handoffIds?: string[];
+  toolIds?: string[];
   handoffDescription?: string;
   model?: string;
-  modelSettings?: {
-    temperature?: number;
-  };
+  modelSettings?: ModelSettings;
   status?: 'active' | 'inactive';
   isHandoff?: boolean;
 }

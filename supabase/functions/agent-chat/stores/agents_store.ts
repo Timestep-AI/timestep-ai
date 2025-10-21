@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import type { ModelSettings } from '@openai/agents-core';
 
 export interface AgentRecord {
   id: string;
@@ -8,6 +9,7 @@ export interface AgentRecord {
   tool_ids: string[];
   handoff_ids: string[];
   model: string;
+  model_settings: ModelSettings;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +59,8 @@ export class AgentsStore {
     instructions: string,
     toolIds: string[],
     handoffIds: string[],
-    model: string = 'gpt-4o-mini'
+    model: string = Deno.env.get('DEFAULT_AGENT_MODEL')!,
+    modelSettings: ModelSettings = {}
   ): Promise<void> {
     const { error } = await this.supabaseClient.from('agents').insert({
       id: agentId,
@@ -67,6 +70,7 @@ export class AgentsStore {
       tool_ids: toolIds,
       handoff_ids: handoffIds,
       model,
+      model_settings: modelSettings,
     });
 
     if (error) {
@@ -111,7 +115,8 @@ You are an AI agent acting as a personal assistant.`,
     instructions: string,
     toolIds: string[],
     handoffIds: string[],
-    model: string = 'gpt-4o-mini'
+    model: string = Deno.env.get('DEFAULT_AGENT_MODEL')!,
+    modelSettings: ModelSettings = {}
   ): Promise<void> {
     // Check if agent already exists for this user
     const existingAgent = await this.getAgentById(agentId, userId);
@@ -120,6 +125,15 @@ You are an AI agent acting as a personal assistant.`,
       return;
     }
 
-    await this.createDefaultAgent(agentId, userId, name, instructions, toolIds, handoffIds, model);
+    await this.createDefaultAgent(
+      agentId,
+      userId,
+      name,
+      instructions,
+      toolIds,
+      handoffIds,
+      model,
+      modelSettings
+    );
   }
 }

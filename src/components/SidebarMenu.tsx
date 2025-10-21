@@ -16,7 +16,7 @@ import {
   IonChip,
 } from '@ionic/react';
 import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
-import { Agent } from '@/types/agent';
+import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 
 interface SidebarMenuProps {
   id: string;
@@ -25,7 +25,7 @@ interface SidebarMenuProps {
   color: 'primary' | 'secondary';
   darkMode?: boolean;
   onDarkModeChange?: (checked: boolean) => void;
-  agentDetails?: Agent | null;
+  agentDetails?: AgentRecord | null;
   loadingAgentDetails?: boolean;
 }
 

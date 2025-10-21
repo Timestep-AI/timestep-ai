@@ -110,6 +110,7 @@ export class AgentsService {
       tools: tools,
       handoffs: handoffs,
       model: agentData.model,
+      modelSettings: agentData.model_settings,
     });
   }
 
