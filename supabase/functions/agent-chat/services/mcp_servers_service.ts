@@ -2,14 +2,29 @@ import { tool } from '@openai/agents-core';
 import { Client } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/index.js';
 import { StreamableHTTPClientTransport } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/streamableHttp.js';
 import { McpServerRecord } from '../stores/mcp_servers_store.ts';
+import { McpServersStore } from '../stores/mcp_servers_store.ts';
+import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 export class McpServersService {
+  private mcpServersStore: McpServersStore;
+
   constructor(
     private supabaseUrl: string,
+    private anonKey: string,
     private userJwt: string
   ) {
     this.supabaseUrl = supabaseUrl;
     this.userJwt = userJwt;
+
+    // Create Supabase client for store operations
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${userJwt}`,
+        },
+      },
+    });
+    this.mcpServersStore = new McpServersStore(supabaseClient);
   }
 
   /**
@@ -235,5 +250,19 @@ export class McpServersService {
     }
 
     return agentTools;
+  }
+
+  /**
+   * Get MCP servers by their IDs
+   */
+  async getMcpServersByIds(serverIds: string[]): Promise<McpServerRecord[]> {
+    return await this.mcpServersStore.getMcpServersByIds(serverIds);
+  }
+
+  /**
+   * Create the default MCP server for a user if it doesn't exist
+   */
+  async createDefaultMcpServer(userId: string): Promise<void> {
+    return await this.mcpServersStore.createDefaultMcpServer(userId);
   }
 }

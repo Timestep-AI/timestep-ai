@@ -8,8 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Handle main ChatKit API requests
-export async function handlePostAgentChatKitRequest(
+// Handle ChatKit API requests
+export async function handlePostChatKitRequest(
   req: Request,
   userId: string,
   agentId: string,
@@ -78,7 +78,7 @@ export async function handlePostAgentChatKitRequest(
           agentId: agentId, // Use the agent ID from the URL
         };
 
-        // Process the request through AgentsService which delegates to AgentChatKitService
+        // Process the request through AgentsService which delegates to ChatKitService
         const result = await agentService.processChatKitRequest(
           agentId,
           currentUserId,
@@ -111,8 +111,34 @@ export async function handlePostAgentChatKitRequest(
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error handling agent ChatKit request:', error);
-    return new Response(JSON.stringify({ error: 'Agent ChatKit request failed' }), {
+    console.error('Error handling ChatKit request:', error);
+    return new Response(JSON.stringify({ error: 'ChatKit request failed' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+// Handle ChatKit upload requests
+export function handlePostChatKitUploadRequest(
+  _req: Request,
+  _userId: string,
+  _agentId: string,
+  _path: string
+): Response {
+  try {
+    // Handle ChatKit upload
+    if (_path.endsWith('/chatkit/upload') && _req.method === 'POST') {
+      throw new Error('ChatKit upload not implemented - requires real file storage integration');
+    }
+
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error handling ChatKit upload request:', error);
+    return new Response(JSON.stringify({ error: 'ChatKit upload request failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

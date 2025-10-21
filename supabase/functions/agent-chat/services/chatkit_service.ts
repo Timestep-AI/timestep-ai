@@ -16,21 +16,21 @@ import {
 } from '../types/chatkit.ts';
 
 // Import from organized modules
-import { ItemFactory } from '../utils/agent_chatkit/factories/item_factory.ts';
-import { WidgetFactory } from '../utils/agent_chatkit/factories/widget_factory.ts';
-import { MessageProcessor } from '../utils/agent_chatkit/processors/message_processor.ts';
-import { StreamProcessor } from '../utils/agent_chatkit/processors/stream_processor.ts';
-import { ToolHandler } from '../utils/agent_chatkit/handlers/tool_handler.ts';
-import { ToolCallOutputHandler } from '../utils/agent_chatkit/handlers/tool_call_output_handler.ts';
-import { ToolCalledHandler } from '../utils/agent_chatkit/handlers/tool_called_handler.ts';
-import { HandoffCallHandler } from '../utils/agent_chatkit/handlers/handoff_call_handler.ts';
-import { HandoffOutputHandler } from '../utils/agent_chatkit/handlers/handoff_output_handler.ts';
-import { ToolApprovalHandler } from '../utils/agent_chatkit/handlers/tool_approval_handler.ts';
-import { ModelStreamHandler } from '../utils/agent_chatkit/handlers/model_stream_handler.ts';
-import { streamAgentResponse } from '../utils/agent_chatkit/streaming/agent_response_streamer.ts';
+import { ItemFactory } from '../utils/chatkit/factories/item_factory.ts';
+import { WidgetFactory } from '../utils/chatkit/factories/widget_factory.ts';
+import { MessageProcessor } from '../utils/chatkit/processors/message_processor.ts';
+import { StreamProcessor } from '../utils/chatkit/processors/stream_processor.ts';
+import { ToolHandler } from '../utils/chatkit/handlers/tool_handler.ts';
+import { ToolCallOutputHandler } from '../utils/chatkit/handlers/tool_call_output_handler.ts';
+import { ToolCalledHandler } from '../utils/chatkit/handlers/tool_called_handler.ts';
+import { HandoffCallHandler } from '../utils/chatkit/handlers/handoff_call_handler.ts';
+import { HandoffOutputHandler } from '../utils/chatkit/handlers/handoff_output_handler.ts';
+import { ToolApprovalHandler } from '../utils/chatkit/handlers/tool_approval_handler.ts';
+import { ModelStreamHandler } from '../utils/chatkit/handlers/model_stream_handler.ts';
+import { streamAgentResponse } from '../utils/chatkit/streaming/agent_response_streamer.ts';
 
 // Event Handlers for different streaming event types
-export class AgentChatKitService {
+export class ChatKitService {
   private messageProcessor: MessageProcessor;
   private streamProcessor: StreamProcessor;
   private toolHandler: ToolHandler;
@@ -223,7 +223,7 @@ export class AgentChatKitService {
 
       yield* streamAgentResponse(result as any, thread.id, this.store);
     } catch (error) {
-      console.error('[AgentChatKitService] Error:', error);
+      console.error('[ChatKitService] Error:', error);
       throw error;
     }
   }

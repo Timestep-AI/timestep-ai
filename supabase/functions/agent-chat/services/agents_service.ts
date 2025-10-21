@@ -1,20 +1,18 @@
 import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../stores/agents_store.ts';
-import { AgentChatKitService } from './agent_chatkit_service.ts';
+import { ChatKitService } from './chatkit_service.ts';
 import { ThreadsStore } from '../stores/threads_store.ts';
 import { AgentsStore } from '../stores/agents_store.ts';
-import { McpServersStore } from '../stores/mcp_servers_store.ts';
 import { McpServersService } from './mcp_servers_service.ts';
 
 export class AgentsService {
   private supabaseClient: SupabaseClient;
-  private agentStore: AgentsStore;
-  private mcpServerStore: McpServersStore;
-  private mcpService: McpServersService;
-  private store: ThreadsStore;
+  private agentsStore: AgentsStore;
+  private mcpServersService: McpServersService;
+  private threadsStore: ThreadsStore;
 
-  constructor(supabaseUrl: string, anonKey: string, userJwt: string, store: ThreadsStore) {
+  constructor(supabaseUrl: string, anonKey: string, userJwt: string, threadsStore: ThreadsStore) {
     // Create Supabase client with user's JWT for RLS
     this.supabaseClient = createClient(supabaseUrl, anonKey, {
       global: {
@@ -24,10 +22,9 @@ export class AgentsService {
       },
     });
 
-    this.agentStore = new AgentsStore(this.supabaseClient);
-    this.mcpServerStore = new McpServersStore(this.supabaseClient);
-    this.mcpService = new McpServersService(supabaseUrl, userJwt);
-    this.store = store;
+    this.agentsStore = new AgentsStore(this.supabaseClient);
+    this.mcpServersService = new McpServersService(supabaseUrl, anonKey, userJwt);
+    this.threadsStore = threadsStore;
   }
 
   /**
@@ -35,11 +32,11 @@ export class AgentsService {
    */
   async getAllAgents(userId: string): Promise<AgentRecord[]> {
     // Ensure default agents exist first
-    await this.agentStore.ensureDefaultAgentsExist(userId);
-    await this.mcpServerStore.createDefaultMcpServer(userId);
+    await this.agentsStore.ensureDefaultAgentsExist(userId);
+    await this.mcpServersService.createDefaultMcpServer(userId);
 
     // Fetch all agents for the user
-    return await this.agentStore.getAllAgents(userId);
+    return await this.agentsStore.getAllAgents(userId);
   }
 
   /**
@@ -47,15 +44,15 @@ export class AgentsService {
    */
   async createAgent(agentId: string, userId: string): Promise<Agent> {
     // Fetch agent configuration from database
-    const agentData = await this.agentStore.getAgentById(agentId, userId);
+    const agentData = await this.agentsStore.getAgentById(agentId, userId);
 
     // If agent not found and it's a default agent ID, create it in the database
     if (!agentData && this.isDefaultAgentId(agentId)) {
-      await this.agentStore.ensureDefaultAgentsExist(userId);
-      await this.mcpServerStore.createDefaultMcpServer(userId);
+      await this.agentsStore.ensureDefaultAgentsExist(userId);
+      await this.mcpServersService.createDefaultMcpServer(userId);
 
       // Fetch the newly created agent - must match both id AND user_id for RLS
-      const newAgentData = await this.agentStore.getAgentById(agentId, userId);
+      const newAgentData = await this.agentsStore.getAgentById(agentId, userId);
 
       if (!newAgentData) {
         console.error('[AgentsService] Error fetching newly created agent:', agentId);
@@ -72,7 +69,7 @@ export class AgentsService {
   }
 
   /**
-   * Process a ChatKit request by delegating to AgentChatKitService
+   * Process a ChatKit request by delegating to ChatKitService
    */
   async processChatKitRequest(
     agentId: string,
@@ -81,7 +78,7 @@ export class AgentsService {
     context: any
   ): Promise<{ streaming: boolean; result: any }> {
     const agent = await this.createAgent(agentId, userId);
-    const chatKitService = new AgentChatKitService(agent, context, this.store);
+    const chatKitService = new ChatKitService(agent, context, this.threadsStore);
     return await chatKitService.processRequest(requestBody);
   }
 
@@ -130,7 +127,7 @@ export class AgentsService {
     }
 
     // Fetch MCP server configurations from database
-    const servers = await this.mcpServerStore.getMcpServersByIds(Array.from(serverIds));
+    const servers = await this.mcpServersService.getMcpServersByIds(Array.from(serverIds));
 
     if (!servers || servers.length === 0) {
       console.warn('[AgentsService] No MCP servers found for the specified tool IDs');
@@ -138,7 +135,7 @@ export class AgentsService {
     }
 
     // Get tools from each server
-    return await this.mcpService.getToolsFromDatabase(toolIds, servers);
+    return await this.mcpServersService.getToolsFromDatabase(toolIds, servers);
   }
 
   /**

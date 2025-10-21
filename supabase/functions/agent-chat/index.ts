@@ -1,9 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/agents-openai';
-import { handleGetAgentsRequest } from './apis/get_agents.ts';
-import { handlePostAgentChatKitRequest } from './apis/post_agent_chatkit.ts';
-import { handlePostAgentChatKitUploadRequest } from './apis/post_agent_chatkit_upload.ts';
+import { handleGetAgentsRequest } from './apis/agents_api.ts';
+import { handlePostChatKitRequest, handlePostChatKitUploadRequest } from './apis/chatkit_api.ts';
 
 // Configure OpenAI API key and tracing exporter
 const DEFAULT_OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -84,7 +83,7 @@ serve(async (req) => {
         });
       }
 
-      return await handlePostAgentChatKitUploadRequest(req, userId, agentId, path);
+      return await handlePostChatKitUploadRequest(req, userId, agentId, path);
     }
 
     // Agent-specific ChatKit API endpoints
@@ -101,7 +100,7 @@ serve(async (req) => {
         });
       }
 
-      return await handlePostAgentChatKitRequest(req, userId, agentId, path);
+      return await handlePostChatKitRequest(req, userId, agentId, path);
     }
 
     return new Response(JSON.stringify({ error: 'Not found', path: path }), {
