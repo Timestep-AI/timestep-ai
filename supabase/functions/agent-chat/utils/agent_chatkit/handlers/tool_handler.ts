@@ -1,4 +1,4 @@
-import type { MemoryStore } from '../../../stores/memory_store.ts';
+import { ThreadsStore } from '../../../stores/threads_store.ts';
 import { Runner, RunState } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import type {
@@ -10,7 +10,7 @@ import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
   constructor(
-    private store: MemoryStore<any>,
+    private store: ThreadsStore,
     private agent: Agent,
     private context: any
   ) {}

@@ -1,7 +1,7 @@
-import type { MemoryStore } from '../../../stores/memory_store.ts';
+import { ThreadsStore } from '../../../stores/threads_store.ts';
 
 export class ItemFactory {
-  constructor(private store: MemoryStore<any>) {}
+  constructor(private store: ThreadsStore) {}
 
   createToolCallOutputItem(threadId: string, toolName: string, toolCallId: string, output: any) {
     return {

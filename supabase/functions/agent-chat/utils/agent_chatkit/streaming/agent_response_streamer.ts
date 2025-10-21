@@ -1,4 +1,4 @@
-import type { MemoryStore } from '../../../stores/memory_store.ts';
+import { ThreadsStore } from '../../../stores/threads_store.ts';
 import type {
   ThreadStreamEvent,
   ThreadItemAddedEvent,
@@ -17,7 +17,7 @@ import { ModelStreamHandler } from '../handlers/model_stream_handler.ts';
 export async function* streamAgentResponse(
   result: AsyncIterable<any>,
   threadId: string,
-  store: MemoryStore<any>
+  store: ThreadsStore
 ): AsyncIterable<ThreadStreamEvent> {
   const itemFactory = new ItemFactory(store);
 

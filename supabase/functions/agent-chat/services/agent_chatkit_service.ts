@@ -1,4 +1,4 @@
-import type { MemoryStore } from '../stores/memory_store.ts';
+import { ThreadsStore } from '../stores/threads_store.ts';
 import { Runner, RunState, Agent } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import {
@@ -47,7 +47,7 @@ export class AgentChatKitService {
   constructor(
     private agent: Agent,
     private context: any,
-    private store: MemoryStore<any>
+    private store: ThreadsStore
   ) {
     this.itemFactory = new ItemFactory(store);
     this.messageProcessor = new MessageProcessor(store, this.itemFactory);

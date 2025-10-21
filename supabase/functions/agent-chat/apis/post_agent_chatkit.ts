@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { MemoryStore } from '../stores/memory_store.ts';
+import { ThreadsStore } from '../stores/threads_store.ts';
 import { AgentService } from '../services/agent_service.ts';
 
 // CORS headers
@@ -57,13 +57,11 @@ export async function handlePostAgentChatKitRequest(
         const authHeader = req.headers.get('Authorization') ?? '';
         const userJwt = authHeader.replace('Bearer ', '');
 
-        const store = new MemoryStore<{
-          userId: string;
-          supabaseUrl: string;
-          anonKey: string;
-          userJwt: string;
-          agentId: string;
-        }>(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const store = new ThreadsStore(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          userJwt,
+          currentUserId
+        );
 
         const agentService = new AgentService(
           Deno.env.get('SUPABASE_URL') ?? '',

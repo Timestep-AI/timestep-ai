@@ -1,5 +1,5 @@
 import { AgentService } from '../services/agent_service.ts';
-import { MemoryStore } from '../stores/memory_store.ts';
+import { ThreadsStore } from '../stores/threads_store.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -16,10 +16,12 @@ export async function handleGetAgentsRequest(
     // Extract just the JWT token from Authorization header (remove "Bearer " prefix)
     const userJwt = authHeader.replace('Bearer ', '');
 
-    // Create a basic memory store for agent operations
-    const store = new MemoryStore<{
-      userId: string;
-    }>(Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId);
+    // Create a basic threads store for agent operations
+    const store = new ThreadsStore(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      userJwt,
+      userId
+    );
 
     const agentService = new AgentService(
       Deno.env.get('SUPABASE_URL') ?? '',

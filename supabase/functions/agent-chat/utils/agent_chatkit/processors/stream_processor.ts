@@ -1,8 +1,8 @@
-import type { MemoryStore } from '../../../stores/memory_store.ts';
+import { ThreadsStore } from '../../../stores/threads_store.ts';
 import type { ThreadMetadata, ThreadStreamEvent } from '../../../types/chatkit.ts';
 
 export class StreamProcessor {
-  constructor(private store: MemoryStore<any>) {}
+  constructor(private store: ThreadsStore) {}
 
   async *processEvents(
     thread: ThreadMetadata,
