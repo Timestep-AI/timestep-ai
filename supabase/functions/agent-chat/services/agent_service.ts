@@ -3,14 +3,14 @@ import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../types/agent.ts';
 import { AgentChatKitService } from './agent_chatkit_service.ts';
 import { ThreadsStore } from '../stores/threads_store.ts';
-import { AgentStore } from '../stores/agent_store.ts';
-import { McpServerStore } from '../stores/mcp_server_store.ts';
+import { AgentsStore } from '../stores/agents_store.ts';
+import { McpServersStore } from '../stores/mcp_servers_store.ts';
 import { McpService } from './mcp_service.ts';
 
 export class AgentService {
   private supabaseClient: SupabaseClient;
-  private agentStore: AgentStore;
-  private mcpServerStore: McpServerStore;
+  private agentStore: AgentsStore;
+  private mcpServerStore: McpServersStore;
   private mcpService: McpService;
   private store: ThreadsStore;
 
@@ -24,8 +24,8 @@ export class AgentService {
       },
     });
 
-    this.agentStore = new AgentStore(this.supabaseClient);
-    this.mcpServerStore = new McpServerStore(this.supabaseClient);
+    this.agentStore = new AgentsStore(this.supabaseClient);
+    this.mcpServerStore = new McpServersStore(this.supabaseClient);
     this.mcpService = new McpService(supabaseUrl, userJwt);
     this.store = store;
   }

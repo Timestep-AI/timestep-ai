@@ -1,7 +1,7 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { McpServerRecord } from '../types/mcp_server.ts';
 
-export class McpServerStore {
+export class McpServersStore {
   constructor(private supabaseClient: SupabaseClient) {}
 
   async getMcpServersByIds(serverIds: string[]): Promise<McpServerRecord[]> {

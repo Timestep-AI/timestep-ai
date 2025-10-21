@@ -54,9 +54,6 @@ export class ToolHandler {
     thread: ThreadMetadata,
     toolCallId: string
   ): AsyncIterable<ThreadStreamEvent> {
-    const { markApproved } = await import('../../../stores/approval_store.ts');
-    markApproved(thread.id, toolCallId);
-
     const serializedState = await this.store.loadRunState(thread.id);
     if (!serializedState) {
       yield this.createThreadUpdatedEvent(thread);
@@ -89,9 +86,6 @@ export class ToolHandler {
     thread: ThreadMetadata,
     toolCallId: string
   ): AsyncIterable<ThreadStreamEvent> {
-    const { clearApproved } = await import('../../../stores/approval_store.ts');
-    clearApproved(thread.id, toolCallId);
-
     const serializedState = await this.store.loadRunState(thread.id);
     if (!serializedState) {
       yield this.createThreadUpdatedEvent(thread);

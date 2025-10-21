@@ -70,9 +70,6 @@ export async function* streamAgentResponse(
         approvalItemId
       );
 
-      // Store the toolCallId in the approval store
-      const { markApproved } = await import('../../../stores/approval_store.ts');
-      markApproved(threadId, toolCallId);
 
       const widgetItem = itemFactory.createWidgetItem(threadId, 'widget', widget);
       widgetItem.id = approvalItemId;

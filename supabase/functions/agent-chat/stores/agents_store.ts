@@ -1,7 +1,7 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../types/agent.ts';
 
-export class AgentStore {
+export class AgentsStore {
   constructor(private supabaseClient: SupabaseClient) {}
 
   async getAllAgents(userId: string): Promise<AgentRecord[]> {

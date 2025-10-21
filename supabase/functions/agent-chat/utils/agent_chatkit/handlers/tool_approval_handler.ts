@@ -32,9 +32,6 @@ export class ToolApprovalHandler {
       approvalItemId
     );
 
-    // Store the toolCallId in the approval store
-    const { markApproved } = await import('../../../stores/approval_store.ts');
-    markApproved(threadId, toolCallId);
 
     const widgetItem = this.itemFactory.createWidgetItem(threadId, 'widget', widget);
     widgetItem.id = approvalItemId; // Override with the specific ID
