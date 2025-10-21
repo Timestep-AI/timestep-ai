@@ -54,5 +54,11 @@ jobs:
           echo "Final migration status:"
           supabase migration list
 
+      - name: Remove unwanted functions
+        run: |
+          echo "Removing unwanted edge functions..."
+          # Remove the 'server' function if it exists
+          supabase functions delete server --project-ref $PROJECT_ID || echo "Server function not found or already removed"
+
       - name: Deploy Supabase functions
         run: supabase functions deploy --project-ref $PROJECT_ID
