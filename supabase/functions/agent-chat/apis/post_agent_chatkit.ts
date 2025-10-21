@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ThreadsStore } from '../stores/threads_store.ts';
-import { AgentService } from '../services/agent_service.ts';
+import { AgentsService } from '../services/agents_service.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -63,7 +63,7 @@ export async function handlePostAgentChatKitRequest(
           currentUserId
         );
 
-        const agentService = new AgentService(
+        const agentService = new AgentsService(
           Deno.env.get('SUPABASE_URL') ?? '',
           Deno.env.get('SUPABASE_ANON_KEY') ?? '',
           userJwt, // Use the clean JWT without "Bearer " prefix
@@ -78,7 +78,7 @@ export async function handlePostAgentChatKitRequest(
           agentId: agentId, // Use the agent ID from the URL
         };
 
-        // Process the request through AgentService which delegates to AgentChatKitService
+        // Process the request through AgentsService which delegates to AgentChatKitService
         const result = await agentService.processChatKitRequest(
           agentId,
           currentUserId,

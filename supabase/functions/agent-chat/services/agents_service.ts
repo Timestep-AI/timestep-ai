@@ -5,13 +5,13 @@ import { AgentChatKitService } from './agent_chatkit_service.ts';
 import { ThreadsStore } from '../stores/threads_store.ts';
 import { AgentsStore } from '../stores/agents_store.ts';
 import { McpServersStore } from '../stores/mcp_servers_store.ts';
-import { McpService } from './mcp_service.ts';
+import { McpServersService } from './mcp_servers_service.ts';
 
-export class AgentService {
+export class AgentsService {
   private supabaseClient: SupabaseClient;
   private agentStore: AgentsStore;
   private mcpServerStore: McpServersStore;
-  private mcpService: McpService;
+  private mcpService: McpServersService;
   private store: ThreadsStore;
 
   constructor(supabaseUrl: string, anonKey: string, userJwt: string, store: ThreadsStore) {
@@ -26,7 +26,7 @@ export class AgentService {
 
     this.agentStore = new AgentsStore(this.supabaseClient);
     this.mcpServerStore = new McpServersStore(this.supabaseClient);
-    this.mcpService = new McpService(supabaseUrl, userJwt);
+    this.mcpService = new McpServersService(supabaseUrl, userJwt);
     this.store = store;
   }
 
@@ -58,13 +58,13 @@ export class AgentService {
       const newAgentData = await this.agentStore.getAgentById(agentId, userId);
 
       if (!newAgentData) {
-        console.error('[AgentService] Error fetching newly created agent:', agentId);
+        console.error('[AgentsService] Error fetching newly created agent:', agentId);
         throw new Error(`Failed to create default agent: ${agentId}`);
       }
 
       return this.buildAgentFromData(newAgentData, userId);
     } else if (!agentData) {
-      console.error('[AgentService] Error fetching agent:', agentId);
+      console.error('[AgentsService] Error fetching agent:', agentId);
       throw new Error(`Agent not found: ${agentId}`);
     }
 
@@ -100,7 +100,7 @@ export class AgentService {
           const handoffAgent = await this.createAgent(handoffId, userId);
           handoffs.push(handoffAgent);
         } catch (error) {
-          console.error(`[AgentService] Error loading handoff agent ${handoffId}:`, error);
+          console.error(`[AgentsService] Error loading handoff agent ${handoffId}:`, error);
           // Continue without this handoff if it fails to load
         }
       }
@@ -133,7 +133,7 @@ export class AgentService {
     const servers = await this.mcpServerStore.getMcpServersByIds(Array.from(serverIds));
 
     if (!servers || servers.length === 0) {
-      console.warn('[AgentService] No MCP servers found for the specified tool IDs');
+      console.warn('[AgentsService] No MCP servers found for the specified tool IDs');
       return [];
     }
 
