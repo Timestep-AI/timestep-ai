@@ -7,6 +7,7 @@ export interface AgentRecord {
   instructions: string;
   tool_ids: string[];
   handoff_ids: string[];
+  model: string;
   created_at: string;
   updated_at: string;
 }
@@ -55,7 +56,8 @@ export class AgentsStore {
     name: string,
     instructions: string,
     toolIds: string[],
-    handoffIds: string[]
+    handoffIds: string[],
+    model: string = 'gpt-4o-mini'
   ): Promise<void> {
     const { error } = await this.supabaseClient.from('agents').insert({
       id: agentId,
@@ -64,6 +66,7 @@ export class AgentsStore {
       instructions,
       tool_ids: toolIds,
       handoff_ids: handoffIds,
+      model,
     });
 
     if (error) {
@@ -107,7 +110,8 @@ You are an AI agent acting as a personal assistant.`,
     name: string,
     instructions: string,
     toolIds: string[],
-    handoffIds: string[]
+    handoffIds: string[],
+    model: string = 'gpt-4o-mini'
   ): Promise<void> {
     // Check if agent already exists for this user
     const existingAgent = await this.getAgentById(agentId, userId);
@@ -116,6 +120,6 @@ You are an AI agent acting as a personal assistant.`,
       return;
     }
 
-    await this.createDefaultAgent(agentId, userId, name, instructions, toolIds, handoffIds);
+    await this.createDefaultAgent(agentId, userId, name, instructions, toolIds, handoffIds, model);
   }
 }

@@ -204,7 +204,6 @@ export class ChatKitService {
       });
 
       const runConfig = {
-        model: 'gpt-4o-mini',
         modelProvider,
         traceIncludeSensitiveData: true,
         tracingDisabled: false,
