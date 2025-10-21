@@ -21,7 +21,7 @@ export class RunnerFactory {
       modelProviderMap.addProvider(
         'anthropic',
         new OpenAIProvider({
-          apiKey: Deno.env.get('ANTHROPIC_API_KEY') || '',
+          apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
           baseURL: 'https://api.anthropic.com/v1/',
           useResponses: false,
         })
@@ -32,7 +32,7 @@ export class RunnerFactory {
       modelProviderMap.addProvider(
         'hf_inference_endpoints',
         new OpenAIProvider({
-          apiKey: Deno.env.get('HF_TOKEN') || '',
+          apiKey: Deno.env.get('HF_TOKEN'),
           baseURL: 'https://bb8igs5dnyzb8gu1.us-east-1.aws.endpoints.huggingface.cloud/v1/',
           useResponses: false,
         })
@@ -41,8 +41,8 @@ export class RunnerFactory {
       modelProviderMap.addProvider(
         'hf_inference_providers',
         new OpenAIProvider({
-          apiKey: Deno.env.get('HF_TOKEN') || '',
-          baseURL: 'https://router.huggingface.co/v1/',
+          apiKey: Deno.env.get('HF_TOKEN'),
+          baseURL: 'https://router.huggingface.co/v1',
           useResponses: false,
         })
       );
@@ -52,7 +52,7 @@ export class RunnerFactory {
       modelProviderMap.addProvider(
         'ollama',
         new OllamaModelProvider({
-          apiKey: Deno.env.get('OLLAMA_API_KEY') || '',
+          apiKey: Deno.env.get('OLLAMA_API_KEY'),
         })
       );
     }
@@ -61,8 +61,8 @@ export class RunnerFactory {
     const modelProvider = new MultiProvider({
       provider_map: modelProviderMap,
       openai_api_key: Deno.env.get('OPENAI_API_KEY') || '',
-      openai_use_responses: true,
-      // openai_use_responses: false,
+      // openai_use_responses: true,
+      openai_use_responses: false,
     });
 
     const runConfig = {

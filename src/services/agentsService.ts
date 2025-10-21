@@ -53,7 +53,7 @@ class AgentsService {
           handoffDescription: isHandoff ? apiAgent.instructions || '' : '',
           createdAt: apiAgent.created_at || new Date().toISOString(),
           model: apiAgent.model,
-          modelSettings: apiAgent.model_settings || {},
+          modelSettings: apiAgent.model_settings || { temperature: 0.0, toolChoice: 'auto' },
           status: 'active' as const,
           isHandoff: isHandoff,
           toolIds: apiAgent.tool_ids || [],

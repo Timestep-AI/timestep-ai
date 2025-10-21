@@ -60,7 +60,7 @@ export class AgentsStore {
     toolIds: string[],
     handoffIds: string[],
     model: string = Deno.env.get('DEFAULT_AGENT_MODEL')!,
-    modelSettings: ModelSettings = {}
+    modelSettings: ModelSettings = { temperature: 0.0, toolChoice: 'auto' }
   ): Promise<void> {
     const { error } = await this.supabaseClient.from('agents').insert({
       id: agentId,
@@ -116,7 +116,7 @@ You are an AI agent acting as a personal assistant.`,
     toolIds: string[],
     handoffIds: string[],
     model: string = Deno.env.get('DEFAULT_AGENT_MODEL')!,
-    modelSettings: ModelSettings = {}
+    modelSettings: ModelSettings = { temperature: 0.0, toolChoice: 'auto' }
   ): Promise<void> {
     // Check if agent already exists for this user
     const existingAgent = await this.getAgentById(agentId, userId);

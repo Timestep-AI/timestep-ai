@@ -103,6 +103,13 @@ export class AgentsService {
       }
     }
 
+    // Apply default model settings if none are specified
+    const defaultModelSettings = { temperature: 0.0, toolChoice: 'auto' };
+    const modelSettings =
+      agentData.model_settings && Object.keys(agentData.model_settings).length > 0
+        ? agentData.model_settings
+        : defaultModelSettings;
+
     // Create the agent
     return new Agent({
       name: agentData.name,
@@ -110,7 +117,7 @@ export class AgentsService {
       tools: tools,
       handoffs: handoffs,
       model: agentData.model,
-      modelSettings: agentData.model_settings,
+      modelSettings: modelSettings,
     });
   }
 
