@@ -70,7 +70,6 @@ export async function* streamAgentResponse(
         approvalItemId
       );
 
-
       const widgetItem = itemFactory.createWidgetItem(threadId, 'widget', widget);
       widgetItem.id = approvalItemId;
 

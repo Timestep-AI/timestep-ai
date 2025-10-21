@@ -1,6 +1,7 @@
 import { ThreadsStore } from '../../../stores/threads_store.ts';
 import { Runner, RunState } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
+import { RunnerFactory } from '../../../utils/runner_factory.ts';
 import type {
   ThreadMetadata,
   ThreadStreamEvent,
@@ -115,19 +116,10 @@ export class ToolHandler {
   }
 
   private async runAgent(agent: any, runState: RunState, thread: ThreadMetadata) {
-    const modelProvider = new OpenAIProvider({
-      apiKey: Deno.env.get('OPENAI_API_KEY') || '',
+    const runner = await RunnerFactory.createRunner({
+      threadId: thread.id,
+      userId: this.context.userId,
     });
-
-    const runConfig = {
-      modelProvider,
-      traceIncludeSensitiveData: true,
-      tracingDisabled: false,
-      groupId: thread.id,
-      metadata: { user_id: this.context.userId },
-    };
-
-    const runner = new Runner(runConfig);
     return await runner.run(agent, runState, {
       context: { threadId: thread.id, userId: this.context.userId },
       stream: true,

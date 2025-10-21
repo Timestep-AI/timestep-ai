@@ -32,7 +32,6 @@ export class ToolApprovalHandler {
       approvalItemId
     );
 
-
     const widgetItem = this.itemFactory.createWidgetItem(threadId, 'widget', widget);
     widgetItem.id = approvalItemId; // Override with the specific ID
 

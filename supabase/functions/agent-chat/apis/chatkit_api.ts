@@ -57,11 +57,7 @@ export async function handlePostChatKitRequest(
         const authHeader = req.headers.get('Authorization') ?? '';
         const userJwt = authHeader.replace('Bearer ', '');
 
-        const store = new ThreadsStore(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          userJwt,
-          currentUserId
-        );
+        const store = new ThreadsStore(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
 
         const agentService = new AgentsService(
           Deno.env.get('SUPABASE_URL') ?? '',

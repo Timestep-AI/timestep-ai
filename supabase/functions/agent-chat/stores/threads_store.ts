@@ -124,7 +124,10 @@ export class ThreadsStore {
           `[ThreadsStore] Created vector store ${vectorStore.id} for existing thread ${threadId}`
         );
       } catch (error) {
-        console.error(`[ThreadsStore] Failed to create vector store for thread ${threadId}:`, error);
+        console.error(
+          `[ThreadsStore] Failed to create vector store for thread ${threadId}:`,
+          error
+        );
         throw error;
       }
     }
@@ -954,5 +957,4 @@ export class ThreadsStore {
       content: JSON.stringify(dbMessage),
     };
   }
-
 }

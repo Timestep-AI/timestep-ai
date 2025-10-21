@@ -1,6 +1,7 @@
 import { ThreadsStore } from '../stores/threads_store.ts';
 import { Runner, RunState, Agent } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
+import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
   isStreamingReq,
   type ChatKitRequest,
@@ -199,20 +200,11 @@ export class ChatKitService {
       const agent = this.agent;
       const inputItems = this.messageProcessor.convertToAgentFormat(messages);
 
-      const modelProvider = new OpenAIProvider({
-        apiKey: Deno.env.get('OPENAI_API_KEY') || '',
-      });
-
-      const runConfig = {
-        modelProvider,
-        traceIncludeSensitiveData: true,
-        tracingDisabled: false,
+      const runner = await RunnerFactory.createRunner({
+        threadId: thread.id,
+        userId: this.context.userId,
         workflowName: `Agent workflow (${Date.now()})`,
-        groupId: thread.id,
-        metadata: { user_id: this.context.userId },
-      };
-
-      const runner = new Runner(runConfig);
+      });
       const result = await runner.run(agent, inputItems, {
         context: { threadId: thread.id, userId: this.context.userId },
         stream: true,
