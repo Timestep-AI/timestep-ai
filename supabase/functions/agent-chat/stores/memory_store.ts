@@ -1,8 +1,8 @@
 // Memory Store - Implements the Store interface for ChatKit data
 // Uses clean thread/message format as canonical storage and converts to ChatKit format as needed
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { ThreadMetadata, ThreadItem, Attachment } from '../types/chatkit-types.ts';
-import { createOpenAIClient } from '../utils/openai-client.ts';
+import type { ThreadMetadata, ThreadItem, Attachment } from '../types/chatkit.ts';
+import { createOpenAIClient } from '../utils/openai_client.ts';
 
 export interface Page<T> {
   data: T[];

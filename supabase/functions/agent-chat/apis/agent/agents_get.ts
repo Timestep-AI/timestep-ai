@@ -1,4 +1,4 @@
-import { AgentFactory } from '../services/agent_service.ts';
+import { AgentService } from '../../services/agent/service.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -12,14 +12,14 @@ export async function handleAgentsRequest(userId: string, authHeader: string): P
     // Extract just the JWT token from Authorization header (remove "Bearer " prefix)
     const userJwt = authHeader.replace('Bearer ', '');
 
-    const agentFactory = new AgentFactory(
+    const agentService = new AgentService(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       userJwt
     );
 
     // Get all agents for the user (this will create default agents if they don't exist)
-    const agents = await agentFactory.getAllAgents(userId);
+    const agents = await agentService.getAllAgents(userId);
 
     return new Response(JSON.stringify(agents), {
       status: 200,
