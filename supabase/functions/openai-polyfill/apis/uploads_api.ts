@@ -49,7 +49,7 @@ const corsHeaders = {
 };
 
 // Storage bucket for upload parts
-const STORAGE_BUCKET = 'openai-files';
+const STORAGE_BUCKET = 'openai-polyfill-files';
 const MAX_UPLOAD_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
 const MAX_PART_SIZE = 64 * 1024 * 1024; // 64MB
 const DEFAULT_EXPIRATION = 3600; // 1 hour

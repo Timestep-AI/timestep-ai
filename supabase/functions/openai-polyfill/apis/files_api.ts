@@ -52,7 +52,7 @@ const corsHeaders = {
 };
 
 // Supabase storage bucket name for files
-const STORAGE_BUCKET = 'openai-files';
+const STORAGE_BUCKET = 'openai-polyfill-files';
 
 /**
  * Main router for Files API endpoints

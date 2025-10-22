@@ -1,3 +1,5 @@
+-- Create files and vector stores tables for OpenAI API compatibility
+
 -- Create uploads table for OpenAI Uploads API (multipart uploads)
 CREATE TABLE IF NOT EXISTS uploads (
   id TEXT PRIMARY KEY, -- Upload ID (e.g., upload-abc123)
@@ -312,3 +314,7 @@ CREATE TRIGGER vector_store_file_counts_trigger
   AFTER INSERT OR UPDATE OR DELETE ON vector_store_files
   FOR EACH ROW
   EXECUTE FUNCTION update_vector_store_file_counts();
+
+-- Add foreign key constraint for threads.vector_store_id
+ALTER TABLE threads ADD CONSTRAINT fk_threads_vector_store_id 
+  FOREIGN KEY (vector_store_id) REFERENCES vector_stores(id) ON DELETE SET NULL;

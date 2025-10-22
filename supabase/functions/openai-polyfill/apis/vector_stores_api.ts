@@ -929,7 +929,7 @@ async function downloadFileContent(
 ): Promise<string | null> {
   try {
     const { data, error } = await supabaseClient.storage
-      .from('openai-files')
+      .from('openai-polyfill-files')
       .download(`${userId}/${fileId}.dat`);
 
     if (error) {
