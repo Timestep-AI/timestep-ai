@@ -20,7 +20,7 @@ const getAuthHeaders = async () => {
 };
 
 class AgentsService {
-  async getAll(): Promise<Agent[]> {
+  async getAll(): Promise<AgentRecord[]> {
     try {
       console.log('AgentsService: Fetching from', `${getServerBaseUrl()}/agents`);
       const headers = await getAuthHeaders();
@@ -36,29 +36,19 @@ class AgentsService {
         return [];
       }
 
-      // Map server response to our Agent interface
-      const agents: AgentRecord[] = apiAgents.map((apiAgent: any) => {
-        // Determine if this agent is primarily a handoff agent (has handoff_ids but minimal instructions)
-        const isHandoff =
-          apiAgent.handoff_ids &&
-          apiAgent.handoff_ids.length > 0 &&
-          (!apiAgent.instructions || apiAgent.instructions.length < 100);
-
-        return {
-          id: apiAgent.id,
-          name: apiAgent.name,
-          description: isHandoff ? `${apiAgent.name} - Handoff Agent` : 'AI Agent',
-          instructions: apiAgent.instructions || '',
-          handoffIds: apiAgent.handoff_ids || [],
-          handoffDescription: isHandoff ? apiAgent.instructions || '' : '',
-          createdAt: apiAgent.created_at || new Date().toISOString(),
-          model: apiAgent.model,
-          modelSettings: apiAgent.model_settings || { temperature: 0.0, toolChoice: 'auto' },
-          status: 'active' as const,
-          isHandoff: isHandoff,
-          toolIds: apiAgent.tool_ids || [],
-        };
-      });
+      // Map server response to AgentRecord interface
+      const agents: AgentRecord[] = apiAgents.map((apiAgent: any) => ({
+        id: apiAgent.id,
+        user_id: apiAgent.user_id,
+        name: apiAgent.name,
+        instructions: apiAgent.instructions || '',
+        tool_ids: apiAgent.tool_ids || [],
+        handoff_ids: apiAgent.handoff_ids || [],
+        model: apiAgent.model,
+        model_settings: apiAgent.model_settings || { temperature: 0.0, toolChoice: 'auto' },
+        created_at: apiAgent.created_at || new Date().toISOString(),
+        updated_at: apiAgent.updated_at || new Date().toISOString(),
+      }));
 
       return agents;
     } catch (error) {
@@ -67,7 +57,7 @@ class AgentsService {
     }
   }
 
-  async getById(id: string): Promise<Agent | null> {
+  async getById(id: string): Promise<AgentRecord | null> {
     try {
       console.log('AgentsService: Fetching agent by ID:', id);
 
@@ -89,12 +79,12 @@ class AgentsService {
     }
   }
 
-  async create(request: CreateAgentRequest): Promise<Agent> {
+  async create(request: CreateAgentRequest): Promise<AgentRecord> {
     // Note: Server doesn't support agent creation yet
     throw new Error('Agent creation not implemented in server');
   }
 
-  async update(id: string, request: UpdateAgentRequest): Promise<Agent | null> {
+  async update(id: string, request: UpdateAgentRequest): Promise<AgentRecord | null> {
     // Note: Server doesn't support agent updates yet
     throw new Error('Agent update not implemented in server');
   }
@@ -131,7 +121,7 @@ class AgentsService {
     }
   }
 
-  async search(query: string): Promise<Agent[]> {
+  async search(query: string): Promise<AgentRecord[]> {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(

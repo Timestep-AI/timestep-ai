@@ -21,8 +21,8 @@ import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [agents, setAgents] = useState<AgentRecord[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
 
@@ -30,7 +30,7 @@ const Chat = () => {
   const [darkMode, setDarkMode] = useState(true);
 
   // Agent details state
-  const [agentDetails, setAgentDetails] = useState<Agent | null>(null);
+  const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
   const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
 
   // Menu refs

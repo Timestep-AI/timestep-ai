@@ -87,38 +87,29 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                 </IonItem>
               )}
 
-              {agentDetails.handoffDescription && (
-                <IonItem>
-                  <IonLabel>
-                    <h3>Handoff Description</h3>
-                    <p>{agentDetails.handoffDescription}</p>
-                  </IonLabel>
-                </IonItem>
-              )}
-
-              {agentDetails.handoffIds && agentDetails.handoffIds.length > 0 && (
+              {agentDetails.handoff_ids && agentDetails.handoff_ids.length > 0 && (
                 <IonItem>
                   <IonLabel>
                     <h3>Handoff IDs</h3>
-                    <p>{agentDetails.handoffIds.join(', ')}</p>
+                    <p>{agentDetails.handoff_ids.join(', ')}</p>
                   </IonLabel>
                 </IonItem>
               )}
 
-              {agentDetails.toolIds && agentDetails.toolIds.length > 0 && (
+              {agentDetails.tool_ids && agentDetails.tool_ids.length > 0 && (
                 <IonItem>
                   <IonLabel>
                     <h3>Tool IDs</h3>
-                    <p>{agentDetails.toolIds.join(', ')}</p>
+                    <p>{agentDetails.tool_ids.join(', ')}</p>
                   </IonLabel>
                 </IonItem>
               )}
 
-              {agentDetails.modelSettings && Object.keys(agentDetails.modelSettings).length > 0 && (
+              {agentDetails.model_settings && Object.keys(agentDetails.model_settings).length > 0 && (
                 <IonItem>
                   <IonLabel>
                     <h3>Model Settings</h3>
-                    <p>{JSON.stringify(agentDetails.modelSettings, null, 2)}</p>
+                    <p>{JSON.stringify(agentDetails.model_settings, null, 2)}</p>
                   </IonLabel>
                 </IonItem>
               )}
@@ -126,7 +117,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               <IonItem>
                 <IonLabel>
                   <h3>Created At</h3>
-                  <p>{new Date(agentDetails.createdAt).toLocaleString()}</p>
+                  <p>{new Date(agentDetails.created_at).toLocaleString()}</p>
                 </IonLabel>
               </IonItem>
             </IonList>
