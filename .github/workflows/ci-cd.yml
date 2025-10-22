@@ -51,6 +51,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
       - name: Start Supabase local development
         run: |
           echo "Starting Supabase local development environment..."
@@ -72,11 +77,6 @@ jobs:
         run: |
           echo "Stopping Supabase local development environment..."
           supabase stop || true
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
 
       - name: Link to Supabase project
         run: supabase link --project-ref $PROJECT_ID
@@ -137,6 +137,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
       - name: Start Supabase local development
         run: |
           echo "Starting Supabase local development environment..."
@@ -161,11 +166,6 @@ jobs:
 
       - name: Run linting
         run: npm run lint
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
 
       - name: Link to Supabase project
         run: supabase link --project-ref $PROJECT_ID
