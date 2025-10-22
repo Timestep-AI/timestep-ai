@@ -23,6 +23,18 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,8 +51,27 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Start Supabase local development
+        run: |
+          echo "Starting Supabase local development environment..."
+          supabase start
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Wait for Supabase to be ready
+        run: |
+          echo "Waiting for Supabase services to be ready..."
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:54321/health > /dev/null 2>&1; do sleep 2; done'
+          echo "Supabase is ready!"
+
       - name: Run tests
         run: npm run test
+
+      - name: Stop Supabase local development
+        if: always()
+        run: |
+          echo "Stopping Supabase local development environment..."
+          supabase stop || true
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -78,6 +109,18 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -94,8 +137,27 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Start Supabase local development
+        run: |
+          echo "Starting Supabase local development environment..."
+          supabase start
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Wait for Supabase to be ready
+        run: |
+          echo "Waiting for Supabase services to be ready..."
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:54321/health > /dev/null 2>&1; do sleep 2; done'
+          echo "Supabase is ready!"
+
       - name: Run full test suite
         run: npm run test
+
+      - name: Stop Supabase local development
+        if: always()
+        run: |
+          echo "Stopping Supabase local development environment..."
+          supabase stop || true
 
       - name: Run linting
         run: npm run lint
