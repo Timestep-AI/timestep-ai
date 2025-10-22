@@ -30,6 +30,14 @@ jobs:
           echo "Checking current migration status..."
           supabase migration list
 
+      - name: Repair migration history
+        run: |
+          echo "Repairing migration history to sync local and remote..."
+          supabase migration repair --status reverted 20251022004031
+          supabase migration repair --status reverted 20251022004134
+          supabase migration repair --status applied 20251022004033
+          supabase migration repair --status applied 20251022004137
+          
       - name: Sync with remote database
         run: |
           echo "Pulling latest migrations from remote database..."
