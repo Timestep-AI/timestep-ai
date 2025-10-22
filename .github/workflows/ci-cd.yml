@@ -30,15 +30,6 @@ jobs:
           echo "Checking current migration status..."
           supabase migration list
 
-      - name: Reset migration history
-        run: |
-          echo "Resetting remote migration history to match committed files..."
-          # Mark all conflicting remote migrations as reverted
-          supabase migration repair --status reverted 20251022004031 || true
-          supabase migration repair --status reverted 20251022004134 || true
-          supabase migration repair --status reverted 20251022010840 || true
-          echo "Migration history reset complete"
-          
       - name: Run database migrations
         run: |
           echo "Applying consolidated migrations..."
