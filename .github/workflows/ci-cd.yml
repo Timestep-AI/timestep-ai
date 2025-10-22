@@ -33,9 +33,9 @@ jobs:
       - name: Reset migration history for clean deployment
         run: |
           echo "Resetting migration history for clean deployment..."
-          # Since production was manually cleaned, we'll reset the migration history
-          # This ensures our new consolidated migrations are applied cleanly
-          supabase migration repair --status reverted 20250123000001 || echo "Migration repair completed or not needed"
+          # Mark all old migrations as reverted to clean up the migration history
+          # This allows our new consolidated migrations to be applied cleanly
+          supabase migration repair --status reverted 20251016000001 20251016000002 20251016000003 20251016000004 20251016000005 20251016000007 20251016000008 20251016000009 20251016000010 20251016000011 20251016000012 20251016000013 20251016000014 20251016000015 20251017000001 20251018000001 20251018000002 20251018000003 20251018000004 20251018000005 20251019000001 20251019000002 20251019000003 20251019000004 20251019000005 20251019000006 20251019000007 20251019000008 20251019000009 20251020000001 20251020000002 20251020000003 20251020000004 20251021000001 20251021000002 || echo "Migration repair completed or not needed"
 
       - name: Run database migrations
         run: |
