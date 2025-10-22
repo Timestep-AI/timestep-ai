@@ -4,21 +4,98 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  PROJECT_ID: ohzbghitbjryfpmucgju
+  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 jobs:
-  deploy:
+  # Preview deployment for pull requests and feature branches
+  preview:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_ID: ohzbghitbjryfpmucgju
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to Supabase project
+        run: supabase link --project-ref $PROJECT_ID
+
+      - name: Create Supabase preview branch
+        run: |
+          echo "Creating Supabase preview branch for PR #${{ github.event.number }}"
+          supabase branches create pr-${{ github.event.number }} --project-ref $PROJECT_ID
+
+      - name: Deploy to Supabase preview branch
+        run: |
+          echo "Deploying to Supabase preview branch..."
+          supabase db push --project-ref $PROJECT_ID --branch pr-${{ github.event.number }} --yes
+          supabase functions deploy --project-ref $PROJECT_ID --branch pr-${{ github.event.number }}
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Vercel Preview
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+  # Production deployment for main branch
+  production:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full test suite
+        run: npm run test
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
         with:
           version: latest
 
@@ -32,8 +109,8 @@ jobs:
 
       - name: Run database migrations
         run: |
-          echo "Applying consolidated migrations..."
-          supabase db push --yes
+          echo "Applying migrations to production..."
+          supabase db push --project-ref $PROJECT_ID --yes
 
       - name: Verify migrations were applied
         run: |
@@ -42,3 +119,36 @@ jobs:
 
       - name: Deploy Supabase functions
         run: supabase functions deploy --project-ref $PROJECT_ID
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Vercel Production
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+  # Cleanup preview branches when PR is closed
+  cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to Supabase project
+        run: supabase link --project-ref $PROJECT_ID
+
+      - name: Delete Supabase preview branch
+        run: |
+          echo "Deleting Supabase preview branch for PR #${{ github.event.number }}"
+          supabase branches delete pr-${{ github.event.number }} --project-ref $PROJECT_ID --yes
+        continue-on-error: true
