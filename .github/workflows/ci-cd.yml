@@ -16,6 +16,14 @@ env:
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  # Frontend environment variables
+  VITE_SUPABASE_URL: http://127.0.0.1:54321
+  VITE_SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+  # Supabase edge function secrets
+  DEFAULT_AGENT_MODEL: ollama/gpt-oss:120b-cloud
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
 jobs:
   # Preview deployment for pull requests and feature branches
@@ -62,6 +70,14 @@ jobs:
           supabase start
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Configure Supabase secrets
+        run: |
+          echo "Setting up Supabase edge function secrets..."
+          supabase secrets set DEFAULT_AGENT_MODEL="$DEFAULT_AGENT_MODEL"
+          supabase secrets set OPENAI_API_KEY="$OPENAI_API_KEY"
+          supabase secrets set OLLAMA_API_KEY="$OLLAMA_API_KEY"
+          supabase secrets set HF_TOKEN="$HF_TOKEN"
 
       - name: Wait for Supabase to be ready
         run: |
@@ -164,6 +180,14 @@ jobs:
           supabase start
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Configure Supabase secrets
+        run: |
+          echo "Setting up Supabase edge function secrets..."
+          supabase secrets set DEFAULT_AGENT_MODEL="$DEFAULT_AGENT_MODEL"
+          supabase secrets set OPENAI_API_KEY="$OPENAI_API_KEY"
+          supabase secrets set OLLAMA_API_KEY="$OLLAMA_API_KEY"
+          supabase secrets set HF_TOKEN="$HF_TOKEN"
 
       - name: Wait for Supabase to be ready
         run: |
