@@ -64,20 +64,56 @@ jobs:
         with:
           version: latest
 
+      - name: Create Supabase config for CI
+        run: |
+          echo "Creating Supabase config for CI environment..."
+          cat > supabase/config.toml << EOF
+          project_id = "ohzbghitbjryfpmucgju"
+          
+          [edge_runtime]
+          enabled = true
+          
+          [edge_runtime.secrets]
+          DEFAULT_AGENT_MODEL = "$DEFAULT_AGENT_MODEL"
+          OPENAI_API_KEY = "$OPENAI_API_KEY"
+          OLLAMA_API_KEY = "$OLLAMA_API_KEY"
+          HF_TOKEN = "$HF_TOKEN"
+          
+          [auth]
+          enabled = true
+          site_url = "http://localhost:8080"
+          additional_redirect_urls = ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
+          jwt_expiry = 3600
+          enable_refresh_token_rotation = true
+          refresh_token_reuse_interval = 10
+          enable_signup = true
+          enable_anonymous_sign_ins = true
+          
+          [functions.agent-chat]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/agent-chat/deno.json"
+          entrypoint = "./functions/agent-chat/index.ts"
+          
+          [functions.mcp-env]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/mcp-env/deno.json"
+          entrypoint = "./functions/mcp-env/index.ts"
+          
+          [functions.openai-polyfill]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/openai-polyfill/deno.json"
+          entrypoint = "./functions/openai-polyfill/index.ts"
+          EOF
+
       - name: Start Supabase local development
         run: |
           echo "Starting Supabase local development environment..."
           supabase start
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Configure Supabase secrets
-        run: |
-          echo "Setting up Supabase edge function secrets..."
-          supabase secrets set DEFAULT_AGENT_MODEL="$DEFAULT_AGENT_MODEL"
-          supabase secrets set OPENAI_API_KEY="$OPENAI_API_KEY"
-          supabase secrets set OLLAMA_API_KEY="$OLLAMA_API_KEY"
-          supabase secrets set HF_TOKEN="$HF_TOKEN"
 
       - name: Wait for Supabase to be ready
         run: |
@@ -174,20 +210,56 @@ jobs:
         with:
           version: latest
 
+      - name: Create Supabase config for CI
+        run: |
+          echo "Creating Supabase config for CI environment..."
+          cat > supabase/config.toml << EOF
+          project_id = "ohzbghitbjryfpmucgju"
+          
+          [edge_runtime]
+          enabled = true
+          
+          [edge_runtime.secrets]
+          DEFAULT_AGENT_MODEL = "$DEFAULT_AGENT_MODEL"
+          OPENAI_API_KEY = "$OPENAI_API_KEY"
+          OLLAMA_API_KEY = "$OLLAMA_API_KEY"
+          HF_TOKEN = "$HF_TOKEN"
+          
+          [auth]
+          enabled = true
+          site_url = "http://localhost:8080"
+          additional_redirect_urls = ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
+          jwt_expiry = 3600
+          enable_refresh_token_rotation = true
+          refresh_token_reuse_interval = 10
+          enable_signup = true
+          enable_anonymous_sign_ins = true
+          
+          [functions.agent-chat]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/agent-chat/deno.json"
+          entrypoint = "./functions/agent-chat/index.ts"
+          
+          [functions.mcp-env]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/mcp-env/deno.json"
+          entrypoint = "./functions/mcp-env/index.ts"
+          
+          [functions.openai-polyfill]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/openai-polyfill/deno.json"
+          entrypoint = "./functions/openai-polyfill/index.ts"
+          EOF
+
       - name: Start Supabase local development
         run: |
           echo "Starting Supabase local development environment..."
           supabase start
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Configure Supabase secrets
-        run: |
-          echo "Setting up Supabase edge function secrets..."
-          supabase secrets set DEFAULT_AGENT_MODEL="$DEFAULT_AGENT_MODEL"
-          supabase secrets set OPENAI_API_KEY="$OPENAI_API_KEY"
-          supabase secrets set OLLAMA_API_KEY="$OLLAMA_API_KEY"
-          supabase secrets set HF_TOKEN="$HF_TOKEN"
 
       - name: Wait for Supabase to be ready
         run: |
