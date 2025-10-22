@@ -16,6 +16,20 @@ DROP TABLE IF EXISTS traces CASCADE;
 DROP TABLE IF EXISTS spans CASCADE;
 DROP TABLE IF EXISTS responses CASCADE;
 
+-- Drop unwanted tables from production database
+DROP TABLE IF EXISTS agent_cards CASCADE;
+DROP TABLE IF EXISTS api_keys CASCADE;
+DROP TABLE IF EXISTS artifacts CASCADE;
+DROP TABLE IF EXISTS contexts CASCADE;
+DROP TABLE IF EXISTS invites CASCADE;
+DROP TABLE IF EXISTS model_providers CASCADE;
+DROP TABLE IF EXISTS parts CASCADE;
+DROP TABLE IF EXISTS push_notification_configs CASCADE;
+DROP TABLE IF EXISTS task_artifact_events CASCADE;
+DROP TABLE IF EXISTS task_status_events CASCADE;
+DROP TABLE IF EXISTS tasks CASCADE;
+DROP TABLE IF EXISTS user_invites CASCADE;
+
 -- Drop any remaining old agent/mcp tables that might have been recreated
 -- (These will be recreated by the proper migrations if needed)
 DROP TABLE IF EXISTS agents CASCADE;
