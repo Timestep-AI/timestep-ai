@@ -125,19 +125,13 @@ Deno.serve(async (req: Request) => {
 
       // Create a mock request object that the MCP transport expects
       const url = new URL(req.url);
-      const authFromQuery = url.searchParams.get('authorization');
 
-      // Build headers, including authorization from query parameter if present
+      // Build headers - do NOT accept authorization from query parameters for security
       const headers: Record<string, string> = {
         accept: req.method === 'GET' ? 'text/event-stream' : 'application/json, text/event-stream',
         'content-type': req.method === 'POST' ? 'application/json' : undefined,
         ...Object.fromEntries(req.headers.entries()),
       };
-
-      // Add authorization from query parameter if not already in headers
-      if (authFromQuery && !headers.authorization) {
-        headers.authorization = authFromQuery;
-      }
 
       const mockReq = {
         method: req.method,
