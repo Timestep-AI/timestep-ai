@@ -30,13 +30,6 @@ jobs:
           echo "Checking current migration status..."
           supabase migration list
 
-      - name: Reset migration history for clean deployment
-        run: |
-          echo "Resetting migration history for clean deployment..."
-          # Mark all old migrations as reverted to clean up the migration history
-          # This allows our new consolidated migrations to be applied cleanly
-          supabase migration repair --status reverted 20251016000001 20251016000002 20251016000003 20251016000004 20251016000005 20251016000007 20251016000008 20251016000009 20251016000010 20251016000011 20251016000012 20251016000013 20251016000014 20251016000015 20251017000001 20251018000001 20251018000002 20251018000003 20251018000004 20251018000005 20251019000001 20251019000002 20251019000003 20251019000004 20251019000005 20251019000006 20251019000007 20251019000008 20251019000009 20251020000001 20251020000002 20251020000003 20251020000004 20251021000001 20251021000002 || echo "Migration repair completed or not needed"
-
       - name: Run database migrations
         run: |
           echo "Applying consolidated migrations..."
@@ -46,12 +39,6 @@ jobs:
         run: |
           echo "Final migration status:"
           supabase migration list
-
-      - name: Remove unwanted functions
-        run: |
-          echo "Removing unwanted edge functions..."
-          # Remove the 'server' function if it exists
-          supabase functions delete server --project-ref $PROJECT_ID || echo "Server function not found or already removed"
 
       - name: Deploy Supabase functions
         run: supabase functions deploy --project-ref $PROJECT_ID
