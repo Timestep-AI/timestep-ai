@@ -169,10 +169,16 @@ export async function validateMathWeatherConversationFlow(
   await sfApproveBtn.click();
   console.log('  Clicked approval for San Francisco');
 
-  // San Francisco result is within the same workflow response
+  // Wait for San Francisco tool result to actually appear
+  await expect(chatFrame.locator('text=/Tool Result.*get_weather/').nth(1)).toBeVisible({
+    timeout: 20000,
+  }); // Second get_weather tool result should be San Francisco
   console.log('✓ San Francisco weather tool result received');
 
-  // Final summary is within the same workflow response
+  // Wait for the final weather summary to appear before proceeding
+  await expect(
+    chatFrame.locator('article[data-thread-turn="assistant"]').nth(weatherWorkflowIndex)
+  ).toContainText(/weather.*Oakland.*San Francisco/i, { timeout: 15000 });
   console.log('✓ Final weather summary displayed');
 
   // ============================================================================
@@ -214,10 +220,10 @@ export async function validateMathWeatherConversationFlow(
   }); // Third get_weather tool result should be Atlanta
   console.log('✓ Atlanta weather tool result received');
 
-  // Validate Atlanta weather summary
+  // Wait for the final Atlanta weather summary to appear
   const atlantaResponseIndex = 3; // Atlanta workflow comes after the initial weather workflow
   await expect(
     chatFrame.locator('article[data-thread-turn="assistant"]').nth(atlantaResponseIndex)
-  ).toBeVisible({ timeout: 15000 });
+  ).toContainText(/weather.*Atlanta/i, { timeout: 15000 });
   console.log('✓ Atlanta weather summary displayed');
 }
