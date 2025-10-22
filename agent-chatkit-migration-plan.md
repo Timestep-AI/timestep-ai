@@ -90,11 +90,10 @@ supabase/functions/agent-chat/
 │   ├── ollama_model_provider.ts
 │   ├── ollama_model.ts
 │   ├── openai_client.ts
-│   └── runner_factory.ts
+│   ├── runner_factory.ts
+│   └── factory.ts               # 9a. Consolidated factories
 └── types/
-    ├── events.ts                # 10a. Event type definitions
-    ├── processors.ts            # 10b. Processor interfaces
-    └── streaming.ts             # 10c. Streaming state types
+    └── index.ts                 # 10. All type definitions
 ```
 
 ## Migration Phases
@@ -106,9 +105,10 @@ supabase/functions/agent-chat/
 mkdir -p supabase/functions/agent-chat/{core,processors,stores,types}
 ```
 
-#### 1.2 Create Type Definitions
+#### 1.2 Create Consolidated Type Definitions
 ```typescript
-// types/events.ts
+// types/index.ts
+// Event Types
 export interface AgentEvent {
   type: string;
   name?: string;
@@ -126,14 +126,14 @@ export interface ThreadStreamEvent extends ChatKitEvent {
   type: 'thread.created' | 'thread.updated' | 'thread.item.added' | 'thread.item.done' | 'thread.item.updated';
 }
 
-// types/processors.ts
+// Processor Interface
 export interface EventProcessor {
   readonly name: string;
   canProcess(event: AgentEvent, state: StreamingState): boolean;
   process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent>;
 }
 
-// types/streaming.ts
+// Streaming State
 export interface StreamingState {
   threadId: string;
   itemId: string;
@@ -143,15 +143,46 @@ export interface StreamingState {
   contentPartAdded: boolean;
   paused: boolean;
 }
+
+// Base Store Configuration
+export interface StoreConfig {
+  supabaseUrl: string;
+  userJwt: string;
+  userId: string;
+}
+
+// Base Processor Dependencies
+export interface ProcessorDependencies {
+  factory: Factory;
+  messageStore: MessageStore;
+  threadStore: ThreadStore;
+}
 ```
 
 #### 1.3 Create Base Processor Interface
 ```typescript
 // processors/base_event_processor.ts
-export interface EventProcessor {
-  readonly name: string;
-  canProcess(event: AgentEvent, state: StreamingState): boolean;
-  process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent>;
+import { EventProcessor } from '../types/index.ts';
+
+// Re-export the interface for convenience
+export { EventProcessor };
+
+// Base abstract class with common functionality
+export abstract class BaseEventProcessor implements EventProcessor {
+  abstract readonly name: string;
+  
+  constructor(protected deps: ProcessorDependencies) {}
+  
+  abstract canProcess(event: AgentEvent, state: StreamingState): boolean;
+  abstract process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent>;
+  
+  protected generateId(prefix: string = 'item'): string {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  protected async saveMessage(threadId: string, message: any): Promise<void> {
+    await this.deps.messageStore.add(threadId, message);
+  }
 }
 ```
 
@@ -289,13 +320,11 @@ export class EventRouter {
 #### 3.1 Create Text Stream Processor
 ```typescript
 // processors/text_stream_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class TextStreamProcessor implements EventProcessor {
+export class TextStreamProcessor extends BaseEventProcessor {
   readonly name = 'text_stream';
-  
-  constructor(private itemFactory: ItemFactory) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'raw_model_stream_event' || 
@@ -303,23 +332,18 @@ export class TextStreamProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current ModelStreamHandler
     const delta = this.extractTextDelta(event);
     if (!delta) return;
 
     // First delta: create assistant message item
     if (!state.itemAdded) {
-      const assistantMessage = this.itemFactory.createAssistantMessageItem(
+      const assistantMessage = this.deps.factory.createAssistantMessageItem(
         state.threadId,
         state.itemId,
         state.createdAt
       );
       
-      yield {
-        type: 'thread.item.added',
-        item: assistantMessage
-      };
-      
+      yield { type: 'thread.item.added', item: assistantMessage };
       state.itemAdded = true;
     }
 
@@ -331,14 +355,9 @@ export class TextStreamProcessor implements EventProcessor {
         update: {
           type: 'assistant_message.content_part.added',
           content_index: 0,
-          content: {
-            type: 'output_text',
-            text: '',
-            annotations: []
-          }
+          content: { type: 'output_text', text: '', annotations: [] }
         }
       };
-      
       state.contentPartAdded = true;
     }
 
@@ -356,10 +375,7 @@ export class TextStreamProcessor implements EventProcessor {
   }
 
   private extractTextDelta(event: AgentEvent): string | null {
-    return event.data?.delta || 
-           event.data?.event?.delta || 
-           event.delta || 
-           null;
+    return event.data?.delta || event.data?.event?.delta || event.delta || null;
   }
 }
 ```
@@ -367,17 +383,11 @@ export class TextStreamProcessor implements EventProcessor {
 #### 3.2 Create Tool Call Processor
 ```typescript
 // processors/tool_call_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
-import { MessageStore } from '../stores/message_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class ToolCallProcessor implements EventProcessor {
+export class ToolCallProcessor extends BaseEventProcessor {
   readonly name = 'tool_call';
-  
-  constructor(
-    private itemFactory: ItemFactory,
-    private messageStore: MessageStore
-  ) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'run_item_stream_event' && 
@@ -385,22 +395,20 @@ export class ToolCallProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current ToolCalledHandler
     const tool = event.item?.rawItem;
     const toolCallId = tool?.callId || tool?.call_id || tool?.id;
     const toolName = tool?.name;
     const argumentsText = tool?.arguments;
 
     // Create and save tool call item
-    const toolCallItem = this.itemFactory.createToolCallItem(
+    const toolCallItem = this.deps.factory.createToolCallItem(
       state.threadId,
       toolName,
       toolCallId,
       argumentsText
     );
     
-    await this.messageStore.add(state.threadId, toolCallItem);
-    
+    await this.saveMessage(state.threadId, toolCallItem);
     // No immediate ChatKit event needed for tool calls
   }
 }
@@ -742,29 +750,41 @@ export class ThreadsService {
 
 ### Phase 5: Extract Stores
 
-#### 5.1 Create Thread Store
+#### 5.1 Create Base Store Class
 ```typescript
-// stores/thread_store.ts
+// stores/base_store.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { VectorStore } from './vector_store.ts';
+import { StoreConfig } from '../types/index.ts';
 
-export class ThreadStore {
-  private supabase: ReturnType<typeof createClient>;
+export abstract class BaseStore {
+  protected supabase: ReturnType<typeof createClient>;
 
-  constructor(
-    private supabaseUrl: string,
-    private userJwt: string,
-    private userId: string,
-    private vectorStore: VectorStore
-  ) {
+  constructor(protected config: StoreConfig) {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    this.supabase = createClient(supabaseUrl, anonKey, {
+    this.supabase = createClient(config.supabaseUrl, anonKey, {
       global: {
         headers: {
-          Authorization: `Bearer ${userJwt}`
+          Authorization: `Bearer ${config.userJwt}`
         }
       }
     });
+  }
+}
+```
+
+#### 5.2 Create Thread Store
+```typescript
+// stores/thread_store.ts
+import { BaseStore } from './base_store.ts';
+import { VectorStore } from './vector_store.ts';
+import { StoreConfig } from '../types/index.ts';
+
+export class ThreadStore extends BaseStore {
+  constructor(
+    config: StoreConfig,
+    private vectorStore: VectorStore
+  ) {
+    super(config);
   }
 
   async create(thread: Thread): Promise<Thread> {
@@ -857,29 +877,19 @@ export class ThreadStore {
 }
 ```
 
-#### 5.2 Create Message Store
+#### 5.3 Create Message Store
 ```typescript
 // stores/message_store.ts
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { BaseStore } from './base_store.ts';
 import { VectorStore } from './vector_store.ts';
+import { StoreConfig } from '../types/index.ts';
 
-export class MessageStore {
-  private supabase: ReturnType<typeof createClient>;
-
+export class MessageStore extends BaseStore {
   constructor(
-    private supabaseUrl: string,
-    private userJwt: string,
-    private userId: string,
+    config: StoreConfig,
     private vectorStore: VectorStore
   ) {
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    this.supabase = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${userJwt}`
-        }
-      }
-    });
+    super(config);
   }
 
   async add(threadId: string, message: Message): Promise<void> {
@@ -1083,19 +1093,19 @@ export class MessageStore {
 }
 ```
 
-#### 5.3 Create Vector Store
+#### 5.4 Create Vector Store
 ```typescript
 // stores/vector_store.ts
 import { createOpenAIClient } from '../utils/openai_client.ts';
+import { StoreConfig } from '../types/index.ts';
 
 export class VectorStore {
   private openai: ReturnType<typeof createOpenAIClient>;
 
   constructor(
-    private supabaseUrl: string,
-    private userJwt: string
+    private config: StoreConfig
   ) {
-    this.openai = createOpenAIClient(supabaseUrl, userJwt);
+    this.openai = createOpenAIClient(config.supabaseUrl, config.userJwt);
   }
 
   async createForThread(threadId: string): Promise<string> {
@@ -1167,18 +1177,18 @@ export class VectorStore {
 }
 ```
 
-### Phase 6: Create Utility Classes
+### Phase 6: Create Consolidated Factory
 
-#### 6.1 Create Item Factory
+#### 6.1 Create Unified Factory
 ```typescript
-// utils/item_factory.ts
-export class ItemFactory {
+// utils/factory.ts
+export class Factory {
   generateId(prefix: string = 'item'): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  // Item Creation Methods
   createUserMessageItem(input: any, thread: Thread): UserMessageItem {
-    // Move logic from current MessageProcessor.buildUserMessageItem()
     let content = Array.isArray(input.content) ? input.content : [input.content];
     if (!content || content.length === 0 || !content[0] || typeof content[0].type !== 'string') {
       content = [{ type: 'input_text', text: '' }];
@@ -1193,9 +1203,7 @@ export class ItemFactory {
       attachments: input.attachments || []
     };
 
-    if (input.quoted_text) {
-      userMessage.quoted_text = input.quoted_text;
-    }
+    if (input.quoted_text) userMessage.quoted_text = input.quoted_text;
     if (input.inference_options && Object.keys(input.inference_options).length > 0) {
       userMessage.inference_options = input.inference_options;
     }
@@ -1204,24 +1212,16 @@ export class ItemFactory {
   }
 
   createAssistantMessageItem(threadId: string, itemId: string, createdAt: number): AssistantMessageItem {
-    // Move logic from current ItemFactory.createAssistantMessageItem()
     return {
       type: 'assistant_message',
       id: itemId,
       thread_id: threadId,
-      content: [
-        {
-          annotations: [],
-          text: '',
-          type: 'output_text'
-        }
-      ],
+      content: [{ annotations: [], text: '', type: 'output_text' }],
       created_at: createdAt
     };
   }
 
   createToolCallItem(threadId: string, toolName: string, toolCallId: string, argumentsText: string): any {
-    // Move logic from current ItemFactory.createToolCallItem()
     return {
       type: 'client_tool_call',
       id: this.generateId('tool_call'),
@@ -1237,7 +1237,6 @@ export class ItemFactory {
   }
 
   createToolCallOutputItem(threadId: string, toolName: string, toolCallId: string, output: any): any {
-    // Move logic from current ItemFactory.createToolCallOutputItem()
     return {
       type: 'client_tool_call',
       id: this.generateId('tool_call_output'),
@@ -1253,28 +1252,21 @@ export class ItemFactory {
   }
 
   createHandoffToolCallItem(threadId: string, handoffName: string, handoffCallId: string, argumentsText: string): any {
-    // Move logic from current ItemFactory.createHandoffToolCallItem()
     return {
       type: 'assistant_message',
       id: this.generateId('assistant_message'),
       thread_id: threadId,
       created_at: Math.floor(Date.now() / 1000),
       content: [],
-      tool_calls: [
-        {
-          id: handoffCallId,
-          type: 'function',
-          function: {
-            name: handoffName,
-            arguments: argumentsText
-          }
-        }
-      ]
+      tool_calls: [{
+        id: handoffCallId,
+        type: 'function',
+        function: { name: handoffName, arguments: argumentsText }
+      }]
     };
   }
 
   createHandoffResultToolItem(threadId: string, handoffCallId: string, output: any): any {
-    // Move logic from current ItemFactory.createHandoffResultToolItem()
     return {
       type: 'tool_message',
       id: this.generateId('tool_message'),
@@ -1286,7 +1278,6 @@ export class ItemFactory {
   }
 
   createWidgetItem(threadId: string, widgetType: string, widget: any): any {
-    // Move logic from current ItemFactory.createWidgetItem()
     return {
       type: 'widget',
       id: this.generateId('widget'),
@@ -1296,290 +1287,99 @@ export class ItemFactory {
       widget: widget
     };
   }
-}
-```
 
-#### 6.2 Create Widget Factory
-```typescript
-// utils/widget_factory.ts
-export class WidgetFactory {
-  static createToolResultWidget(toolName: string, output: any): any {
-    // Move logic from current WidgetFactory.createToolResultWidget()
-    let outputText = 'Tool executed successfully.';
-    if (output) {
-      if (typeof output === 'string') {
-        outputText = output;
-      } else if (output.text) {
-        outputText = String(output.text);
-      } else {
-        outputText = JSON.stringify(output);
-      }
-    }
-
-    return {
-      type: 'Card',
-      size: 'sm',
-      children: [
-        {
-          type: 'Row',
-          align: 'center',
-          gap: 3,
-          children: [
-            {
-              type: 'Box',
-              background: 'alpha-10',
-              radius: 'sm',
-              padding: 2,
-              children: [
-                {
-                  type: 'Icon',
-                  name: 'check-circle',
-                  size: 'lg'
-                }
-              ]
-            },
-            {
-              type: 'Col',
-              gap: 0,
-              children: [
-                {
-                  type: 'Title',
-                  value: 'Tool Result',
-                  size: 'sm'
-                },
-                {
-                  type: 'Caption',
-                  value: toolName,
-                  color: 'secondary'
-                }
-              ]
-            }
-          ]
-        },
-        {
-          type: 'Divider',
-          flush: true
-        },
-        {
-          type: 'Text',
-          value: outputText,
-          wrap: true
-        }
-      ]
-    };
+  // Widget Creation Methods
+  createToolResultWidget(toolName: string, output: any): any {
+    const outputText = this.extractText(output) || 'Tool executed successfully.';
+    return this.createCardWidget('Tool Result', toolName, 'check-circle', outputText);
   }
 
-  static createToolApprovalWidget(toolName: string, argumentsText: string, toolCallId: string, approvalItemId: string): any {
-    // Move logic from current WidgetFactory.createToolApprovalWidget()
+  createToolApprovalWidget(toolName: string, argumentsText: string, toolCallId: string, approvalItemId: string): any {
+    const args = JSON.parse(argumentsText || '{}');
     return {
       type: 'Card',
       size: 'sm',
       confirm: {
         label: 'Approve',
-        action: {
-          type: 'approve_tool_call',
-          toolCallId: toolCallId,
-          item_id: approvalItemId,
-          payload: {
-            tool_call_id: toolCallId
-          }
-        }
+        action: { type: 'approve_tool_call', toolCallId, item_id: approvalItemId, payload: { tool_call_id: toolCallId } }
       },
       cancel: {
         label: 'Deny',
-        action: {
-          type: 'reject_tool_call',
-          toolCallId: toolCallId,
-          item_id: approvalItemId,
-          payload: {
-            tool_call_id: toolCallId
-          }
-        }
+        action: { type: 'reject_tool_call', toolCallId, item_id: approvalItemId, payload: { tool_call_id: toolCallId } }
       },
       children: [
-        {
-          type: 'Row',
-          align: 'center',
-          gap: 3,
-          children: [
-            {
-              type: 'Box',
-              background: 'alpha-10',
-              radius: 'sm',
-              padding: 2,
-              children: [
-                {
-                  type: 'Icon',
-                  name: 'square-code',
-                  size: 'lg'
-                }
-              ]
-            },
-            {
-              type: 'Col',
-              gap: 0,
-              children: [
-                {
-                  type: 'Title',
-                  value: 'Tool approval required',
-                  size: 'sm'
-                },
-                {
-                  type: 'Caption',
-                  value: toolName,
-                  color: 'secondary'
-                }
-              ]
-            }
-          ]
-        },
-        {
-          type: 'Divider',
-          flush: true
-        },
+        this.createHeaderRow('Tool approval required', toolName, 'square-code'),
+        { type: 'Divider', flush: true },
         {
           type: 'Col',
           gap: 2,
           children: [
-            {
-              type: 'Caption',
-              value: 'Arguments',
-              color: 'secondary'
-            },
-            ...Object.entries(JSON.parse(argumentsText || '{}')).map(([key, value]) => ({
+            { type: 'Caption', value: 'Arguments', color: 'secondary' },
+            ...Object.entries(args).map(([key, value]) => ({
               type: 'Row',
               gap: 2,
               children: [
-                {
-                  type: 'Badge',
-                  label: key
-                },
-                {
-                  type: 'Text',
-                  value: String(value),
-                  size: 'sm'
-                }
+                { type: 'Badge', label: key },
+                { type: 'Text', value: String(value), size: 'sm' }
               ]
             })),
-            {
-              type: 'Text',
-              value: `May send ${toolName} request to external service.`,
-              size: 'xs',
-              color: 'tertiary'
-            }
+            { type: 'Text', value: `May send ${toolName} request to external service.`, size: 'xs', color: 'tertiary' }
           ]
         }
       ]
     };
   }
 
-  static createHandoffWidget(handoffName: string): any {
-    // Move logic from current WidgetFactory.createHandoffWidget()
-    return {
-      type: 'Card',
-      size: 'sm',
-      children: [
-        {
-          type: 'Row',
-          align: 'center',
-          gap: 3,
-          children: [
-            {
-              type: 'Box',
-              background: 'alpha-10',
-              radius: 'sm',
-              padding: 2,
-              children: [
-                {
-                  type: 'Icon',
-                  name: 'arrow-right-circle',
-                  size: 'lg'
-                }
-              ]
-            },
-            {
-              type: 'Col',
-              gap: 0,
-              children: [
-                {
-                  type: 'Title',
-                  value: 'Agent Transfer',
-                  size: 'sm'
-                },
-                {
-                  type: 'Caption',
-                  value: `Transferring to ${handoffName}`,
-                  color: 'secondary'
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+  createHandoffWidget(handoffName: string): any {
+    return this.createCardWidget('Agent Transfer', `Transferring to ${handoffName}`, 'arrow-right-circle');
   }
 
-  static createHandoffResultWidget(output: any): any {
-    // Move logic from current WidgetFactory.createHandoffResultWidget()
-    let handoffOutputText = 'Transfer completed successfully.';
-    if (output) {
-      if (typeof output === 'string') {
-        handoffOutputText = output;
-      } else if (output.text) {
-        handoffOutputText = String(output.text);
-      } else {
-        handoffOutputText = JSON.stringify(output);
-      }
+  createHandoffResultWidget(output: any): any {
+    const outputText = this.extractText(output) || 'Transfer completed successfully.';
+    return this.createCardWidget('Transfer Complete', 'Successfully transferred to target agent', 'check-circle', outputText);
+  }
+
+  // Helper Methods
+  private extractText(output: any): string | null {
+    if (typeof output === 'string') return output;
+    if (output?.text) return String(output.text);
+    if (output) return JSON.stringify(output);
+    return null;
+  }
+
+  private createCardWidget(title: string, subtitle: string, icon: string, content?: string): any {
+    const children = [
+      this.createHeaderRow(title, subtitle, icon),
+      { type: 'Divider', flush: true }
+    ];
+    
+    if (content) {
+      children.push({ type: 'Text', value: content, wrap: true });
     }
+    
+    return { type: 'Card', size: 'sm', children };
+  }
 
+  private createHeaderRow(title: string, subtitle: string, icon: string): any {
     return {
-      type: 'Card',
-      size: 'sm',
+      type: 'Row',
+      align: 'center',
+      gap: 3,
       children: [
         {
-          type: 'Row',
-          align: 'center',
-          gap: 3,
+          type: 'Box',
+          background: 'alpha-10',
+          radius: 'sm',
+          padding: 2,
+          children: [{ type: 'Icon', name: icon, size: 'lg' }]
+        },
+        {
+          type: 'Col',
+          gap: 0,
           children: [
-            {
-              type: 'Box',
-              background: 'alpha-10',
-              radius: 'sm',
-              padding: 2,
-              children: [
-                {
-                  type: 'Icon',
-                  name: 'check-circle',
-                  size: 'lg'
-                }
-              ]
-            },
-            {
-              type: 'Col',
-              gap: 0,
-              children: [
-                {
-                  type: 'Title',
-                  value: 'Transfer Complete',
-                  size: 'sm'
-                },
-                {
-                  type: 'Caption',
-                  value: 'Successfully transferred to target agent',
-                  color: 'secondary'
-                }
-              ]
-            }
+            { type: 'Title', value: title, size: 'sm' },
+            { type: 'Caption', value: subtitle, color: 'secondary' }
           ]
-        },
-        {
-          type: 'Divider',
-          flush: true
-        },
-        {
-          type: 'Text',
-          value: handoffOutputText,
-          wrap: true
         }
       ]
     };
@@ -1899,6 +1699,29 @@ Update all import statements to reference the new file locations.
 - Monitor memory usage
 - Test concurrent requests
 
+## DRY Improvements
+
+### Eliminated Redundancies
+1. **Consolidated Types**: All types in single `types/index.ts` file instead of scattered across multiple files
+2. **Unified Factory**: Combined `ItemFactory` and `WidgetFactory` into single `Factory` class with shared helper methods
+3. **Base Store Class**: Common Supabase client setup moved to `BaseStore` abstract class
+4. **Base Processor Class**: Common functionality moved to `BaseEventProcessor` abstract class
+5. **Shared Dependencies**: `ProcessorDependencies` interface eliminates repetitive constructor parameters
+6. **Helper Methods**: Common widget creation logic consolidated into reusable methods
+
+### Before vs After
+- **Before**: 3 separate type files (`events.ts`, `processors.ts`, `streaming.ts`)
+- **After**: 1 consolidated type file (`types/index.ts`)
+
+- **Before**: 2 separate factory classes with duplicate helper methods
+- **After**: 1 unified factory with shared helper methods
+
+- **Before**: Each store class duplicated Supabase client setup (15+ lines each)
+- **After**: Base store class handles common setup (1 line per store)
+
+- **Before**: Each processor class duplicated dependency injection and helper methods
+- **After**: Base processor class provides common functionality
+
 ## Migration Benefits
 
 1. **Clear Flow**: Files read from top to bottom follow execution path
@@ -1907,6 +1730,8 @@ Update all import statements to reference the new file locations.
 4. **Better Maintainability**: Clear separation of concerns
 5. **Extensible**: Easy to add new event types and processors
 6. **Reduced Complexity**: 260+ line service broken into focused components
+7. **DRY Compliance**: Eliminated code duplication and consolidated common functionality
+8. **Reduced File Count**: Fewer files to maintain and understand
 
 ## Rollback Plan
 
