@@ -33,8 +33,7 @@ const Chat = () => {
 
   // Theme settings state
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
-    const saved = localStorage.getItem('chatkitTheme');
-    return saved ? JSON.parse(saved) : {
+    return {
       colorScheme: 'light' as const,
       accentColor: '#3B82F6',
       accentLevel: 2,
@@ -61,15 +60,21 @@ const Chat = () => {
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
 
-      // Only set initial agent on first load
+      // Set initial agent from URL or first agent
       if (!selectedAgent) {
-        const savedAgentId = localStorage.getItem('selectedAgentId');
-        const savedAgent = savedAgentId ? agentsData.find((a) => a.id === savedAgentId) : null;
-
-        if (savedAgent) {
-          setSelectedAgent(savedAgent);
-        } else if (agentsData.length > 0) {
-          setSelectedAgent(agentsData[0]);
+        const agentParam = searchParams.get('agent');
+        const agent = agentParam 
+          ? agentsData.find((a) => a.id === agentParam)
+          : agentsData[0];
+        
+        if (agent) {
+          setSelectedAgent(agent);
+          // Update URL if no agent param exists
+          if (!agentParam && agentsData.length > 0) {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('agent', agent.id);
+            window.history.replaceState({}, '', newUrl);
+          }
         }
       }
     } catch (error) {
@@ -78,7 +83,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  }, []); // Remove selectedAgent from dependencies
+  }, [searchParams, selectedAgent]);
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {
@@ -196,7 +201,6 @@ const Chat = () => {
   const handleThemeChange = (updates: Partial<ThemeSettings>) => {
     const newSettings = { ...themeSettings, ...updates };
     setThemeSettings(newSettings);
-    localStorage.setItem('chatkitTheme', JSON.stringify(newSettings));
   };
 
   // Helper function to get auth headers
@@ -222,12 +226,11 @@ const Chat = () => {
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
-      localStorage.setItem('selectedAgentId', agent.id);
       
       // Update URL to reflect agent change
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('agent', agent.id);
-      window.history.replaceState({}, '', newUrl);
+      window.history.pushState({}, '', newUrl);
     }
   };
 
@@ -254,18 +257,14 @@ const Chat = () => {
       await setThreadId(targetId);
       setCurrentThreadId(targetId);
 
+      // Update URL
+      const newUrl = new URL(window.location.href);
       if (targetId) {
-        localStorage.setItem('currentThreadId', targetId);
-        // Update URL
-        const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('thread', targetId);
-        window.history.replaceState({}, '', newUrl);
       } else {
-        localStorage.removeItem('currentThreadId');
-        const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('thread');
-        window.history.replaceState({}, '', newUrl);
       }
+      window.history.pushState({}, '', newUrl);
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
@@ -287,18 +286,16 @@ const Chat = () => {
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
+      
+      // Update URL to reflect current thread
+      const newUrl = new URL(window.location.href);
       if (threadId) {
-        localStorage.setItem('currentThreadId', threadId);
-        // Update URL to reflect current thread
-        const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('thread', threadId);
-        window.history.replaceState({}, '', newUrl);
       } else {
-        localStorage.removeItem('currentThreadId');
-        const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('thread');
-        window.history.replaceState({}, '', newUrl);
       }
+      window.history.replaceState({}, '', newUrl);
+      
       loadThreads();
     },
     api: {
@@ -360,17 +357,14 @@ const Chat = () => {
     },
   });
 
-  // Restore saved thread or URL thread when available (after ChatKit is ready)
+  // Load thread from URL when ChatKit is ready
   useEffect(() => {
-    // Check URL first, then localStorage
     const threadParam = searchParams.get('thread');
-    const savedThread = localStorage.getItem('currentThreadId');
-    const threadToLoad = threadParam || savedThread;
     
-    if (isAuthenticated && selectedAgent && threadToLoad && setThreadId) {
-      console.log('Loading thread from URL/storage:', threadToLoad);
-      setThreadId(threadToLoad);
-      setCurrentThreadId(threadToLoad);
+    if (isAuthenticated && selectedAgent && threadParam && setThreadId) {
+      console.log('Loading thread from URL:', threadParam);
+      setThreadId(threadParam);
+      setCurrentThreadId(threadParam);
     }
   }, [isAuthenticated, selectedAgent, setThreadId, searchParams]);
 
