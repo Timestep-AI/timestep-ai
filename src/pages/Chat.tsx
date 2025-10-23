@@ -10,19 +10,14 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
-  IonSelect,
-  IonSelectOption,
   IonIcon,
   IonSpinner,
-  IonButtons,
   IonButton,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonPopover,
+  IonButtons,
 } from '@ionic/react';
-import { personCircleOutline, chatbubblesOutline, addOutline, cogOutline } from 'ionicons/icons';
-import SidebarMenu, { type ThemeSettings } from '@/components/SidebarMenu';
+import { settingsOutline } from 'ionicons/icons';
+import { ModernSidebar } from '@/components/ModernSidebar';
+import type { ThemeSettings } from '@/components/SidebarMenu';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,7 +26,7 @@ const Chat = () => {
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<any[]>([]);
-  const [showThreads, setShowThreads] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Theme settings state
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
@@ -45,14 +40,6 @@ const Chat = () => {
       fontFamily: "'Open Sans', sans-serif"
     };
   });
-
-  // Agent details state
-  const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
-  const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
-
-  // Menu refs
-  const leftMenuRef = useRef<HTMLIonMenuElement>(null);
-  const rightMenuRef = useRef<HTMLIonMenuElement>(null);
 
   // Get server base URL
   const getServerBaseUrl = () => {
@@ -85,20 +72,6 @@ const Chat = () => {
       setLoadingAgents(false);
     }
   }, []); // Remove selectedAgent from dependencies
-
-  // Load agent details
-  const loadAgentDetails = async (agentId: string) => {
-    try {
-      setLoadingAgentDetails(true);
-      const details = await agentsService.getById(agentId);
-      setAgentDetails(details);
-    } catch (error) {
-      console.error('Error loading agent details:', error);
-      toast.error('Failed to load agent details');
-    } finally {
-      setLoadingAgentDetails(false);
-    }
-  };
 
   // Load all threads for the current user
   const loadThreads = useCallback(async () => {
@@ -182,13 +155,6 @@ const Chat = () => {
       subscription.unsubscribe();
     };
   }, [loadAgents]);
-
-  // Load agent details when selected agent changes
-  useEffect(() => {
-    if (selectedAgent?.id) {
-      loadAgentDetails(selectedAgent.id);
-    }
-  }, [selectedAgent?.id]);
 
   // Load threads when agent is selected
   useEffect(() => {
@@ -383,45 +349,30 @@ const Chat = () => {
 
   return (
     <>
-      <SidebarMenu
-        ref={leftMenuRef}
-        id="left-menu"
-        side="start"
-        title="Settings"
-        color="primary"
-        agentDetails={agentDetails}
-        loadingAgentDetails={loadingAgentDetails}
-        themeSettings={themeSettings}
-        onThemeChange={handleThemeChange}
+      <ModernSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         agents={agents}
         selectedAgent={selectedAgent}
         onAgentChange={handleAgentChange}
         threads={threads}
         currentThreadId={currentThreadId}
         onThreadChange={handleSelectThread}
-      />
-
-      <SidebarMenu
-        ref={rightMenuRef}
-        id="right-menu"
-        side="end"
-        title="Settings"
-        color="primary"
-        agentDetails={agentDetails}
-        loadingAgentDetails={loadingAgentDetails}
         themeSettings={themeSettings}
         onThemeChange={handleThemeChange}
       />
 
       <IonPage id="main-content">
         <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonButton onClick={() => leftMenuRef.current?.open()}>
-                <IonIcon slot="icon-only" icon={cogOutline} />
+          <IonToolbar className="bg-gradient-to-r from-slate-900 to-slate-800">
+            <IonTitle className="text-white font-bold">
+              {selectedAgent?.name || 'Timestep AI'}
+            </IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setSidebarOpen(true)} className="text-white">
+                <IonIcon slot="icon-only" icon={settingsOutline} />
               </IonButton>
             </IonButtons>
-            <IonTitle className="ion-text-center">Agent: {selectedAgent?.id ?? 'none'} | Thread: {currentThreadId ?? 'new'}</IonTitle>
           </IonToolbar>
         </IonHeader>
         
