@@ -362,6 +362,34 @@ const Chat = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
+              <IonSelect
+                value={currentThreadId || ''}
+                placeholder="Thread"
+                interface="popover"
+                onIonChange={(e) => handleSelectThread(e.detail.value)}
+              >
+                <IonSelectOption value="">New Thread</IonSelectOption>
+                {threads.map((thread) => (
+                  <IonSelectOption key={thread.id} value={thread.id}>
+                    {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+              
+              <IonSelect
+                value={selectedAgent?.id || ''}
+                placeholder="Agent"
+                onIonChange={handleAgentChange}
+                interface="popover"
+              >
+                {agents.map((agent) => (
+                  <IonSelectOption key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonButtons>
+            <IonButtons slot="end">
               <IonButton id="threads-trigger">
                 <IonIcon slot="icon-only" icon={chatbubblesOutline} />
               </IonButton>
@@ -408,66 +436,6 @@ const Chat = () => {
         </IonPopover>
 
         <IonContent fullscreen>
-          <div style={{ 
-            padding: '16px', 
-            display: 'flex', 
-            gap: '12px', 
-            alignItems: 'flex-start', 
-            borderBottom: '2px solid var(--ion-color-medium)',
-            background: 'var(--ion-color-step-50, #f5f5f5)'
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: 'var(--ion-text-color)' }}>
-                Thread
-              </div>
-              <IonSelect
-                value={currentThreadId || ''}
-                placeholder="Select Thread"
-                interface="popover"
-                onIonChange={(e) => handleSelectThread(e.detail.value)}
-                style={{
-                  width: '100%',
-                  border: '1px solid var(--ion-color-medium)',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  background: 'var(--ion-background-color, white)'
-                }}
-              >
-                <IonSelectOption value="">New Thread</IonSelectOption>
-                {threads.map((thread) => (
-                  <IonSelectOption key={thread.id} value={thread.id}>
-                    {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </div>
-            
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: 'var(--ion-text-color)' }}>
-                Agent
-              </div>
-              <IonSelect
-                value={selectedAgent?.id || ''}
-                placeholder="Select Agent"
-                onIonChange={handleAgentChange}
-                interface="popover"
-                style={{
-                  width: '100%',
-                  border: '1px solid var(--ion-color-medium)',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  background: 'var(--ion-background-color, white)'
-                }}
-              >
-                {agents.map((agent) => (
-                  <IonSelectOption key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </div>
-          </div>
-          
           {control ? (
             <ChatKit control={control} className="h-full w-full" />
           ) : (
