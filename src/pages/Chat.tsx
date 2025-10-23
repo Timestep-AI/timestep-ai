@@ -57,8 +57,13 @@ const Chat = () => {
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
 
-      // Auto-select the first agent if available
-      if (agentsData.length > 0 && !selectedAgent) {
+      // Prefer saved agent if available, otherwise keep current or fall back to first
+      const savedAgentId = localStorage.getItem('selectedAgentId');
+      const savedAgent = savedAgentId ? agentsData.find((a) => a.id === savedAgentId) : null;
+
+      if (savedAgent) {
+        setSelectedAgent(savedAgent);
+      } else if (agentsData.length > 0 && !selectedAgent) {
         setSelectedAgent(agentsData[0]);
       }
     } catch (error) {
@@ -204,10 +209,9 @@ const Chat = () => {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       const preservedThreadId = currentThreadId;
       setSelectedAgent(agent);
-      
-      // Preserve the current thread when switching agents
-      if (setThreadId && preservedThreadId) {
-        await setThreadId(preservedThreadId);
+      localStorage.setItem('selectedAgentId', agent.id);
+      if (preservedThreadId) {
+        localStorage.setItem('currentThreadId', preservedThreadId);
       }
       
       toast.success(`Switched to ${agent.name}`);
@@ -233,10 +237,18 @@ const Chat = () => {
     if (!setThreadId) return;
     
     try {
-      await setThreadId(threadId);
-      setCurrentThreadId(threadId);
+      const targetId: string | null = threadId && threadId.length > 0 ? threadId : null;
+      await setThreadId(targetId);
+      setCurrentThreadId(targetId);
+
+      if (targetId) {
+        localStorage.setItem('currentThreadId', targetId);
+      } else {
+        localStorage.removeItem('currentThreadId');
+      }
+
       setShowThreads(false);
-      toast.success('Thread loaded');
+      toast.success(targetId ? 'Thread loaded' : 'New thread started');
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
@@ -251,6 +263,8 @@ const Chat = () => {
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
+      if (threadId) localStorage.setItem('currentThreadId', threadId);
+      else localStorage.removeItem('currentThreadId');
       loadThreads();
     },
     api: {
@@ -312,6 +326,15 @@ const Chat = () => {
       typography: { fontFamily: 'Open Sans, sans-serif' },
     },
   });
+
+  // Restore saved thread when available (after ChatKit is ready)
+  useEffect(() => {
+    const saved = localStorage.getItem('currentThreadId');
+    if (isAuthenticated && selectedAgent && saved) {
+      setThreadId(saved);
+      setCurrentThreadId(saved);
+    }
+  }, [isAuthenticated, selectedAgent, setThreadId]);
 
   console.log('ChatKit: Control object:', control);
 
@@ -375,7 +398,7 @@ const Chat = () => {
                 <IonIcon slot="icon-only" icon={personCircleOutline} />
               </IonButton>
             </IonButtons>
-            <IonTitle slot="end">Timestep AI</IonTitle>
+            <IonTitle className="ion-text-center">Thread: {currentThreadId ?? 'new'} | Agent: {selectedAgent?.id ?? 'none'}</IonTitle>
           </IonToolbar>
         </IonHeader>
         
