@@ -16,7 +16,7 @@ import {
   IonInput,
   IonRange,
 } from '@ionic/react';
-import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
+import { colorPaletteOutline, informationCircleOutline, cogOutline, personCircleOutline, chatbubblesOutline } from 'ionicons/icons';
 import type { AgentRecord } from '@/types/agent';
 
 export interface ThemeSettings {
@@ -37,11 +37,17 @@ interface SidebarMenuProps {
   loadingAgentDetails?: boolean;
   themeSettings?: ThemeSettings;
   onThemeChange?: (settings: Partial<ThemeSettings>) => void;
+  agents?: AgentRecord[];
+  selectedAgent?: AgentRecord | null;
+  onAgentChange?: (agentId: string) => void;
+  threads?: any[];
+  currentThreadId?: string | null;
+  onThreadChange?: (threadId: string) => void;
 }
 
 const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
   (
-    { id, side, title, color, agentDetails, loadingAgentDetails, themeSettings, onThemeChange },
+    { id, side, title, color, agentDetails, loadingAgentDetails, themeSettings, onThemeChange, agents, selectedAgent, onAgentChange, threads, currentThreadId, onThreadChange },
     ref
   ) => {
     return (
@@ -52,6 +58,59 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
           </IonToolbar>
         </IonHeader>
         <IonContent>
+          {/* Agent Selection */}
+          {agents && onAgentChange && (
+            <IonList>
+              <IonItem>
+                <IonIcon icon={personCircleOutline} slot="start" />
+                <IonLabel>
+                  <h2>Agent</h2>
+                </IonLabel>
+              </IonItem>
+              <IonItem>
+                <IonSelect
+                  value={selectedAgent?.id || ''}
+                  placeholder="Select Agent"
+                  onIonChange={(e) => onAgentChange(e.detail.value)}
+                  interface="popover"
+                >
+                  {agents.map((agent) => (
+                    <IonSelectOption key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            </IonList>
+          )}
+
+          {/* Thread Selection */}
+          {threads && onThreadChange && (
+            <IonList>
+              <IonItem>
+                <IonIcon icon={chatbubblesOutline} slot="start" />
+                <IonLabel>
+                  <h2>Thread</h2>
+                </IonLabel>
+              </IonItem>
+              <IonItem>
+                <IonSelect
+                  value={currentThreadId || ''}
+                  placeholder="Select Thread"
+                  onIonChange={(e) => onThreadChange(e.detail.value)}
+                  interface="popover"
+                >
+                  <IonSelectOption value="">New Thread</IonSelectOption>
+                  {threads.map((thread) => (
+                    <IonSelectOption key={thread.id} value={thread.id}>
+                      {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            </IonList>
+          )}
+
           {/* Agent Config Section */}
           <IonList>
             <IonItem>

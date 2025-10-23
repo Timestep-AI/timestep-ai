@@ -222,8 +222,7 @@ const Chat = () => {
 
 
   // Handle agent switching
-  const handleAgentChange = async (e: CustomEvent) => {
-    const agentId = e.detail.value;
+  const handleAgentChange = (agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
@@ -264,8 +263,6 @@ const Chat = () => {
       } else {
         localStorage.removeItem('currentThreadId');
       }
-
-      setShowThreads(false);
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
@@ -396,6 +393,12 @@ const Chat = () => {
         loadingAgentDetails={loadingAgentDetails}
         themeSettings={themeSettings}
         onThemeChange={handleThemeChange}
+        agents={agents}
+        selectedAgent={selectedAgent}
+        onAgentChange={handleAgentChange}
+        threads={threads}
+        currentThreadId={currentThreadId}
+        onThreadChange={handleSelectThread}
       />
 
       <SidebarMenu
@@ -417,67 +420,11 @@ const Chat = () => {
               <IonButton onClick={() => leftMenuRef.current?.open()}>
                 <IonIcon slot="icon-only" icon={cogOutline} />
               </IonButton>
-              <IonButton id="agent-selector">
-                <IonIcon slot="icon-only" icon={personCircleOutline} />
-              </IonButton>
-              <IonButton id="thread-selector">
-                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
-              </IonButton>
             </IonButtons>
             <IonTitle className="ion-text-center">Agent: {selectedAgent?.id ?? 'none'} | Thread: {currentThreadId ?? 'new'}</IonTitle>
           </IonToolbar>
         </IonHeader>
         
-        <IonPopover trigger="thread-selector" dismissOnSelect={true}>
-          <IonContent>
-            <IonList>
-              <IonItem button onClick={() => handleSelectThread('')}>
-                <IonLabel>New Thread</IonLabel>
-              </IonItem>
-              {threads.map((thread) => (
-                <IonItem
-                  key={thread.id}
-                  button
-                  onClick={() => handleSelectThread(thread.id)}
-                  color={thread.id === currentThreadId ? 'primary' : undefined}
-                >
-                  <IonLabel>
-                    <h3>{thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}</h3>
-                    <p>
-                      {thread.created_at 
-                        ? new Date(
-                            typeof thread.created_at === 'number' 
-                              ? thread.created_at * 1000 
-                              : thread.created_at
-                          ).toLocaleString()
-                        : 'No date'}
-                    </p>
-                  </IonLabel>
-                </IonItem>
-              ))}
-            </IonList>
-          </IonContent>
-        </IonPopover>
-        
-        <IonPopover trigger="agent-selector" dismissOnSelect={true}>
-          <IonContent>
-            <IonList>
-              {agents.map((agent) => (
-                <IonItem
-                  key={agent.id}
-                  button
-                  onClick={() => {
-                    const event = { detail: { value: agent.id } } as CustomEvent;
-                    handleAgentChange(event);
-                  }}
-                  color={agent.id === selectedAgent?.id ? 'primary' : undefined}
-                >
-                  <IonLabel>{agent.name}</IonLabel>
-                </IonItem>
-              ))}
-            </IonList>
-          </IonContent>
-        </IonPopover>
         <IonContent fullscreen>
           {control ? (
             <ChatKit control={control} className="h-full w-full" />
