@@ -68,14 +68,16 @@ const Chat = () => {
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
 
-      // Prefer saved agent if available, otherwise keep current or fall back to first
-      const savedAgentId = localStorage.getItem('selectedAgentId');
-      const savedAgent = savedAgentId ? agentsData.find((a) => a.id === savedAgentId) : null;
+      // Only set initial agent on first load
+      if (!selectedAgent) {
+        const savedAgentId = localStorage.getItem('selectedAgentId');
+        const savedAgent = savedAgentId ? agentsData.find((a) => a.id === savedAgentId) : null;
 
-      if (savedAgent) {
-        setSelectedAgent(savedAgent);
-      } else if (agentsData.length > 0 && !selectedAgent) {
-        setSelectedAgent(agentsData[0]);
+        if (savedAgent) {
+          setSelectedAgent(savedAgent);
+        } else if (agentsData.length > 0) {
+          setSelectedAgent(agentsData[0]);
+        }
       }
     } catch (error) {
       console.error('Error loading agents:', error);
@@ -83,7 +85,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  }, [selectedAgent]);
+  }, []); // Remove selectedAgent from dependencies
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {
@@ -276,6 +278,13 @@ const Chat = () => {
 
   // ChatKit configuration - use a generic agents endpoint and route dynamically
   const chatKitUrl = `${getServerBaseUrl()}/agents`;
+  const selectedAgentRef = useRef(selectedAgent);
+  
+  // Keep ref updated without triggering re-renders
+  useEffect(() => {
+    selectedAgentRef.current = selectedAgent;
+  }, [selectedAgent]);
+
   console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
 
   const { control, setThreadId } = useChatKit({
@@ -292,13 +301,14 @@ const Chat = () => {
       // Custom fetch with auth injection and dynamic agent routing
       async fetch(url: string, options: RequestInit) {
         const auth = await getAuthHeaders();
+        const currentAgent = selectedAgentRef.current;
 
         // Route requests to the currently selected agent
         let targetUrl = url;
-        if (selectedAgent && url.includes('/agents')) {
+        if (currentAgent && url.includes('/agents')) {
           // Replace the generic /agents endpoint with the specific agent endpoint
-          targetUrl = url.replace('/agents', `/agents/${selectedAgent.id}/chatkit`);
-          console.log('Routing request to agent:', selectedAgent.name, 'URL:', targetUrl);
+          targetUrl = url.replace('/agents', `/agents/${currentAgent.id}/chatkit`);
+          console.log('Routing request to agent:', currentAgent.name, 'URL:', targetUrl);
         }
 
         return fetch(targetUrl, {
@@ -310,19 +320,17 @@ const Chat = () => {
         });
       },
 
-      // Upload strategy for attachments - also route dynamically
+      // Upload strategy for attachments - use generic endpoint
       uploadStrategy: {
         type: 'direct',
-        uploadUrl: selectedAgent
-          ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit/upload`
-          : `${getServerBaseUrl()}/agents/chatkit/upload`,
+        uploadUrl: `${getServerBaseUrl()}/agents/chatkit/upload`,
       },
 
       // Domain key for security
       domainKey: 'localhost-dev',
     },
     composer: {
-      placeholder: `Message your ${selectedAgent?.name} AI agent...`,
+      placeholder: 'Message your AI agent...',
     },
     header: { enabled: false },
     history: { enabled: false },
