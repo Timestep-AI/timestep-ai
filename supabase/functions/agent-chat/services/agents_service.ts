@@ -1,4 +1,4 @@
-import { Agent } from '@openai/agents-core';
+import { Agent } from 'npm:@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../stores/agents_store.ts';
 import { ChatKitService } from './chatkit_service.ts';

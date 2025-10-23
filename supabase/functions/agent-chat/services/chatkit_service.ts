@@ -1,6 +1,6 @@
 import { ThreadsStore } from '../stores/threads_store.ts';
-import { Runner, RunState, Agent } from '@openai/agents-core';
-import { OpenAIProvider } from '@openai/agents-openai';
+import { Runner, RunState, Agent } from 'npm:@openai/agents-core';
+import { OpenAIProvider } from 'npm:@openai/agents-openai';
 import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
   isStreamingReq,

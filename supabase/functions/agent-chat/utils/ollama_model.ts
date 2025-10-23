@@ -6,10 +6,10 @@ import {
   resetCurrentSpan,
   createGenerationSpan,
   setCurrentSpan,
-} from '@openai/agents-core';
-import type { ModelRequest, ModelResponse, ResponseStreamEvent } from '@openai/agents-core';
-import { protocol } from '@openai/agents-core';
-import { Span } from '@openai/agents-core';
+} from 'npm:@openai/agents-core';
+import type { ModelRequest, ModelResponse, ResponseStreamEvent } from 'npm:@openai/agents-core';
+import { protocol } from 'npm:@openai/agents-core';
+import { Span } from 'npm:@openai/agents-core';
 
 function generateOpenAIId(prefix: string, length: number): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
