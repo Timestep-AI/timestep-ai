@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import {
   IonMenu,
   IonHeader,
@@ -16,7 +16,7 @@ import {
   IonInput,
   IonRange,
 } from '@ionic/react';
-import { colorPaletteOutline, informationCircleOutline, cogOutline, personCircleOutline, chatbubblesOutline } from 'ionicons/icons';
+import { colorPaletteOutline, informationCircleOutline, cogOutline, personCircleOutline, chatbubblesOutline, chevronDownOutline, chevronUpOutline } from 'ionicons/icons';
 import type { AgentRecord } from '@/types/agent';
 
 export interface ThemeSettings {
@@ -50,6 +50,16 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
     { id, side, title, color, agentDetails, loadingAgentDetails, themeSettings, onThemeChange, agents, selectedAgent, onAgentChange, threads, currentThreadId, onThreadChange },
     ref
   ) => {
+    const [expandedSections, setExpandedSections] = useState({
+      agentConfig: true,
+      chatThread: true,
+      chatkitTheme: true,
+    });
+
+    const toggleSection = (section: 'agentConfig' | 'chatThread' | 'chatkitTheme') => {
+      setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
     return (
       <IonMenu ref={ref} id={id} contentId="main-content" type="reveal" side={side}>
         <IonHeader>
@@ -60,34 +70,39 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
         <IonContent>
           {/* Agent Config Section with Selection */}
           <IonList>
-            <IonItem>
+            <IonItem button onClick={() => toggleSection('agentConfig')}>
               <IonIcon icon={personCircleOutline} slot="start" />
               <IonLabel>
                 <h2>Agent Config</h2>
               </IonLabel>
+              <IonIcon icon={expandedSections.agentConfig ? chevronUpOutline : chevronDownOutline} slot="end" />
             </IonItem>
             
-            {/* Agent Selection Dropdown */}
-            {agents && onAgentChange && (
-              <IonItem>
-                <IonLabel position="stacked">Select Agent</IonLabel>
-                <IonSelect
-                  value={selectedAgent?.id || ''}
-                  placeholder="Choose an agent"
-                  onIonChange={(e) => onAgentChange(e.detail.value)}
-                  interface="popover"
-                >
-                  {agents.map((agent) => (
-                    <IonSelectOption key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
+            {expandedSections.agentConfig && (
+              <>
+                {/* Agent Selection Dropdown */}
+                {agents && onAgentChange && (
+                  <IonItem>
+                    <IonLabel position="stacked">Select Agent</IonLabel>
+                    <IonSelect
+                      value={selectedAgent?.id || ''}
+                      placeholder="Choose an agent"
+                      onIonChange={(e) => onAgentChange(e.detail.value)}
+                      interface="popover"
+                    >
+                      {agents.map((agent) => (
+                        <IonSelectOption key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </IonSelectOption>
+                      ))}
+                    </IonSelect>
+                  </IonItem>
+                )}
+              </>
             )}
           </IonList>
 
-          {loadingAgentDetails ? (
+          {expandedSections.agentConfig && (loadingAgentDetails ? (
             <IonList>
               <IonItem>
                 <IonSpinner name="crescent" slot="start" />
@@ -158,44 +173,53 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                 </IonLabel>
               </IonItem>
             </IonList>
-          ) : null}
+          ) : null)}
 
           {/* Chat Thread Selection */}
           {threads && onThreadChange && (
             <IonList>
-              <IonItem>
+              <IonItem button onClick={() => toggleSection('chatThread')}>
                 <IonIcon icon={chatbubblesOutline} slot="start" />
                 <IonLabel>
                   <h2>Chat Thread</h2>
                 </IonLabel>
+                <IonIcon icon={expandedSections.chatThread ? chevronUpOutline : chevronDownOutline} slot="end" />
               </IonItem>
-              <IonItem>
-                <IonLabel position="stacked">Select Thread</IonLabel>
-                <IonSelect
-                  value={currentThreadId || ''}
-                  placeholder="Choose a thread"
-                  onIonChange={(e) => onThreadChange(e.detail.value)}
-                  interface="popover"
-                >
-                  <IonSelectOption value="">New Thread</IonSelectOption>
-                  {threads.map((thread) => (
-                    <IonSelectOption key={thread.id} value={thread.id}>
-                      {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
-                    </IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
+              
+              {expandedSections.chatThread && (
+                <IonItem>
+                  <IonLabel position="stacked">Select Thread</IonLabel>
+                  <IonSelect
+                    value={currentThreadId || ''}
+                    placeholder="Choose a thread"
+                    onIonChange={(e) => onThreadChange(e.detail.value)}
+                    interface="popover"
+                  >
+                    <IonSelectOption value="">New Thread</IonSelectOption>
+                    {threads.map((thread) => (
+                      <IonSelectOption key={thread.id} value={thread.id}>
+                        {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
+                      </IonSelectOption>
+                    ))}
+                  </IonSelect>
+                </IonItem>
+              )}
             </IonList>
           )}
 
           {/* ChatKit Theme Settings */}
           {themeSettings && onThemeChange && (
             <IonList>
-              <IonItem>
+              <IonItem button onClick={() => toggleSection('chatkitTheme')}>
+                <IonIcon icon={colorPaletteOutline} slot="start" />
                 <IonLabel>
                   <h2>ChatKit Theme</h2>
                 </IonLabel>
+                <IonIcon icon={expandedSections.chatkitTheme ? chevronUpOutline : chevronDownOutline} slot="end" />
               </IonItem>
+
+              {expandedSections.chatkitTheme && (
+                <>
 
               <IonItem>
                 <IonLabel>Color Scheme</IonLabel>
@@ -263,7 +287,9 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   placeholder="'Inter', sans-serif"
                   onIonChange={(e) => onThemeChange({ fontFamily: e.detail.value as string })}
                 />
-              </IonItem>
+                  </IonItem>
+                </>
+              )}
             </IonList>
           )}
         </IonContent>
