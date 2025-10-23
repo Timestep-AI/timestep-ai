@@ -231,6 +231,9 @@ const Chat = () => {
     composer: {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
     },
+    header: {
+      enabled: false,
+    },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
       // prompts: [
