@@ -361,34 +361,35 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              <IonSelect
-                value={currentThreadId || ''}
-                placeholder="Thread"
-                interface="popover"
-                onIonChange={(e) => handleSelectThread(e.detail.value)}
-              >
-                <IonSelectOption value="">New Thread</IonSelectOption>
-                {threads.map((thread) => (
-                  <IonSelectOption key={thread.id} value={thread.id}>
-                    {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-              
-              <IonSelect
-                value={selectedAgent?.id || ''}
-                placeholder="Agent"
-                onIonChange={handleAgentChange}
-                interface="popover"
-              >
-                {agents.map((agent) => (
-                  <IonSelectOption key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </IonButtons>
+            <IonSelect
+              slot="start"
+              value={currentThreadId || ''}
+              placeholder="Thread"
+              interface="popover"
+              onIonChange={(e) => handleSelectThread(e.detail.value)}
+            >
+              <IonSelectOption value="">New Thread</IonSelectOption>
+              {threads.map((thread) => (
+                <IonSelectOption key={thread.id} value={thread.id}>
+                  {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+            
+            <IonSelect
+              slot="start"
+              value={selectedAgent?.id || ''}
+              placeholder="Agent"
+              onIonChange={handleAgentChange}
+              interface="popover"
+            >
+              {agents.map((agent) => (
+                <IonSelectOption key={agent.id} value={agent.id}>
+                  {agent.name}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+            
             <IonTitle slot="end">Timestep AI</IonTitle>
           </IonToolbar>
         </IonHeader>
