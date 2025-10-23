@@ -421,11 +421,11 @@ const Chat = () => {
               <IonButton onClick={() => leftMenuRef.current?.open()}>
                 <IonIcon slot="icon-only" icon={cogOutline} />
               </IonButton>
-              <IonButton id="thread-selector">
-                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
-              </IonButton>
               <IonButton id="agent-selector">
                 <IonIcon slot="icon-only" icon={personCircleOutline} />
+              </IonButton>
+              <IonButton id="thread-selector">
+                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
               </IonButton>
             </IonButtons>
             <IonTitle className="ion-text-center">Thread: {currentThreadId ?? 'new'} | Agent: {selectedAgent?.id ?? 'none'}</IonTitle>
