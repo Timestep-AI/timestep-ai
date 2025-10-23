@@ -18,11 +18,11 @@ const { expect } = require('@playwright/test');
 // ============================================================================
 
 const TIMEOUTS = {
-  TOOL_RENDER: 30000,
-  TOOL_RESULT: 30000,
+  TOOL_RENDER: process.env.CI ? 60000 : 30000, // Longer timeout in CI
+  TOOL_RESULT: process.env.CI ? 60000 : 30000, // Longer timeout in CI
   UI_SETTLE: 1000,
-  ASSISTANT_TURN: 30000,
-  SUMMARY: 20000,
+  ASSISTANT_TURN: process.env.CI ? 60000 : 30000, // Longer timeout in CI
+  SUMMARY: process.env.CI ? 40000 : 20000, // Longer timeout in CI
   SEND_BUTTON: 10000,
   CONTEXT_REMOUNT: 500,
 };
