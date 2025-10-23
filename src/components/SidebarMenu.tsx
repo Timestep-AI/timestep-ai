@@ -105,14 +105,15 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                 </IonItem>
               )}
 
-              {agentDetails.model_settings && Object.keys(agentDetails.model_settings).length > 0 && (
-                <IonItem>
-                  <IonLabel>
-                    <h3>Model Settings</h3>
-                    <p>{JSON.stringify(agentDetails.model_settings, null, 2)}</p>
-                  </IonLabel>
-                </IonItem>
-              )}
+              {agentDetails.model_settings &&
+                Object.keys(agentDetails.model_settings).length > 0 && (
+                  <IonItem>
+                    <IonLabel>
+                      <h3>Model Settings</h3>
+                      <p>{JSON.stringify(agentDetails.model_settings, null, 2)}</p>
+                    </IonLabel>
+                  </IonItem>
+                )}
 
               <IonItem>
                 <IonLabel>

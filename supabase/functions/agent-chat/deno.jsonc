@@ -2,6 +2,6 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["deno.window", "deno.unstable"],
-    "types": ["jsr:@supabase/functions-js/edge-runtime.d.ts"]
-  }
+    "types": ["jsr:@supabase/functions-js/edge-runtime.d.ts"],
+  },
 }

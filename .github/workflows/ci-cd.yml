@@ -30,7 +30,7 @@ jobs:
   preview:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -42,7 +42,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,16 +69,16 @@ jobs:
           echo "Creating Supabase config for CI environment..."
           cat > supabase/config.toml << EOF
           project_id = "ohzbghitbjryfpmucgju"
-          
+
           [edge_runtime]
           enabled = true
-          
+
           [edge_runtime.secrets]
           DEFAULT_AGENT_MODEL = "$DEFAULT_AGENT_MODEL"
           OPENAI_API_KEY = "$OPENAI_API_KEY"
           OLLAMA_API_KEY = "$OLLAMA_API_KEY"
           HF_TOKEN = "$HF_TOKEN"
-          
+
           [auth]
           enabled = true
           site_url = "http://localhost:8080"
@@ -88,19 +88,19 @@ jobs:
           refresh_token_reuse_interval = 10
           enable_signup = true
           enable_anonymous_sign_ins = true
-          
+
           [functions.agent-chat]
           enabled = true
           verify_jwt = true
           import_map = "./functions/agent-chat/deno.json"
           entrypoint = "./functions/agent-chat/index.ts"
-          
+
           [functions.mcp-env]
           enabled = true
           verify_jwt = true
           import_map = "./functions/mcp-env/deno.json"
           entrypoint = "./functions/mcp-env/index.ts"
-          
+
           [functions.openai-polyfill]
           enabled = true
           verify_jwt = true
@@ -120,7 +120,7 @@ jobs:
           echo "Waiting for Supabase services to be ready..."
           # Give Supabase time to start up
           sleep 30
-          
+
           # Check if Supabase is responding
           for i in {1..20}; do
             if curl -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
@@ -130,15 +130,17 @@ jobs:
             echo "Attempt $i/20: Waiting for Supabase..."
             sleep 5
           done
-          
+
           # Final check
           if ! curl -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
             echo "Supabase failed to start properly"
             exit 1
           fi
 
-      - name: Run tests
-        run: npm run test
+      - name: Run E2E tests (headed)
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24' \
+            npm run test
 
       - name: Stop Supabase local development
         if: always()
@@ -176,7 +178,7 @@ jobs:
   production:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -188,7 +190,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -215,16 +217,16 @@ jobs:
           echo "Creating Supabase config for CI environment..."
           cat > supabase/config.toml << EOF
           project_id = "ohzbghitbjryfpmucgju"
-          
+
           [edge_runtime]
           enabled = true
-          
+
           [edge_runtime.secrets]
           DEFAULT_AGENT_MODEL = "$DEFAULT_AGENT_MODEL"
           OPENAI_API_KEY = "$OPENAI_API_KEY"
           OLLAMA_API_KEY = "$OLLAMA_API_KEY"
           HF_TOKEN = "$HF_TOKEN"
-          
+
           [auth]
           enabled = true
           site_url = "http://localhost:8080"
@@ -234,19 +236,19 @@ jobs:
           refresh_token_reuse_interval = 10
           enable_signup = true
           enable_anonymous_sign_ins = true
-          
+
           [functions.agent-chat]
           enabled = true
           verify_jwt = true
           import_map = "./functions/agent-chat/deno.json"
           entrypoint = "./functions/agent-chat/index.ts"
-          
+
           [functions.mcp-env]
           enabled = true
           verify_jwt = true
           import_map = "./functions/mcp-env/deno.json"
           entrypoint = "./functions/mcp-env/index.ts"
-          
+
           [functions.openai-polyfill]
           enabled = true
           verify_jwt = true
@@ -266,7 +268,7 @@ jobs:
           echo "Waiting for Supabase services to be ready..."
           # Give Supabase time to start up
           sleep 30
-          
+
           # Check if Supabase is responding
           for i in {1..20}; do
             if curl -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
@@ -276,15 +278,17 @@ jobs:
             echo "Attempt $i/20: Waiting for Supabase..."
             sleep 5
           done
-          
+
           # Final check
           if ! curl -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
             echo "Supabase failed to start properly"
             exit 1
           fi
 
-      - name: Run full test suite
-        run: npm run test
+      - name: Run E2E tests (headed)
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24' \
+            npm run test
 
       - name: Stop Supabase local development
         if: always()
@@ -333,7 +337,7 @@ jobs:
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1

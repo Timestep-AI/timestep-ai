@@ -190,10 +190,8 @@ const Chat = () => {
     }
   };
 
-  // ChatKit configuration
-  const chatKitUrl = selectedAgent
-    ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit`
-    : `${getServerBaseUrl()}/api/chatkit`;
+  // ChatKit configuration - use a generic agents endpoint and route dynamically
+  const chatKitUrl = `${getServerBaseUrl()}/agents`;
   console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
 
   const { control } = useChatKit({
@@ -204,11 +202,19 @@ const Chat = () => {
     api: {
       url: chatKitUrl,
 
-      // Custom fetch with auth injection
+      // Custom fetch with auth injection and dynamic agent routing
       async fetch(url: string, options: RequestInit) {
         const auth = await getAuthHeaders();
 
-        return fetch(url, {
+        // Route requests to the currently selected agent
+        let targetUrl = url;
+        if (selectedAgent && url.includes('/agents')) {
+          // Replace the generic /agents endpoint with the specific agent endpoint
+          targetUrl = url.replace('/agents', `/agents/${selectedAgent.id}/chatkit`);
+          console.log('Routing request to agent:', selectedAgent.name, 'URL:', targetUrl);
+        }
+
+        return fetch(targetUrl, {
           ...options,
           headers: {
             ...options.headers,
@@ -217,12 +223,12 @@ const Chat = () => {
         });
       },
 
-      // Upload strategy for attachments
+      // Upload strategy for attachments - also route dynamically
       uploadStrategy: {
         type: 'direct',
         uploadUrl: selectedAgent
           ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit/upload`
-          : `${getServerBaseUrl()}/api/chatkit/upload`,
+          : `${getServerBaseUrl()}/agents/chatkit/upload`,
       },
 
       // Domain key for security

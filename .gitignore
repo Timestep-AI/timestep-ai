@@ -28,6 +28,9 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+# Cucumber
+reports/
+
 # Environment variables
 .env
 .env.local

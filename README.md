@@ -23,6 +23,7 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
 ## Tech Stack
 
 ### Frontend
+
 - **Framework**: React 18, TypeScript, Vite
 - **UI**: Ionic React, Tailwind CSS
 - **Chat Components**: OpenAI ChatKit React
@@ -33,6 +34,7 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
 - **Notifications**: Sonner
 
 ### Backend
+
 - **Platform**: Supabase (PostgreSQL, Edge Functions)
 - **Runtime**: Deno (Edge Functions)
 - **AI Framework**: OpenAI Agents SDK (@openai/agents-openai, @openai/agents-core)
@@ -41,6 +43,7 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
 - **Authentication**: Supabase Auth (anonymous & authenticated users)
 
 ### DevOps & Testing
+
 - **E2E Testing**: Playwright
 - **CI/CD**: GitHub Actions
 - **Linting**: ESLint, Prettier
@@ -224,6 +227,7 @@ Agents are defined with customizable configurations:
 - **Handoffs**: Define which agents can transfer conversations to this agent
 
 **Built-in Agents**:
+
 - **Personal Assistant**: General-purpose assistant for everyday tasks
 - **Weather Assistant**: Specialized agent with weather tool for location-based queries
 
@@ -271,6 +275,7 @@ npm run test:headed   # Run in headed mode (visible browser)
 ```
 
 **Test Coverage**:
+
 - **Personal Assistant**: Tests general conversation flows
 - **Weather Assistant**: Tests weather queries and tool execution
 - **Anonymous Authentication**: Verifies anonymous user flows
@@ -320,10 +325,12 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci-cd.yml`) t
 3. Deploys edge functions
 
 **Required GitHub Secrets**:
+
 - `SUPABASE_ACCESS_TOKEN` - Supabase access token
 - `SUPABASE_DB_PASSWORD` - Database password
 
 The workflow runs on:
+
 - Push to `main` branch
 - Manual trigger via `workflow_dispatch`
 
@@ -388,6 +395,7 @@ Database (PostgreSQL)
 ```
 
 **Key Components**:
+
 - **API Handlers** (`apis/`): Process HTTP requests and responses
 - **Services** (`services/`): Business logic and orchestration
 - **Stores** (`stores/`): Database queries and data persistence
@@ -411,6 +419,7 @@ Database (PostgreSQL)
 ### Database Schema
 
 **Key Tables**:
+
 - `agents`: Agent configurations (instructions, tools, model settings)
 - `threads`: Conversation threads
 - `thread_messages`: Individual messages in conversations
@@ -426,11 +435,11 @@ All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 
 **Base URL**: `{SUPABASE_URL}/functions/v1/agent-chat`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/agents` | List all agents for authenticated user |
-| POST | `/agents/{agentId}/chatkit` | ChatKit protocol endpoint (threads, messages) |
-| POST | `/agents/{agentId}/chatkit/upload` | File upload for attachments |
+| Method | Path                               | Description                                   |
+| ------ | ---------------------------------- | --------------------------------------------- |
+| GET    | `/agents`                          | List all agents for authenticated user        |
+| POST   | `/agents/{agentId}/chatkit`        | ChatKit protocol endpoint (threads, messages) |
+| POST   | `/agents/{agentId}/chatkit/upload` | File upload for attachments                   |
 
 ### ChatKit Operations
 
@@ -456,6 +465,7 @@ Via POST to `/agents/{agentId}/chatkit`:
 ### Row-Level Security (RLS)
 
 All tables enforce RLS policies:
+
 - Users can only access their own data
 - Policies filter by `user_id`
 - Service role bypasses RLS for backend operations
@@ -471,18 +481,22 @@ All tables enforce RLS policies:
 ### Common Issues
 
 **Supabase connection failed**
+
 - Ensure Supabase is running: `npx supabase status`
 - Check `.env.local` has correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 
 **Agent not responding**
+
 - Verify `OPENAI_API_KEY` is set in `supabase/config.toml`
 - Check edge function logs: `npx supabase functions logs agent-chat`
 
 **Database migration errors**
+
 - Reset database: `npx supabase db reset`
 - Check migration status: `npx supabase migration list`
 
 **Build errors**
+
 - Clear cache: `rm -rf node_modules dist && npm install`
 - Check TypeScript errors: `npm run build`
 
