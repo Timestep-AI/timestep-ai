@@ -1,5 +1,5 @@
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import type { ModelSettings } from 'npm:@openai/agents-core';
+import type { ModelSettings } from '@openai/agents-core';
 
 export interface AgentRecord {
   id: string;
