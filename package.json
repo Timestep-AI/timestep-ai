@@ -9,8 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "cucumber-js --import ts-node/register",
-    "test:feature": "cucumber-js --import ts-node/register --name",
+    "test": "cucumber-js",
+    "test:feature": "cucumber-js --name",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
