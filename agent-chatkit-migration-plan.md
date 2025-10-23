@@ -1719,6 +1719,9 @@ Update all import statements to reference the new file locations.
 - **Before**: Each processor class duplicated dependency injection and helper methods
 - **After**: Base processor class provides common functionality
 
+- **Before**: Inconsistent store naming (`agents_store.ts`, `thread_store.ts`, `message_store.ts`)
+- **After**: Consistent singular naming (`agent_store.ts`, `thread_store.ts`, `message_store.ts`)
+
 ## Migration Benefits
 
 1. **Clear Flow**: Files read from top to bottom follow execution path
