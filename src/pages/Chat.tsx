@@ -221,12 +221,13 @@ const Chat = () => {
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
-      const preservedThreadId = currentThreadId;
       setSelectedAgent(agent);
       localStorage.setItem('selectedAgentId', agent.id);
-      if (preservedThreadId) {
-        localStorage.setItem('currentThreadId', preservedThreadId);
-      }
+      
+      // Update URL to reflect agent change
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('agent', agent.id);
+      window.history.replaceState({}, '', newUrl);
     }
   };
 
@@ -255,8 +256,15 @@ const Chat = () => {
 
       if (targetId) {
         localStorage.setItem('currentThreadId', targetId);
+        // Update URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('thread', targetId);
+        window.history.replaceState({}, '', newUrl);
       } else {
         localStorage.removeItem('currentThreadId');
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('thread');
+        window.history.replaceState({}, '', newUrl);
       }
     } catch (error) {
       console.error('Error switching thread:', error);
@@ -279,8 +287,18 @@ const Chat = () => {
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
-      if (threadId) localStorage.setItem('currentThreadId', threadId);
-      else localStorage.removeItem('currentThreadId');
+      if (threadId) {
+        localStorage.setItem('currentThreadId', threadId);
+        // Update URL to reflect current thread
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('thread', threadId);
+        window.history.replaceState({}, '', newUrl);
+      } else {
+        localStorage.removeItem('currentThreadId');
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('thread');
+        window.history.replaceState({}, '', newUrl);
+      }
       loadThreads();
     },
     api: {
@@ -342,33 +360,19 @@ const Chat = () => {
     },
   });
 
-  // Restore saved thread when available (after ChatKit is ready)
+  // Restore saved thread or URL thread when available (after ChatKit is ready)
   useEffect(() => {
-    const saved = localStorage.getItem('currentThreadId');
-    if (isAuthenticated && selectedAgent && saved) {
-      setThreadId(saved);
-      setCurrentThreadId(saved);
-    }
-  }, [isAuthenticated, selectedAgent, setThreadId]);
-
-  // Handle URL params for agent and thread (after ChatKit is initialized)
-  useEffect(() => {
-    const agentId = searchParams.get('agent');
-    const threadId = searchParams.get('thread');
+    // Check URL first, then localStorage
+    const threadParam = searchParams.get('thread');
+    const savedThread = localStorage.getItem('currentThreadId');
+    const threadToLoad = threadParam || savedThread;
     
-    if (agentId && agents.length > 0) {
-      const agent = agents.find(a => a.id === agentId);
-      if (agent && agent.id !== selectedAgent?.id) {
-        setSelectedAgent(agent);
-        localStorage.setItem('selectedAgentId', agent.id);
-      }
+    if (isAuthenticated && selectedAgent && threadToLoad && setThreadId) {
+      console.log('Loading thread from URL/storage:', threadToLoad);
+      setThreadId(threadToLoad);
+      setCurrentThreadId(threadToLoad);
     }
-    
-    if (threadId && threadId !== currentThreadId && setThreadId) {
-      setCurrentThreadId(threadId);
-      setThreadId(threadId);
-    }
-  }, [searchParams, agents, selectedAgent, currentThreadId, setThreadId]);
+  }, [isAuthenticated, selectedAgent, setThreadId, searchParams]);
 
   console.log('ChatKit: Control object:', control);
 
