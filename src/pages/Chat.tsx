@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
-import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
+import type { AgentRecord } from '@/types/agent';
 import {
   IonPage,
   IonHeader,

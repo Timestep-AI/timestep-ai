@@ -16,7 +16,7 @@ import {
   IonChip,
 } from '@ionic/react';
 import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
-import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
+import type { AgentRecord } from '@/types/agent';
 
 interface SidebarMenuProps {
   id: string;
