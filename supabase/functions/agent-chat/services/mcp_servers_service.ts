@@ -99,7 +99,7 @@ export class McpServersService {
     for (const toolName of requestedToolNames) {
       // Create a temporary client to fetch just this tool's schema
       const schemaClient = new Client({
-        name: 'agent-mcp-client',
+        name: 'timestep-mcp-client',
         version: '1.0.0',
       });
 
@@ -166,7 +166,7 @@ export class McpServersService {
             async execute(params: Record<string, unknown>) {
               // Create a new client for tool execution
               const execClient = new Client({
-                name: 'agent-mcp-client',
+                name: 'timestep-mcp-client',
                 version: '1.0.0',
               });
 

@@ -40,13 +40,13 @@ export async function handlePostChatKitRequest(
               currentUserId = threadData.user_id;
             } else {
               console.warn(
-                '[ChatKitServer] Could not extract user ID from thread, using:',
+                '[TimestepChatKitServer] Could not extract user ID from thread, using:',
                 currentUserId
               );
             }
           } catch (_e) {
             console.warn(
-              '[ChatKitServer] Could not extract user ID from thread, using:',
+              '[TimestepChatKitServer] Could not extract user ID from thread, using:',
               currentUserId
             );
           }

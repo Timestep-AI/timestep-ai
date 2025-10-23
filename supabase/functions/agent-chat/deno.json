@@ -1,9 +1,4 @@
 {
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "lib": ["deno.window", "deno.unstable"],
-    "types": ["jsr:@supabase/functions-js/edge-runtime.d.ts"]
-  },
   "imports": {
     "@openai/agents-core": "npm:@openai/agents-core",
     "@openai/agents-openai": "npm:@openai/agents-openai",
