@@ -28,10 +28,9 @@ const TIMEOUTS = {
 };
 
 async function runConversationFlow(page, steps) {
-  const root =
-    (await page.locator('iframe[name="chatkit"]').count()) > 0
-      ? page.frameLocator('iframe[name="chatkit"]')
-      : page;
+  // Check if ChatKit is in iframe (despite directive saying it shouldn't be)
+  const iframeCount = await page.locator('iframe[name="chatkit"]').count();
+  const root = iframeCount > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
 
   const input = root.locator('input[type="text"], textarea');
   const sendButton = root.getByRole('button', { name: /send/i });
@@ -45,9 +44,9 @@ async function runConversationFlow(page, steps) {
     // --- Optional agent switch ---
     if (step.switchAgentTo) {
       console.log(`→ Switching to agent: ${step.switchAgentTo}`);
-      const agentButton = root.getByRole('button', { name: new RegExp(step.switchAgentTo, 'i') });
+      const agentButton = page.getByRole('button', { name: new RegExp(step.switchAgentTo, 'i') });
       await agentButton.click();
-      const header = root.locator('header, [data-active-agent]');
+      const header = page.locator('header, [data-active-agent]');
       await expect(header).toContainText(new RegExp(step.switchAgentTo, 'i'), { timeout: 5000 });
       await page.waitForTimeout(TIMEOUTS.CONTEXT_REMOUNT);
       console.log(`✓ Verified active agent: ${step.switchAgentTo}`);
@@ -75,7 +74,7 @@ async function runConversationFlow(page, steps) {
     }
 
     if (step.approvals?.length) {
-      await handleToolApprovals(root, assistantTurns, currentTurn, step.approvals);
+      await handleToolApprovals(root, page, assistantTurns, currentTurn, step.approvals);
     }
 
     // --- Before next user turn ---
@@ -98,6 +97,7 @@ async function waitForNextAssistantTurn(assistantTurns, prevCount) {
 
 async function handleToolApprovals(
   root,
+  page,
   assistantTurns,
   currentTurn,
   approvals
@@ -110,7 +110,7 @@ async function handleToolApprovals(
   );
   console.log('✓ At least one tool approval prompt has appeared');
 
-  await root.waitForTimeout?.(TIMEOUTS.UI_SETTLE);
+  await root.waitForTimeout?.(TIMEOUTS.UI_SETTLE) || await page.waitForTimeout(TIMEOUTS.UI_SETTLE);
 
   for (const [index, city] of approvals.entries()) {
     const approvalPrompt = new RegExp(`Tool approval required.*get_weather.*${city}`, 'i');
