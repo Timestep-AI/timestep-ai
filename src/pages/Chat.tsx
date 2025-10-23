@@ -428,7 +428,7 @@ const Chat = () => {
                 <IonIcon slot="icon-only" icon={chatbubblesOutline} />
               </IonButton>
             </IonButtons>
-            <IonTitle className="ion-text-center">Thread: {currentThreadId ?? 'new'} | Agent: {selectedAgent?.id ?? 'none'}</IonTitle>
+            <IonTitle className="ion-text-center">Agent: {selectedAgent?.id ?? 'none'} | Thread: {currentThreadId ?? 'new'}</IonTitle>
           </IonToolbar>
         </IonHeader>
         
