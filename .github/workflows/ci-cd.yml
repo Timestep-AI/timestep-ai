@@ -197,14 +197,19 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
       - name: Deploy to Vercel Preview
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          vercel --yes --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope ${{ secrets.VERCEL_ORG_ID }} \
+            --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
+            --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
+            --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \
+            --env HF_TOKEN="${{ secrets.HF_TOKEN }}"
 
   # Production deployment for main branch
   production:
@@ -387,15 +392,20 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
       - name: Deploy to Vercel Production
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          vercel --yes --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope ${{ secrets.VERCEL_ORG_ID }} \
+            --prod \
+            --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
+            --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
+            --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \
+            --env HF_TOKEN="${{ secrets.HF_TOKEN }}"
 
   # Cleanup preview branches when PR is closed
   cleanup:
