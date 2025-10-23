@@ -56,7 +56,7 @@ serve(async (req) => {
     // Handle different path patterns (Supabase strips /functions/v1 prefix)
     if (path === '/agent-chat' || path === '/') {
       return new Response(
-        JSON.stringify({ message: 'Welcome to the Timestep AI ChatKit Server!' }),
+        JSON.stringify({ message: 'Welcome to the Agent ChatKit Server!' }),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

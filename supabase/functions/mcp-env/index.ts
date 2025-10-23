@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from 'npm:@modelcontextprotocol/sdk@^1.
 import { tools } from './tools/index.ts';
 
 const mcpServer = new McpServer({
-  name: 'Timestep AI MCP Server',
+  name: 'Agent MCP Server',
   version: '1.0.0',
 });
 
@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
       // Each request needs its own transport instance to handle concurrent requests properly
       // We create a temporary connection just for this request
       const serverForRequest = new McpServer({
-        name: 'Timestep AI MCP Server',
+        name: 'Agent MCP Server',
         version: '1.0.0',
       });
 
