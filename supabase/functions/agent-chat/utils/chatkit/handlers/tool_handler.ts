@@ -33,7 +33,7 @@ export class ToolHandler {
   }
 
   private extractToolCallId(action: any, params?: any): string {
-    let toolCallId = action?.toolCallId || action?.payload?.tool_call_id || action?.tool_call_id;
+    const toolCallId = action?.toolCallId || action?.payload?.tool_call_id || action?.tool_call_id;
 
     if (!toolCallId) {
       const itemId = action?.item_id || params?.item_id;

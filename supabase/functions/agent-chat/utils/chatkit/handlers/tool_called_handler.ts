@@ -7,7 +7,7 @@ export class ToolCalledHandler {
     private itemFactory: ItemFactory
   ) {}
 
-  async *handle(event: any, threadId: string): AsyncIterable<any> {
+  async handle(event: any, threadId: string): Promise<void> {
     const item = event.item;
     const tool = item?.rawItem;
     const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
