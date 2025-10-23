@@ -1,4 +1,4 @@
-import { X, Palette, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useState } from 'react';
 import { AgentCard } from './AgentCard';
 import { ThreadCard } from './ThreadCard';
@@ -211,18 +211,15 @@ export const ModernSidebar = ({
               onClick={() => setExpandedTheme(!expandedTheme)}
               className="w-full flex items-center justify-between"
             >
-              <h3 className="text-sm font-semibold text-accent/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(150, 100, 255, 0.5)' }}>
-                <Palette size={16} className="inline mr-2 mb-0.5" />
-                THEME
-              </h3>
+              <h3 className="text-sm font-semibold text-accent/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(150, 100, 255, 0.5)' }}>THEME</h3>
               {expandedTheme ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
             </button>
 
             {expandedTheme && (
-              <div className="space-y-4 p-4 rounded-lg bg-primary/5 border-2 border-primary/20">
+              <div className="space-y-4 p-4 rounded-lg bg-accent/5 border-2 border-accent/20">
                 {/* Color Scheme */}
                 <div className="space-y-2">
-                  <label className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Color Scheme</label>
+                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Color Scheme</label>
                   <div className="flex gap-2">
                     {(['dark', 'light'] as const).map((scheme) => (
                       <button
@@ -230,7 +227,7 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ colorScheme: scheme })}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
                           themeSettings.colorScheme === scheme
-                            ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
                             : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
                         }`}
                       >
@@ -242,21 +239,21 @@ export const ModernSidebar = ({
 
                 {/* Accent Color */}
                 <div className="space-y-2">
-                  <label className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Accent Color</label>
+                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Accent Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={themeSettings.accentColor}
                       onChange={(e) => onThemeChange({ accentColor: e.target.value })}
-                      className="w-full h-12 rounded-lg border-2 border-primary/30 cursor-pointer bg-transparent hover:border-primary/50 transition-all"
+                      className="w-full h-12 rounded-lg border-2 border-accent/30 cursor-pointer bg-transparent hover:border-accent/50 transition-all"
                     />
-                    <span className="text-xs text-primary/90 font-mono font-semibold">{themeSettings.accentColor}</span>
+                    <span className="text-xs text-accent/90 font-mono font-semibold">{themeSettings.accentColor}</span>
                   </div>
                 </div>
 
                 {/* Radius */}
                 <div className="space-y-2">
-                  <label className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Border Radius</label>
+                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Border Radius</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['sharp', 'soft', 'round', 'pill'] as const).map((radius) => (
                       <button
@@ -264,7 +261,7 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ radius })}
                         className={`py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
                           themeSettings.radius === radius
-                            ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
                             : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
                         }`}
                       >
@@ -276,7 +273,7 @@ export const ModernSidebar = ({
 
                 {/* Density */}
                 <div className="space-y-2">
-                  <label className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Density</label>
+                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Density</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['compact', 'normal', 'spacious'] as const).map((density) => (
                       <button
@@ -284,7 +281,7 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ density })}
                         className={`py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
                           themeSettings.density === density
-                            ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
                             : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
                         }`}
                       >
