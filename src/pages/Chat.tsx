@@ -15,8 +15,13 @@ import {
   IonIcon,
   IonSpinner,
   IonButtons,
+  IonButton,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonPopover,
 } from '@ionic/react';
-import { personCircleOutline } from 'ionicons/icons';
+import { personCircleOutline, chatbubblesOutline, addOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
@@ -25,6 +30,8 @@ const Chat = () => {
   const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [threads, setThreads] = useState<any[]>([]);
+  const [showThreads, setShowThreads] = useState(false);
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -76,29 +83,37 @@ const Chat = () => {
     }
   };
 
-  // Load the most recent thread for the current user
-  const loadMostRecentThread = useCallback(async () => {
+  // Load all threads for the current user
+  const loadThreads = useCallback(async () => {
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(`${getServerBaseUrl()}/threads/list?limit=1&order=desc`, {
-        method: 'GET',
-        headers: authHeaders,
-      });
+      const response = await fetch(
+        `${getServerBaseUrl()}/agents/${selectedAgent?.id || '00000000-0000-0000-0000-000000000000'}/chatkit`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            type: 'threads.list',
+            params: { limit: 50, order: 'desc' }
+          }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
-        if (data.data && data.data.length > 0) {
+        setThreads(data.data || []);
+        
+        // Auto-select the most recent thread if no thread is selected
+        if (data.data && data.data.length > 0 && !currentThreadId) {
           const mostRecentThread = data.data[0];
           console.log('Loading most recent thread:', mostRecentThread.id);
           setCurrentThreadId(mostRecentThread.id);
-          return mostRecentThread.id;
         }
       }
     } catch (error) {
-      console.error('Error loading most recent thread:', error);
+      console.error('Error loading threads:', error);
     }
-    return null;
-  }, []);
+  }, [selectedAgent, currentThreadId]);
 
   // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
@@ -114,8 +129,6 @@ const Chat = () => {
           // We have a valid session, use it
           setIsAuthenticated(true);
           await loadAgents();
-          // Load the most recent thread to continue the conversation
-          await loadMostRecentThread();
         } else {
           // No valid session, sign in anonymously
           const { data, error } = await supabase.auth.signInAnonymously();
@@ -125,8 +138,6 @@ const Chat = () => {
           } else {
             setIsAuthenticated(true);
             await loadAgents();
-            // Load the most recent thread to continue the conversation
-            await loadMostRecentThread();
           }
         }
       } catch (error) {
@@ -153,7 +164,7 @@ const Chat = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadAgents, loadMostRecentThread]);
+  }, [loadAgents]);
 
   // Load agent details when selected agent changes
   useEffect(() => {
@@ -161,6 +172,13 @@ const Chat = () => {
       loadAgentDetails(selectedAgent.id);
     }
   }, [selectedAgent?.id]);
+
+  // Load threads when agent is selected
+  useEffect(() => {
+    if (selectedAgent && isAuthenticated) {
+      loadThreads();
+    }
+  }, [selectedAgent, isAuthenticated, loadThreads]);
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -185,8 +203,33 @@ const Chat = () => {
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
-      // Show a toast notification when switching agents
       toast.success(`Switched to ${agent.name}`);
+    }
+  };
+
+  // Create a new thread
+  const handleCreateThread = async () => {
+    try {
+      // Clear current thread to start fresh
+      setCurrentThreadId(null);
+      toast.success('New thread started');
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      toast.error('Failed to create thread');
+    }
+  };
+
+  // Switch to a different thread
+  const handleSelectThread = async (threadId: string) => {
+    try {
+      setCurrentThreadId(threadId);
+      setShowThreads(false);
+      
+      // Force ChatKit to reload with the new thread
+      window.location.reload();
+    } catch (error) {
+      console.error('Error switching thread:', error);
+      toast.error('Failed to switch thread');
     }
   };
 
@@ -198,6 +241,7 @@ const Chat = () => {
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
+      loadThreads();
     },
     api: {
       url: chatKitUrl,
@@ -238,26 +282,7 @@ const Chat = () => {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
       // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
     },
-    header: {
-      leftAction: {
-        icon: 'sidebar-left',
-        onClick: async () => {
-          // Open the left settings menu
-          if (leftMenuRef.current) {
-            await leftMenuRef.current.open();
-          }
-        },
-      },
-      rightAction: {
-        icon: 'sidebar-right',
-        onClick: async () => {
-          // Open the right menu
-          if (rightMenuRef.current) {
-            await rightMenuRef.current.open();
-          }
-        },
-      },
-    },
+    header: null,
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
       // prompts: [
@@ -333,6 +358,14 @@ const Chat = () => {
         <IonHeader>
           <IonToolbar>
             <IonTitle>Timestep AI</IonTitle>
+            <IonButtons slot="start">
+              <IonButton id="threads-trigger">
+                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
+              </IonButton>
+              <IonButton onClick={handleCreateThread}>
+                <IonIcon slot="icon-only" icon={addOutline} />
+              </IonButton>
+            </IonButtons>
             <IonButtons slot="end">
               <IonIcon
                 icon={personCircleOutline}
@@ -353,6 +386,33 @@ const Chat = () => {
             </IonButtons>
           </IonToolbar>
         </IonHeader>
+        
+        <IonPopover trigger="threads-trigger" dismissOnSelect={true}>
+          <IonContent>
+            <IonList>
+              {threads.length === 0 ? (
+                <IonItem>
+                  <IonLabel>No threads yet</IonLabel>
+                </IonItem>
+              ) : (
+                threads.map((thread) => (
+                  <IonItem
+                    key={thread.id}
+                    button
+                    onClick={() => handleSelectThread(thread.id)}
+                    color={thread.id === currentThreadId ? 'primary' : undefined}
+                  >
+                    <IonLabel>
+                      <h3>{thread.metadata?.title || 'Untitled Thread'}</h3>
+                      <p>{new Date(thread.created_at * 1000).toLocaleString()}</p>
+                    </IonLabel>
+                  </IonItem>
+                ))
+              )}
+            </IonList>
+          </IonContent>
+        </IonPopover>
+
         <IonContent fullscreen>
           <ChatKit control={control} className="h-full w-full" />
         </IonContent>
