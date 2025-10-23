@@ -2,11 +2,7 @@
   "imports": {
     "@openai/agents-core": "npm:@openai/agents-core",
     "@openai/agents-openai": "npm:@openai/agents-openai",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
     "openai": "npm:openai",
     "ollama": "npm:ollama"
-  },
-  "compilerOptions": {
-    "lib": ["deno.ns", "deno.unstable"]
   }
 }
