@@ -11,12 +11,22 @@ import {
   IonIcon,
   IonToggle,
   IonSpinner,
-  IonCard,
-  IonCardContent,
-  IonChip,
+  IonSelect,
+  IonSelectOption,
+  IonInput,
+  IonRange,
 } from '@ionic/react';
 import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
 import type { AgentRecord } from '@/types/agent';
+
+export interface ThemeSettings {
+  colorScheme: 'dark' | 'light';
+  accentColor: string;
+  accentLevel: number;
+  radius: 'none' | 'small' | 'medium' | 'large' | 'round';
+  density: 'compact' | 'normal' | 'comfortable';
+  fontFamily: string;
+}
 
 interface SidebarMenuProps {
   id: string;
@@ -27,11 +37,13 @@ interface SidebarMenuProps {
   onDarkModeChange?: (checked: boolean) => void;
   agentDetails?: AgentRecord | null;
   loadingAgentDetails?: boolean;
+  themeSettings?: ThemeSettings;
+  onThemeChange?: (settings: Partial<ThemeSettings>) => void;
 }
 
 const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
   (
-    { id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails },
+    { id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails, themeSettings, onThemeChange },
     ref
   ) => {
     return (
@@ -141,6 +153,83 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               />
             </IonItem>
           </IonList>
+
+          {/* ChatKit Theme Settings */}
+          {themeSettings && onThemeChange && (
+            <IonList>
+              <IonItem>
+                <IonLabel>
+                  <h2>ChatKit Theme</h2>
+                </IonLabel>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Color Scheme</IonLabel>
+                <IonSelect
+                  value={themeSettings.colorScheme}
+                  onIonChange={(e) => onThemeChange({ colorScheme: e.detail.value })}
+                >
+                  <IonSelectOption value="dark">Dark</IonSelectOption>
+                  <IonSelectOption value="light">Light</IonSelectOption>
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Accent Color</IonLabel>
+                <IonInput
+                  type="color"
+                  value={themeSettings.accentColor}
+                  onIonChange={(e) => onThemeChange({ accentColor: e.detail.value as string })}
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Accent Level: {themeSettings.accentLevel}</IonLabel>
+                <IonRange
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={themeSettings.accentLevel}
+                  onIonChange={(e) => onThemeChange({ accentLevel: e.detail.value as number })}
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Radius</IonLabel>
+                <IonSelect
+                  value={themeSettings.radius}
+                  onIonChange={(e) => onThemeChange({ radius: e.detail.value })}
+                >
+                  <IonSelectOption value="none">None</IonSelectOption>
+                  <IonSelectOption value="small">Small</IonSelectOption>
+                  <IonSelectOption value="medium">Medium</IonSelectOption>
+                  <IonSelectOption value="large">Large</IonSelectOption>
+                  <IonSelectOption value="round">Round</IonSelectOption>
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Density</IonLabel>
+                <IonSelect
+                  value={themeSettings.density}
+                  onIonChange={(e) => onThemeChange({ density: e.detail.value })}
+                >
+                  <IonSelectOption value="compact">Compact</IonSelectOption>
+                  <IonSelectOption value="normal">Normal</IonSelectOption>
+                  <IonSelectOption value="comfortable">Comfortable</IonSelectOption>
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel position="stacked">Font Family</IonLabel>
+                <IonInput
+                  value={themeSettings.fontFamily}
+                  placeholder="'Inter', sans-serif"
+                  onIonChange={(e) => onThemeChange({ fontFamily: e.detail.value as string })}
+                />
+              </IonItem>
+            </IonList>
+          )}
         </IonContent>
       </IonMenu>
     );

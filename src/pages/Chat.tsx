@@ -21,8 +21,8 @@ import {
   IonLabel,
   IonPopover,
 } from '@ionic/react';
-import { personCircleOutline, chatbubblesOutline, addOutline } from 'ionicons/icons';
-import SidebarMenu from '@/components/SidebarMenu';
+import { personCircleOutline, chatbubblesOutline, addOutline, cogOutline } from 'ionicons/icons';
+import SidebarMenu, { type ThemeSettings } from '@/components/SidebarMenu';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -35,6 +35,17 @@ const Chat = () => {
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
+    const saved = localStorage.getItem('chatkitTheme');
+    return saved ? JSON.parse(saved) : {
+      colorScheme: 'dark' as const,
+      accentColor: '#D7263D',
+      accentLevel: 2,
+      radius: 'round' as const,
+      density: 'normal' as const,
+      fontFamily: "'Open Sans', sans-serif"
+    };
+  });
 
   // Agent details state
   const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
@@ -185,6 +196,13 @@ const Chat = () => {
     }
   }, [selectedAgent, isAuthenticated, loadThreads]);
 
+  // Handle theme changes
+  const handleThemeChange = (updates: Partial<ThemeSettings>) => {
+    const newSettings = { ...themeSettings, ...updates };
+    setThemeSettings(newSettings);
+    localStorage.setItem('chatkitTheme', JSON.stringify(newSettings));
+  };
+
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
     const {
@@ -199,6 +217,14 @@ const Chat = () => {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.access_token}`,
     };
+  };
+
+  // Handle theme changes
+  const handleThemeChange = (updates: Partial<ThemeSettings>) => {
+    const newSettings = { ...themeSettings, ...updates };
+    setThemeSettings(newSettings);
+    localStorage.setItem('chatkitTheme', JSON.stringify(newSettings));
+  };
   };
 
   // Handle agent switching
@@ -319,11 +345,11 @@ const Chat = () => {
       // ]
     },
     theme: {
-      colorScheme: darkMode ? 'dark' : 'light',
-      color: { accent: { primary: '#D7263D', level: 2 } },
-      radius: 'round',
-      density: 'normal',
-      typography: { fontFamily: 'Open Sans, sans-serif' },
+      colorScheme: themeSettings.colorScheme,
+      color: { accent: { primary: themeSettings.accentColor, level: themeSettings.accentLevel } },
+      radius: themeSettings.radius,
+      density: themeSettings.density,
+      typography: { fontFamily: themeSettings.fontFamily },
     },
   });
 
@@ -373,6 +399,8 @@ const Chat = () => {
         onDarkModeChange={setDarkMode}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
+        themeSettings={themeSettings}
+        onThemeChange={handleThemeChange}
       />
 
       <SidebarMenu
@@ -391,6 +419,9 @@ const Chat = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
+              <IonButton onClick={() => leftMenuRef.current?.open()}>
+                <IonIcon slot="icon-only" icon={cogOutline} />
+              </IonButton>
               <IonButton id="thread-selector">
                 <IonIcon slot="icon-only" icon={chatbubblesOutline} />
               </IonButton>
