@@ -1,6 +1,6 @@
 module.exports = {
   default: {
-    require: ['@swc-node/register', 'tests/cucumber/steps/**/*.ts'],
+    require: ['tsx/cjs', 'tests/cucumber/steps/**/*.ts'],
     paths: ['tests/cucumber/features/**/*.feature'],
     format: ['progress', 'html:reports/cucumber-report.html'],
     publishQuiet: true,
