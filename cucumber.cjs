@@ -6,5 +6,6 @@ module.exports = {
     publishQuiet: true,
     timeout: 60000,
     stepTimeout: 60000,
+    parallel: 2, // Run both scenarios in parallel to expose interference
   },
 };
