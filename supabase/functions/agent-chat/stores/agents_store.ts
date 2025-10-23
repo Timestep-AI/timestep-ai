@@ -1,4 +1,6 @@
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+// Type-only shims for build tooling; no runtime impact
+declare const Deno: any;
+type SupabaseClient = any;
 import type { ModelSettings } from '@openai/agents-core';
 
 export interface AgentRecord {

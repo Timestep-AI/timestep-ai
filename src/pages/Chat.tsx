@@ -326,25 +326,24 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonTitle slot="start">Timestep AI</IonTitle>
-            <div slot="primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <IonIcon
-                icon={personCircleOutline}
-                style={{ fontSize: '24px' }}
-              />
-              <IonSelect
-                value={selectedAgent?.id || ''}
-                placeholder="Select Agent"
-                onIonChange={handleAgentChange}
-                interface="popover"
-              >
-                {agents.map((agent) => (
-                  <IonSelectOption key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </div>
+            <div slot="start" style={{ fontWeight: 600 }}>Timestep AI</div>
+            <IonTitle>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <IonIcon icon={personCircleOutline} style={{ fontSize: '24px' }} />
+                <IonSelect
+                  value={selectedAgent?.id || ''}
+                  placeholder="Select Agent"
+                  onIonChange={handleAgentChange}
+                  interface="popover"
+                >
+                  {agents.map((agent) => (
+                    <IonSelectOption key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </div>
+            </IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
