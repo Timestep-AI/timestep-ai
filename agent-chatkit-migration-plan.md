@@ -24,8 +24,8 @@ supabase/functions/agent-chat/
 │   ├── chatkit_service.ts          # TO BE REMOVED
 │   └── mcp_servers_service.ts      # KEEP
 ├── stores/
-│   ├── agents_store.ts             # KEEP
-│   ├── mcp_servers_store.ts        # KEEP
+│   ├── agent_store.ts              # KEEP
+│   ├── mcp_server_store.ts         # KEEP
 │   └── threads_store.ts            # TO BE REFACTORED
 ├── utils/
 │   ├── chatkit/
@@ -80,8 +80,8 @@ supabase/functions/agent-chat/
 │   ├── mcp_servers_service.ts   # 7b. MCP servers (KEEP)
 │   └── threads_service.ts       # 7c. Manages threads
 ├── stores/                      # 8. Data access
-│   ├── agents_store.ts          # 8a. Agents data (KEEP)
-│   ├── mcp_servers_store.ts     # 8b. MCP servers data (KEEP)
+│   ├── agent_store.ts           # 8a. Agent data (KEEP)
+│   ├── mcp_server_store.ts      # 8b. MCP server data (KEEP)
 │   ├── message_store.ts         # 8c. Message data
 │   ├── thread_store.ts          # 8d. Thread data
 │   └── vector_store.ts          # 8e. Vector data
@@ -1567,30 +1567,26 @@ export async function handlePostChatKitRequest(
         const userJwt = authHeader.replace('Bearer ', '');
 
         const vectorStore = new VectorStore(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          userJwt
+          { supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId: currentUserId }
         );
 
         const threadStore = new ThreadStore(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          userJwt,
-          currentUserId,
+          { supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId: currentUserId },
           vectorStore
         );
 
         const messageStore = new MessageStore(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          userJwt,
-          currentUserId,
+          { supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId: currentUserId },
           vectorStore
         );
 
         const threadsService = new ThreadsService(threadStore, messageStore, vectorStore);
-        const agentsService = new AgentsService(/* ... */);
+        const agentsService = new AgentsService(threadStore, /* mcpServersService */);
 
         // Create event pipeline and router
-        const eventRouter = new EventRouter(/* ... */);
-        const eventPipeline = new EventPipeline(eventRouter, /* ... */);
+        const factory = new Factory();
+        const eventRouter = new EventRouter(/* processor map */);
+        const eventPipeline = new EventPipeline(eventRouter, /* state manager */);
         const agentRunner = new AgentRunner(eventPipeline);
 
         // Create orchestrator
@@ -1708,6 +1704,7 @@ Update all import statements to reference the new file locations.
 4. **Base Processor Class**: Common functionality moved to `BaseEventProcessor` abstract class
 5. **Shared Dependencies**: `ProcessorDependencies` interface eliminates repetitive constructor parameters
 6. **Helper Methods**: Common widget creation logic consolidated into reusable methods
+7. **Consistent Naming**: All store files use singular naming (`agent_store.ts`, `mcp_server_store.ts`) for consistency
 
 ### Before vs After
 - **Before**: 3 separate type files (`events.ts`, `processors.ts`, `streaming.ts`)
