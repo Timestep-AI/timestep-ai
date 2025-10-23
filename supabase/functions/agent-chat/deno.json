@@ -1,5 +1,6 @@
 {
   "imports": {
+    "@timestep-ai/timestep": "npm:@timestep-ai/timestep@^2025.9.172034",
     "@openai/agents-core": "npm:@openai/agents-core",
     "@openai/agents-openai": "npm:@openai/agents-openai",
     "openai": "npm:openai",
