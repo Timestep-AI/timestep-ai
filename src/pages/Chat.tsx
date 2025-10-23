@@ -408,14 +408,30 @@ const Chat = () => {
         </IonPopover>
 
         <IonContent fullscreen>
-          <div style={{ padding: '12px 16px', display: 'flex', gap: '12px', alignItems: 'center', borderBottom: '1px solid var(--ion-border-color)', backgroundColor: 'var(--ion-background-color)' }}>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', opacity: 0.7 }}>Thread</label>
+          <div style={{ 
+            padding: '16px', 
+            display: 'flex', 
+            gap: '12px', 
+            alignItems: 'flex-start', 
+            borderBottom: '2px solid var(--ion-color-medium)',
+            background: 'var(--ion-color-step-50, #f5f5f5)'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: 'var(--ion-text-color)' }}>
+                Thread
+              </div>
               <IonSelect
                 value={currentThreadId || ''}
                 placeholder="Select Thread"
                 interface="popover"
                 onIonChange={(e) => handleSelectThread(e.detail.value)}
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--ion-color-medium)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  background: 'var(--ion-background-color, white)'
+                }}
               >
                 <IonSelectOption value="">New Thread</IonSelectOption>
                 {threads.map((thread) => (
@@ -426,13 +442,22 @@ const Chat = () => {
               </IonSelect>
             </div>
             
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', opacity: 0.7 }}>Agent</label>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: 'var(--ion-text-color)' }}>
+                Agent
+              </div>
               <IonSelect
                 value={selectedAgent?.id || ''}
                 placeholder="Select Agent"
                 onIonChange={handleAgentChange}
                 interface="popover"
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--ion-color-medium)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  background: 'var(--ion-background-color, white)'
+                }}
               >
                 {agents.map((agent) => (
                   <IonSelectOption key={agent.id} value={agent.id}>
