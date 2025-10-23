@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
@@ -44,7 +44,7 @@ const Chat = () => {
   };
 
   // Load agents
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     try {
       setLoadingAgents(true);
       const agentsData = await agentsService.getAll();
@@ -60,7 +60,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  };
+  }, [selectedAgent]);
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {
@@ -77,7 +77,7 @@ const Chat = () => {
   };
 
   // Load the most recent thread for the current user
-  const loadMostRecentThread = async () => {
+  const loadMostRecentThread = useCallback(async () => {
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${getServerBaseUrl()}/threads/list?limit=1&order=desc`, {
@@ -98,7 +98,7 @@ const Chat = () => {
       console.error('Error loading most recent thread:', error);
     }
     return null;
-  };
+  }, []);
 
   // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
@@ -153,7 +153,7 @@ const Chat = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadAgents, loadMostRecentThread]);
 
   // Load agent details when selected agent changes
   useEffect(() => {
