@@ -35,6 +35,8 @@ export const ModernSidebar = ({
   loadingAgentDetails,
 }: ModernSidebarProps) => {
   const [expandedTheme, setExpandedTheme] = useState(false);
+  const [expandedAgents, setExpandedAgents] = useState(true);
+  const [expandedThreads, setExpandedThreads] = useState(true);
   const [expandedAgentDetails, setExpandedAgentDetails] = useState(true);
 
   return (
@@ -71,49 +73,57 @@ export const ModernSidebar = ({
         <div className="h-[calc(100%-88px)] overflow-y-auto p-6 space-y-6">
           {/* Agents Section */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-primary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(0, 255, 255, 0.5)' }}>AGENTS</h3>
-            <div className="grid gap-3">
-              {agents.map((agent) => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  isActive={selectedAgent?.id === agent.id}
-                  onClick={() => onAgentChange(agent.id)}
-                />
-              ))}
-            </div>
+            <button
+              onClick={() => setExpandedAgents(!expandedAgents)}
+              className="w-full flex items-center justify-between"
+            >
+              <h3 className="text-sm font-semibold text-primary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(0, 255, 255, 0.5)' }}>AGENTS</h3>
+              {expandedAgents ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+            </button>
+
+            {expandedAgents && (
+              <>
+                <div className="grid gap-3">{agents.map((agent) => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    isActive={selectedAgent?.id === agent.id}
+                    onClick={() => onAgentChange(agent.id)}
+                  />
+                ))}
+              </div>
 
             {/* Agent Details Section */}
-            {selectedAgent && (
+            {expandedAgents && selectedAgent && (
               <div className="mt-3 space-y-2">
                 <button
                   onClick={() => setExpandedAgentDetails(!expandedAgentDetails)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-primary/5 border-2 border-primary/20 hover:bg-primary/10 transition-all"
                 >
                   <div className="flex items-center gap-2">
-                    <Info size={16} className="text-white/70" />
-                    <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">Agent Details</span>
+                    <Info size={16} className="text-primary/70" />
+                    <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider">Agent Details</span>
                   </div>
-                  {expandedAgentDetails ? <ChevronUp size={16} className="text-white/50" /> : <ChevronDown size={16} className="text-white/50" />}
+                  {expandedAgentDetails ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
                 </button>
 
                 {expandedAgentDetails && agentDetails && (
-                  <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="space-y-3 p-4 rounded-lg bg-primary/5 border-2 border-primary/20">
                     {loadingAgentDetails ? (
-                      <div className="text-center text-white/50 text-sm py-4">Loading details...</div>
+                      <div className="text-center text-primary/50 text-sm py-4">Loading details...</div>
                     ) : (
                       <>
                         {agentDetails.model && (
                           <div className="space-y-1">
-                            <div className="text-xs text-white/40 uppercase tracking-wide">Model</div>
-                            <div className="text-sm text-white/90 font-mono bg-white/5 p-2 rounded">{agentDetails.model}</div>
+                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Model</div>
+                            <div className="text-sm text-white/90 font-mono bg-white/5 p-2 rounded border border-primary/20">{agentDetails.model}</div>
                           </div>
                         )}
 
                         {agentDetails.instructions && (
                           <div className="space-y-1">
-                            <div className="text-xs text-white/40 uppercase tracking-wide">Instructions</div>
-                            <div className="text-sm text-white/70 bg-white/5 p-2 rounded max-h-32 overflow-y-auto">
+                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Instructions</div>
+                            <div className="text-sm text-white/70 bg-white/5 p-2 rounded border border-primary/20 max-h-32 overflow-y-auto">
                               {agentDetails.instructions}
                             </div>
                           </div>
@@ -121,10 +131,10 @@ export const ModernSidebar = ({
 
                         {agentDetails.tool_ids && agentDetails.tool_ids.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-white/40 uppercase tracking-wide">Tools ({agentDetails.tool_ids.length})</div>
+                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Tools ({agentDetails.tool_ids.length})</div>
                             <div className="flex flex-wrap gap-1">
                               {agentDetails.tool_ids.map((toolId) => (
-                                <span key={toolId} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">
+                                <span key={toolId} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30">
                                   {toolId.split('.').pop()}
                                 </span>
                               ))}
@@ -134,10 +144,10 @@ export const ModernSidebar = ({
 
                         {agentDetails.handoff_ids && agentDetails.handoff_ids.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-white/40 uppercase tracking-wide">Handoffs ({agentDetails.handoff_ids.length})</div>
+                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Handoffs ({agentDetails.handoff_ids.length})</div>
                             <div className="flex flex-wrap gap-1">
                               {agentDetails.handoff_ids.map((handoffId) => (
-                                <span key={handoffId} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">
+                                <span key={handoffId} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
                                   {handoffId.slice(0, 8)}
                                 </span>
                               ))}
@@ -147,16 +157,16 @@ export const ModernSidebar = ({
 
                         {agentDetails.model_settings && Object.keys(agentDetails.model_settings).length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-white/40 uppercase tracking-wide">Model Settings</div>
-                            <pre className="text-xs text-white/70 bg-white/5 p-2 rounded overflow-x-auto">
+                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Model Settings</div>
+                            <pre className="text-xs text-white/70 bg-white/5 p-2 rounded border border-primary/20 overflow-x-auto">
                               {JSON.stringify(agentDetails.model_settings, null, 2)}
                             </pre>
                           </div>
                         )}
 
-                        <div className="space-y-1 pt-2 border-t border-white/10">
-                          <div className="text-xs text-white/40 uppercase tracking-wide">Created</div>
-                          <div className="text-xs text-white/50">
+                        <div className="space-y-1 pt-2 border-t-2 border-primary/20">
+                          <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Created</div>
+                          <div className="text-xs text-white/60">
                             {new Date(agentDetails.created_at).toLocaleString()}
                           </div>
                         </div>
@@ -166,22 +176,33 @@ export const ModernSidebar = ({
                 )}
               </div>
             )}
+              </>
+            )}
           </div>
 
           {/* Threads Section */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-secondary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(200, 0, 255, 0.5)' }}>CHAT THREADS</h3>
-            <div className="space-y-2">
-              <ThreadCard isNewThread onClick={() => onThreadChange('')} isActive={!currentThreadId} />
-              {threads.slice(0, 5).map((thread) => (
-                <ThreadCard
-                  key={thread.id}
-                  thread={thread}
-                  isActive={thread.id === currentThreadId}
-                  onClick={() => onThreadChange(thread.id)}
-                />
-              ))}
-            </div>
+          <div className="space-y-3 pt-6 border-t-2 border-primary/30">
+            <button
+              onClick={() => setExpandedThreads(!expandedThreads)}
+              className="w-full flex items-center justify-between"
+            >
+              <h3 className="text-sm font-semibold text-secondary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(200, 0, 255, 0.5)' }}>CHAT THREADS</h3>
+              {expandedThreads ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+            </button>
+
+            {expandedThreads && (
+              <div className="space-y-2">
+                <ThreadCard isNewThread onClick={() => onThreadChange('')} isActive={!currentThreadId} />
+                {threads.slice(0, 5).map((thread) => (
+                  <ThreadCard
+                    key={thread.id}
+                    thread={thread}
+                    isActive={thread.id === currentThreadId}
+                    onClick={() => onThreadChange(thread.id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Theme Settings */}
