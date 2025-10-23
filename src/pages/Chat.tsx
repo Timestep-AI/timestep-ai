@@ -185,8 +185,6 @@ const Chat = () => {
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
-      // Show a toast notification when switching agents
-      toast.success(`Switched to ${agent.name}`);
     }
   };
 
