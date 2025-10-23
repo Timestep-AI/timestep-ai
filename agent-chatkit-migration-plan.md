@@ -17,12 +17,12 @@ This document outlines the complete migration plan for refactoring the Agent-Cha
 ```
 supabase/functions/agent-chat/
 ├── apis/
-│   ├── agents_api.ts
+│   ├── agent_api.ts
 │   └── chatkit_api.ts
 ├── services/
-│   ├── agents_service.ts
+│   ├── agent_service.ts
 │   ├── chatkit_service.ts          # TO BE REMOVED
-│   └── mcp_servers_service.ts      # KEEP
+│   └── mcp_server_service.ts       # KEEP
 ├── stores/
 │   ├── agent_store.ts              # KEEP
 │   ├── mcp_server_store.ts         # KEEP
@@ -59,7 +59,7 @@ supabase/functions/agent-chat/
 ```
 supabase/functions/agent-chat/
 ├── apis/
-│   ├── agents_api.ts            # 1a. Agents API endpoints
+│   ├── agent_api.ts             # 1a. Agent API endpoints
 │   └── chatkit_api.ts           # 1b. ChatKit API endpoints
 ├── core/
 │   ├── agent_orchestrator.ts    # 2. Main entry point
@@ -76,9 +76,9 @@ supabase/functions/agent-chat/
 │   ├── tool_call_processor.ts   # 6g. Tool calls
 │   └── tool_output_processor.ts # 6h. Tool results
 ├── services/
-│   ├── agents_service.ts        # 7a. Creates and manages agents
-│   ├── mcp_servers_service.ts   # 7b. MCP servers (KEEP)
-│   └── threads_service.ts       # 7c. Manages threads
+│   ├── agent_service.ts         # 7a. Creates and manages agents
+│   ├── mcp_server_service.ts    # 7b. MCP servers (KEEP)
+│   └── thread_service.ts        # 7c. Manages threads
 ├── stores/                      # 8. Data access
 │   ├── agent_store.ts           # 8a. Agent data (KEEP)
 │   ├── mcp_server_store.ts      # 8b. MCP server data (KEEP)
@@ -689,14 +689,14 @@ export class CompletionProcessor implements EventProcessor {
 
 ### Phase 4: Extract Services
 
-#### 4.1 Create Threads Service
+#### 4.1 Create Thread Service
 ```typescript
-// services/threads_service.ts
+// services/thread_service.ts
 import { ThreadStore } from '../stores/thread_store.ts';
 import { MessageStore } from '../stores/message_store.ts';
 import { VectorStore } from '../stores/vector_store.ts';
 
-export class ThreadsService {
+export class ThreadService {
   constructor(
     private threadStore: ThreadStore,
     private messageStore: MessageStore,
@@ -1395,7 +1395,7 @@ export class Factory {
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/agents-openai';
-import { handleGetAgentsRequest } from './apis/agents_api.ts';
+import { handleGetAgentsRequest } from './apis/agent_api.ts';
 import { handlePostChatKitRequest, handlePostChatKitUploadRequest } from './apis/chatkit_api.ts';
 
 // Configure OpenAI API key and tracing exporter
@@ -1456,7 +1456,7 @@ serve(async (req) => {
       );
     }
 
-    // Agents API endpoints
+    // Agent API endpoints
     if (path === '/agent-chat/agents' && req.method === 'GET') {
       return await handleGetAgentsRequest(userId, req.headers.get('Authorization') ?? '');
     }
@@ -1511,8 +1511,8 @@ serve(async (req) => {
 // apis/chatkit_api.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AgentOrchestrator } from '../core/agent_orchestrator.ts';
-import { AgentsService } from '../services/agents_service.ts';
-import { ThreadsService } from '../services/threads_service.ts';
+import { AgentService } from '../services/agent_service.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { EventPipeline } from '../core/event_pipeline.ts';
 import { EventRouter } from '../core/event_router.ts';
 import { AgentRunner } from '../core/agent_runner.ts';
@@ -1580,8 +1580,8 @@ export async function handlePostChatKitRequest(
           vectorStore
         );
 
-        const threadsService = new ThreadsService(threadStore, messageStore, vectorStore);
-        const agentsService = new AgentsService(threadStore, /* mcpServersService */);
+        const threadService = new ThreadService(threadStore, messageStore, vectorStore);
+        const agentService = new AgentService(threadStore, /* mcpServerService */);
 
         // Create event pipeline and router
         const factory = new Factory();
@@ -1591,8 +1591,8 @@ export async function handlePostChatKitRequest(
 
         // Create orchestrator
         const orchestrator = new AgentOrchestrator(
-          agentsService,
-          threadsService,
+          agentService,
+          threadService,
           eventPipeline,
           agentRunner
         );
@@ -1704,7 +1704,7 @@ Update all import statements to reference the new file locations.
 4. **Base Processor Class**: Common functionality moved to `BaseEventProcessor` abstract class
 5. **Shared Dependencies**: `ProcessorDependencies` interface eliminates repetitive constructor parameters
 6. **Helper Methods**: Common widget creation logic consolidated into reusable methods
-7. **Consistent Naming**: All store files use singular naming (`agent_store.ts`, `mcp_server_store.ts`) for consistency
+7. **Consistent Naming**: All files use singular naming (`agent_api.ts`, `agent_service.ts`, `agent_store.ts`, `mcp_server_service.ts`, `mcp_server_store.ts`, `thread_service.ts`) for consistency
 
 ### Before vs After
 - **Before**: 3 separate type files (`events.ts`, `processors.ts`, `streaming.ts`)
@@ -1719,8 +1719,8 @@ Update all import statements to reference the new file locations.
 - **Before**: Each processor class duplicated dependency injection and helper methods
 - **After**: Base processor class provides common functionality
 
-- **Before**: Inconsistent store naming (`agents_store.ts`, `thread_store.ts`, `message_store.ts`)
-- **After**: Consistent singular naming (`agent_store.ts`, `thread_store.ts`, `message_store.ts`)
+- **Before**: Inconsistent naming (`agents_api.ts`, `agents_service.ts`, `agents_store.ts`, `mcp_servers_service.ts`, `mcp_servers_store.ts`, `threads_service.ts`)
+- **After**: Consistent singular naming (`agent_api.ts`, `agent_service.ts`, `agent_store.ts`, `mcp_server_service.ts`, `mcp_server_store.ts`, `thread_service.ts`)
 
 ## Migration Benefits
 
