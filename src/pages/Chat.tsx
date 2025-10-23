@@ -41,6 +41,10 @@ const Chat = () => {
     };
   });
 
+  // Agent details state
+  const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
+  const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
+
   // Get server base URL
   const getServerBaseUrl = () => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
@@ -72,6 +76,20 @@ const Chat = () => {
       setLoadingAgents(false);
     }
   }, []); // Remove selectedAgent from dependencies
+
+  // Load agent details
+  const loadAgentDetails = async (agentId: string) => {
+    try {
+      setLoadingAgentDetails(true);
+      const details = await agentsService.getById(agentId);
+      setAgentDetails(details);
+    } catch (error) {
+      console.error('Error loading agent details:', error);
+      toast.error('Failed to load agent details');
+    } finally {
+      setLoadingAgentDetails(false);
+    }
+  };
 
   // Load all threads for the current user
   const loadThreads = useCallback(async () => {
@@ -155,6 +173,13 @@ const Chat = () => {
       subscription.unsubscribe();
     };
   }, [loadAgents]);
+
+  // Load agent details when selected agent changes
+  useEffect(() => {
+    if (selectedAgent?.id) {
+      loadAgentDetails(selectedAgent.id);
+    }
+  }, [selectedAgent?.id]);
 
   // Load threads when agent is selected
   useEffect(() => {
@@ -360,6 +385,8 @@ const Chat = () => {
         onThreadChange={handleSelectThread}
         themeSettings={themeSettings}
         onThemeChange={handleThemeChange}
+        agentDetails={agentDetails}
+        loadingAgentDetails={loadingAgentDetails}
       />
 
       <IonPage id="main-content">

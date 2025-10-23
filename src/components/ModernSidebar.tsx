@@ -1,4 +1,4 @@
-import { X, Palette, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Palette, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useState } from 'react';
 import { AgentCard } from './AgentCard';
 import { ThreadCard } from './ThreadCard';
@@ -16,6 +16,8 @@ interface ModernSidebarProps {
   onThreadChange: (threadId: string) => void;
   themeSettings: ThemeSettings;
   onThemeChange: (settings: Partial<ThemeSettings>) => void;
+  agentDetails?: AgentRecord | null;
+  loadingAgentDetails?: boolean;
 }
 
 export const ModernSidebar = ({
@@ -29,8 +31,11 @@ export const ModernSidebar = ({
   onThreadChange,
   themeSettings,
   onThemeChange,
+  agentDetails,
+  loadingAgentDetails,
 }: ModernSidebarProps) => {
   const [expandedTheme, setExpandedTheme] = useState(false);
+  const [expandedAgentDetails, setExpandedAgentDetails] = useState(true);
 
   return (
     <>
@@ -76,6 +81,90 @@ export const ModernSidebar = ({
                 />
               ))}
             </div>
+
+            {/* Agent Details Section */}
+            {selectedAgent && (
+              <div className="mt-3 space-y-2">
+                <button
+                  onClick={() => setExpandedAgentDetails(!expandedAgentDetails)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <Info size={16} className="text-white/70" />
+                    <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">Agent Details</span>
+                  </div>
+                  {expandedAgentDetails ? <ChevronUp size={16} className="text-white/50" /> : <ChevronDown size={16} className="text-white/50" />}
+                </button>
+
+                {expandedAgentDetails && agentDetails && (
+                  <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                    {loadingAgentDetails ? (
+                      <div className="text-center text-white/50 text-sm py-4">Loading details...</div>
+                    ) : (
+                      <>
+                        {agentDetails.model && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 uppercase tracking-wide">Model</div>
+                            <div className="text-sm text-white/90 font-mono bg-white/5 p-2 rounded">{agentDetails.model}</div>
+                          </div>
+                        )}
+
+                        {agentDetails.instructions && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 uppercase tracking-wide">Instructions</div>
+                            <div className="text-sm text-white/70 bg-white/5 p-2 rounded max-h-32 overflow-y-auto">
+                              {agentDetails.instructions}
+                            </div>
+                          </div>
+                        )}
+
+                        {agentDetails.tool_ids && agentDetails.tool_ids.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 uppercase tracking-wide">Tools ({agentDetails.tool_ids.length})</div>
+                            <div className="flex flex-wrap gap-1">
+                              {agentDetails.tool_ids.map((toolId) => (
+                                <span key={toolId} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">
+                                  {toolId.split('.').pop()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {agentDetails.handoff_ids && agentDetails.handoff_ids.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 uppercase tracking-wide">Handoffs ({agentDetails.handoff_ids.length})</div>
+                            <div className="flex flex-wrap gap-1">
+                              {agentDetails.handoff_ids.map((handoffId) => (
+                                <span key={handoffId} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">
+                                  {handoffId.slice(0, 8)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {agentDetails.model_settings && Object.keys(agentDetails.model_settings).length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-white/40 uppercase tracking-wide">Model Settings</div>
+                            <pre className="text-xs text-white/70 bg-white/5 p-2 rounded overflow-x-auto">
+                              {JSON.stringify(agentDetails.model_settings, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 pt-2 border-t border-white/10">
+                          <div className="text-xs text-white/40 uppercase tracking-wide">Created</div>
+                          <div className="text-xs text-white/50">
+                            {new Date(agentDetails.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Threads Section */}
