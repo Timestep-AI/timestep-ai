@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
@@ -15,11 +16,13 @@ import {
   IonButton,
   IonButtons,
 } from '@ionic/react';
-import { settingsOutline } from 'ionicons/icons';
+import { menu, chatbubblesOutline, peopleOutline } from 'ionicons/icons';
 import { ModernSidebar } from '@/components/ModernSidebar';
 import type { ThemeSettings } from '@/components/SidebarMenu';
 
 const Chat = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
@@ -32,12 +35,12 @@ const Chat = () => {
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
     const saved = localStorage.getItem('chatkitTheme');
     return saved ? JSON.parse(saved) : {
-      colorScheme: 'dark' as const,
-      accentColor: '#00FFFF',
+      colorScheme: 'light' as const,
+      accentColor: '#3B82F6',
       accentLevel: 2,
-      radius: 'round' as const,
+      radius: 'soft' as const,
       density: 'normal' as const,
-      fontFamily: "'Rajdhani', sans-serif"
+      fontFamily: "'Inter', sans-serif"
     };
   });
 
@@ -173,6 +176,7 @@ const Chat = () => {
       subscription.unsubscribe();
     };
   }, [loadAgents]);
+
 
   // Load agent details when selected agent changes
   useEffect(() => {
@@ -347,6 +351,25 @@ const Chat = () => {
     }
   }, [isAuthenticated, selectedAgent, setThreadId]);
 
+  // Handle URL params for agent and thread (after ChatKit is initialized)
+  useEffect(() => {
+    const agentId = searchParams.get('agent');
+    const threadId = searchParams.get('thread');
+    
+    if (agentId && agents.length > 0) {
+      const agent = agents.find(a => a.id === agentId);
+      if (agent && agent.id !== selectedAgent?.id) {
+        setSelectedAgent(agent);
+        localStorage.setItem('selectedAgentId', agent.id);
+      }
+    }
+    
+    if (threadId && threadId !== currentThreadId && setThreadId) {
+      setCurrentThreadId(threadId);
+      setThreadId(threadId);
+    }
+  }, [searchParams, agents, selectedAgent, currentThreadId, setThreadId]);
+
   console.log('ChatKit: Control object:', control);
 
   if (!isAuthenticated || loadingAgents) {
@@ -391,13 +414,19 @@ const Chat = () => {
 
       <IonPage id="main-content">
         <IonHeader>
-          <IonToolbar className="bg-gradient-to-r from-slate-900 to-slate-800">
-            <IonTitle className="text-white font-bold">
-              {selectedAgent?.name || 'Timestep AI'}
-            </IonTitle>
+          <IonToolbar>
+            <IonButtons slot="start">
+              <IonButton onClick={() => setSidebarOpen(true)}>
+                <IonIcon slot="icon-only" icon={menu} />
+              </IonButton>
+            </IonButtons>
+            <IonTitle>{selectedAgent?.name || 'Timestep AI'}</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setSidebarOpen(true)} className="text-white">
-                <IonIcon slot="icon-only" icon={settingsOutline} />
+              <IonButton onClick={() => navigate('/chats')}>
+                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
+              </IonButton>
+              <IonButton onClick={() => navigate('/agents')}>
+                <IonIcon slot="icon-only" icon={peopleOutline} />
               </IonButton>
             </IonButtons>
           </IonToolbar>

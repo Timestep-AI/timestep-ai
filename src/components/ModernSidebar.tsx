@@ -51,20 +51,19 @@ export const ModernSidebar = ({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 right-0 h-full w-96 bg-gradient-to-br from-background via-surface to-background border-l-2 border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.3)] z-50 transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-96 bg-card border-l shadow-lg z-50 transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        style={{ boxShadow: '0 0 50px rgba(0, 255, 255, 0.3), inset 0 0 100px rgba(0, 255, 255, 0.05)' }}
       >
         {/* Header */}
-        <div className="p-6 border-b-2 border-primary/30 backdrop-blur-sm bg-primary/5">
+        <div className="p-6 border-b bg-muted/30">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-primary" style={{ textShadow: '0 0 20px rgba(0, 255, 255, 0.8)' }}>SETTINGS</h2>
+            <h2 className="text-xl font-semibold">Settings</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-primary/20 transition-all text-primary/70 hover:text-primary border border-primary/30 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)]"
+              className="p-2 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground border border-border"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -75,10 +74,10 @@ export const ModernSidebar = ({
           <div className="space-y-3">
             <button
               onClick={() => setExpandedAgents(!expandedAgents)}
-              className="w-full flex items-center justify-between"
+              className="w-full flex items-center justify-between hover:opacity-70 transition-opacity"
             >
-              <h3 className="text-sm font-semibold text-primary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(0, 255, 255, 0.5)' }}>AGENTS</h3>
-              {expandedAgents ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Agents</h3>
+              {expandedAgents ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
             </button>
 
             {expandedAgents && (
@@ -98,32 +97,32 @@ export const ModernSidebar = ({
               <div className="mt-3 space-y-2">
                 <button
                   onClick={() => setExpandedAgentDetails(!expandedAgentDetails)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-primary/5 border-2 border-primary/20 hover:bg-primary/10 transition-all"
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 border hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Info size={16} className="text-primary/70" />
-                    <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider">Agent Details</span>
+                    <Info size={14} className="text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">Agent Details</span>
                   </div>
-                  {expandedAgentDetails ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+                  {expandedAgentDetails ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
                 </button>
 
                 {expandedAgentDetails && agentDetails && (
-                  <div className="space-y-3 p-4 rounded-lg bg-primary/5 border-2 border-primary/20">
+                  <div className="space-y-3 p-4 rounded-lg bg-muted/30 border">
                     {loadingAgentDetails ? (
-                      <div className="text-center text-primary/50 text-sm py-4">Loading details...</div>
+                      <div className="text-center text-muted-foreground text-sm py-4">Loading details...</div>
                     ) : (
                       <>
                         {agentDetails.model && (
                           <div className="space-y-1">
-                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Model</div>
-                            <div className="text-sm text-white/90 font-mono bg-white/5 p-2 rounded border border-primary/20">{agentDetails.model}</div>
+                            <div className="text-xs text-muted-foreground font-medium">Model</div>
+                            <div className="text-sm text-foreground font-mono bg-muted/50 p-2 rounded border">{agentDetails.model}</div>
                           </div>
                         )}
 
                         {agentDetails.instructions && (
                           <div className="space-y-1">
-                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Instructions</div>
-                            <div className="text-sm text-white/70 bg-white/5 p-2 rounded border border-primary/20 max-h-32 overflow-y-auto">
+                            <div className="text-xs text-muted-foreground font-medium">Instructions</div>
+                            <div className="text-sm text-foreground bg-muted/50 p-2 rounded border max-h-32 overflow-y-auto">
                               {agentDetails.instructions}
                             </div>
                           </div>
@@ -131,10 +130,10 @@ export const ModernSidebar = ({
 
                         {agentDetails.tool_ids && agentDetails.tool_ids.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Tools ({agentDetails.tool_ids.length})</div>
+                            <div className="text-xs text-muted-foreground font-medium">Tools ({agentDetails.tool_ids.length})</div>
                             <div className="flex flex-wrap gap-1">
                               {agentDetails.tool_ids.map((toolId) => (
-                                <span key={toolId} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30">
+                                <span key={toolId} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full border border-primary/20">
                                   {toolId.split('.').pop()}
                                 </span>
                               ))}
@@ -144,10 +143,10 @@ export const ModernSidebar = ({
 
                         {agentDetails.handoff_ids && agentDetails.handoff_ids.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Handoffs ({agentDetails.handoff_ids.length})</div>
+                            <div className="text-xs text-muted-foreground font-medium">Handoffs ({agentDetails.handoff_ids.length})</div>
                             <div className="flex flex-wrap gap-1">
                               {agentDetails.handoff_ids.map((handoffId) => (
-                                <span key={handoffId} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+                                <span key={handoffId} className="text-xs px-2 py-1 bg-secondary/10 text-secondary rounded-full border border-secondary/20">
                                   {handoffId.slice(0, 8)}
                                 </span>
                               ))}
@@ -157,16 +156,16 @@ export const ModernSidebar = ({
 
                         {agentDetails.model_settings && Object.keys(agentDetails.model_settings).length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Model Settings</div>
-                            <pre className="text-xs text-white/70 bg-white/5 p-2 rounded border border-primary/20 overflow-x-auto">
+                            <div className="text-xs text-muted-foreground font-medium">Model Settings</div>
+                            <pre className="text-xs text-foreground bg-muted/50 p-2 rounded border overflow-x-auto">
                               {JSON.stringify(agentDetails.model_settings, null, 2)}
                             </pre>
                           </div>
                         )}
 
-                        <div className="space-y-1 pt-2 border-t-2 border-primary/20">
-                          <div className="text-xs text-primary/70 uppercase tracking-wide font-semibold">Created</div>
-                          <div className="text-xs text-white/60">
+                        <div className="space-y-1 pt-2 border-t">
+                          <div className="text-xs text-muted-foreground font-medium">Created</div>
+                          <div className="text-xs text-muted-foreground">
                             {new Date(agentDetails.created_at).toLocaleString()}
                           </div>
                         </div>
@@ -181,13 +180,13 @@ export const ModernSidebar = ({
           </div>
 
           {/* Threads Section */}
-          <div className="space-y-3 pt-6 border-t-2 border-primary/30">
+          <div className="space-y-3 pt-6 border-t">
             <button
               onClick={() => setExpandedThreads(!expandedThreads)}
-              className="w-full flex items-center justify-between"
+              className="w-full flex items-center justify-between hover:opacity-70 transition-opacity"
             >
-              <h3 className="text-sm font-semibold text-secondary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(200, 0, 255, 0.5)' }}>CHAT THREADS</h3>
-              {expandedThreads ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Chat Threads</h3>
+              {expandedThreads ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
             </button>
 
             {expandedThreads && (
@@ -206,20 +205,20 @@ export const ModernSidebar = ({
           </div>
 
           {/* Theme Settings */}
-          <div className="space-y-3 pt-6 border-t-2 border-primary/30">
+          <div className="space-y-3 pt-6 border-t">
             <button
               onClick={() => setExpandedTheme(!expandedTheme)}
-              className="w-full flex items-center justify-between"
+              className="w-full flex items-center justify-between hover:opacity-70 transition-opacity"
             >
-              <h3 className="text-sm font-semibold text-accent/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(150, 100, 255, 0.5)' }}>THEME</h3>
-              {expandedTheme ? <ChevronUp size={16} className="text-primary/50" /> : <ChevronDown size={16} className="text-primary/50" />}
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Theme</h3>
+              {expandedTheme ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
             </button>
 
             {expandedTheme && (
-              <div className="space-y-4 p-4 rounded-lg bg-accent/5 border-2 border-accent/20">
+              <div className="space-y-4 p-4 rounded-lg bg-muted/30 border">
                 {/* Color Scheme */}
                 <div className="space-y-2">
-                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Color Scheme</label>
+                  <label className="text-xs text-muted-foreground font-medium">Color Scheme</label>
                   <div className="flex gap-2">
                     {(['dark', 'light'] as const).map((scheme) => (
                       <button
@@ -227,8 +226,8 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ colorScheme: scheme })}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
                           themeSettings.colorScheme === scheme
-                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
-                            : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background border-border hover:bg-accent'
                         }`}
                       >
                         {scheme.charAt(0).toUpperCase() + scheme.slice(1)}
@@ -239,21 +238,21 @@ export const ModernSidebar = ({
 
                 {/* Accent Color */}
                 <div className="space-y-2">
-                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Accent Color</label>
+                  <label className="text-xs text-muted-foreground font-medium">Accent Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={themeSettings.accentColor}
                       onChange={(e) => onThemeChange({ accentColor: e.target.value })}
-                      className="w-full h-12 rounded-lg border-2 border-accent/30 cursor-pointer bg-transparent hover:border-accent/50 transition-all"
+                      className="w-full h-12 rounded-lg border-2 cursor-pointer bg-transparent"
                     />
-                    <span className="text-xs text-accent/90 font-mono font-semibold">{themeSettings.accentColor}</span>
+                    <span className="text-xs text-foreground font-mono font-medium">{themeSettings.accentColor}</span>
                   </div>
                 </div>
 
                 {/* Radius */}
                 <div className="space-y-2">
-                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Border Radius</label>
+                  <label className="text-xs text-muted-foreground font-medium">Border Radius</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['sharp', 'soft', 'round', 'pill'] as const).map((radius) => (
                       <button
@@ -261,8 +260,8 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ radius })}
                         className={`py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
                           themeSettings.radius === radius
-                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
-                            : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background border-border hover:bg-accent'
                         }`}
                       >
                         {radius.charAt(0).toUpperCase() + radius.slice(1)}
@@ -273,7 +272,7 @@ export const ModernSidebar = ({
 
                 {/* Density */}
                 <div className="space-y-2">
-                  <label className="text-xs text-accent/70 uppercase tracking-wide font-semibold">Density</label>
+                  <label className="text-xs text-muted-foreground font-medium">Density</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['compact', 'normal', 'spacious'] as const).map((density) => (
                       <button
@@ -281,8 +280,8 @@ export const ModernSidebar = ({
                         onClick={() => onThemeChange({ density })}
                         className={`py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
                           themeSettings.density === density
-                            ? 'bg-accent/20 text-accent border-accent/40 shadow-[0_0_10px_rgba(150,100,255,0.3)]'
-                            : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background border-border hover:bg-accent'
                         }`}
                       >
                         {density.charAt(0).toUpperCase() + density.slice(1)}

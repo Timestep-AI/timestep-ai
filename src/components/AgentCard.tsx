@@ -1,4 +1,4 @@
-import { Bot, Zap } from 'lucide-react';
+import { Bot, CheckCircle2 } from 'lucide-react';
 import type { AgentRecord } from '@/types/agent';
 
 interface AgentCardProps {
@@ -12,36 +12,31 @@ export const AgentCard = ({ agent, isActive, onClick }: AgentCardProps) => {
     <div
       onClick={onClick}
       className={`
-        relative p-4 rounded-lg cursor-pointer transition-all duration-300 border-2
+        relative p-4 rounded-lg cursor-pointer transition-all duration-200 border
         ${isActive 
-          ? 'bg-primary/10 border-primary shadow-[0_0_20px_rgba(0,255,255,0.5)]' 
-          : 'bg-background/50 border-primary/20 hover:bg-primary/5 hover:border-primary/40 hover:shadow-[0_0_15px_rgba(0,255,255,0.3)]'
+          ? 'bg-primary/10 border-primary shadow-sm' 
+          : 'bg-card border-border hover:bg-accent hover:border-primary/50'
         }
       `}
     >
       <div className="flex items-center gap-3">
         <div className={`
-          p-2 rounded-lg transition-all border-2
+          p-2 rounded-lg transition-all
           ${isActive 
-            ? 'bg-primary/20 text-primary border-primary shadow-[0_0_15px_rgba(0,255,255,0.6)]' 
-            : 'bg-background border-primary/30 text-primary/70'
+            ? 'bg-primary text-primary-foreground' 
+            : 'bg-muted text-muted-foreground'
           }
         `}>
-          <Bot size={20} />
+          <Bot size={18} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 
-            className="font-medium text-sm text-primary truncate" 
-            style={{ textShadow: isActive ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}
-          >
+          <h3 className={`font-medium text-sm truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
             {agent.name}
           </h3>
-          <p className="text-xs text-primary/50 truncate font-mono">{agent.model || 'AI Agent'}</p>
+          <p className="text-xs text-muted-foreground truncate">{agent.model || 'AI Agent'}</p>
         </div>
         {isActive && (
-          <div className="absolute top-2 right-2">
-            <Zap size={14} className="text-primary animate-pulse" style={{ filter: 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.8))' }} />
-          </div>
+          <CheckCircle2 size={16} className="text-primary flex-shrink-0" />
         )}
       </div>
     </div>

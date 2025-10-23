@@ -18,15 +18,15 @@ export const ThreadCard = ({ thread, isActive, isNewThread, onClick }: ThreadCar
     return (
       <div
         onClick={onClick}
-        className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 ${
+        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
           isActive
-            ? 'bg-secondary/10 border-secondary shadow-[0_0_20px_rgba(200,0,255,0.5)]'
-            : 'bg-background/50 border-secondary/20 hover:bg-secondary/5 hover:border-secondary/40 hover:shadow-[0_0_15px_rgba(200,0,255,0.3)]'
+            ? 'bg-primary/10 border-primary shadow-sm'
+            : 'bg-card border-border hover:bg-accent hover:border-primary/50'
         }`}
       >
-        <div className="flex items-center gap-3 text-secondary">
-          <Plus size={18} style={{ filter: 'drop-shadow(0 0 5px rgba(200, 0, 255, 0.5))' }} />
-          <span className="text-sm font-medium" style={{ textShadow: '0 0 10px rgba(200, 0, 255, 0.3)' }}>New Thread</span>
+        <div className={`flex items-center gap-3 ${isActive ? 'text-primary' : 'text-foreground'}`}>
+          <Plus size={18} />
+          <span className="text-sm font-medium">New Thread</span>
         </div>
       </div>
     );
@@ -47,26 +47,23 @@ export const ThreadCard = ({ thread, isActive, isNewThread, onClick }: ThreadCar
     <div
       onClick={onClick}
       className={`
-        p-4 rounded-lg cursor-pointer transition-all duration-300 border-2
+        p-4 rounded-lg cursor-pointer transition-all duration-200 border
         ${isActive 
-          ? 'bg-secondary/10 border-secondary shadow-[0_0_20px_rgba(200,0,255,0.5)]' 
-          : 'bg-background/50 border-secondary/20 hover:bg-secondary/5 hover:border-secondary/40 hover:shadow-[0_0_15px_rgba(200,0,255,0.3)]'
+          ? 'bg-primary/10 border-primary shadow-sm' 
+          : 'bg-card border-border hover:bg-accent hover:border-primary/50'
         }
       `}
     >
       <div className="flex items-start gap-3">
-        <div className={`mt-1 ${isActive ? 'text-secondary' : 'text-secondary/50'}`} style={{ filter: isActive ? 'drop-shadow(0 0 5px rgba(200, 0, 255, 0.5))' : 'none' }}>
+        <div className={`mt-0.5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
           <MessageSquare size={16} />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 
-            className="text-sm font-medium text-secondary truncate" 
-            style={{ textShadow: isActive ? '0 0 10px rgba(200, 0, 255, 0.5)' : 'none' }}
-          >
+          <h4 className={`text-sm font-medium truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
             {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
           </h4>
-          <p className="text-xs text-secondary/50 truncate mt-1 font-mono">{preview}</p>
-          <p className="text-xs text-secondary/30 mt-2 font-mono">{timeAgo}</p>
+          <p className="text-xs text-muted-foreground truncate mt-1">{preview}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1.5">{timeAgo}</p>
         </div>
       </div>
     </div>
