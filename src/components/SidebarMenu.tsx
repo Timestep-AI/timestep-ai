@@ -58,32 +58,6 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
           </IonToolbar>
         </IonHeader>
         <IonContent>
-          {/* Agent Selection */}
-          {agents && onAgentChange && (
-            <IonList>
-              <IonItem>
-                <IonIcon icon={personCircleOutline} slot="start" />
-                <IonLabel>
-                  <h2>Agent</h2>
-                </IonLabel>
-              </IonItem>
-              <IonItem>
-                <IonSelect
-                  value={selectedAgent?.id || ''}
-                  placeholder="Select Agent"
-                  onIonChange={(e) => onAgentChange(e.detail.value)}
-                  interface="popover"
-                >
-                  {agents.map((agent) => (
-                    <IonSelectOption key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
-            </IonList>
-          )}
-
           {/* Thread Selection */}
           {threads && onThreadChange && (
             <IonList>
@@ -111,13 +85,33 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
             </IonList>
           )}
 
-          {/* Agent Config Section */}
+          {/* Agent Config Section with Selection */}
           <IonList>
             <IonItem>
+              <IonIcon icon={personCircleOutline} slot="start" />
               <IonLabel>
                 <h2>Agent Config</h2>
               </IonLabel>
             </IonItem>
+            
+            {/* Agent Selection Dropdown */}
+            {agents && onAgentChange && (
+              <IonItem>
+                <IonLabel position="stacked">Select Agent</IonLabel>
+                <IonSelect
+                  value={selectedAgent?.id || ''}
+                  placeholder="Choose an agent"
+                  onIonChange={(e) => onAgentChange(e.detail.value)}
+                  interface="popover"
+                >
+                  {agents.map((agent) => (
+                    <IonSelectOption key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            )}
           </IonList>
 
           {loadingAgentDetails ? (
