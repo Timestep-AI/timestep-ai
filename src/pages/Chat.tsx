@@ -219,13 +219,6 @@ const Chat = () => {
     };
   };
 
-  // Handle theme changes
-  const handleThemeChange = (updates: Partial<ThemeSettings>) => {
-    const newSettings = { ...themeSettings, ...updates };
-    setThemeSettings(newSettings);
-    localStorage.setItem('chatkitTheme', JSON.stringify(newSettings));
-  };
-  };
 
   // Handle agent switching
   const handleAgentChange = async (e: CustomEvent) => {

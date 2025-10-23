@@ -22,9 +22,9 @@ import type { AgentRecord } from '@/types/agent';
 export interface ThemeSettings {
   colorScheme: 'dark' | 'light';
   accentColor: string;
-  accentLevel: number;
-  radius: 'none' | 'small' | 'medium' | 'large' | 'round';
-  density: 'compact' | 'normal' | 'comfortable';
+  accentLevel: 0 | 1 | 2 | 3;
+  radius: 'pill' | 'round' | 'sharp' | 'soft';
+  density: 'compact' | 'normal' | 'spacious';
   fontFamily: string;
 }
 
@@ -177,21 +177,24 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               <IonItem>
                 <IonLabel>Accent Color</IonLabel>
                 <IonInput
-                  type="color"
+                  type="text"
                   value={themeSettings.accentColor}
+                  placeholder="#D7263D"
                   onIonChange={(e) => onThemeChange({ accentColor: e.detail.value as string })}
                 />
               </IonItem>
 
               <IonItem>
-                <IonLabel>Accent Level: {themeSettings.accentLevel}</IonLabel>
-                <IonRange
-                  min={1}
-                  max={5}
-                  step={1}
+                <IonLabel>Accent Level</IonLabel>
+                <IonSelect
                   value={themeSettings.accentLevel}
-                  onIonChange={(e) => onThemeChange({ accentLevel: e.detail.value as number })}
-                />
+                  onIonChange={(e) => onThemeChange({ accentLevel: e.detail.value })}
+                >
+                  <IonSelectOption value={0}>0</IonSelectOption>
+                  <IonSelectOption value={1}>1</IonSelectOption>
+                  <IonSelectOption value={2}>2</IonSelectOption>
+                  <IonSelectOption value={3}>3</IonSelectOption>
+                </IonSelect>
               </IonItem>
 
               <IonItem>
@@ -200,11 +203,10 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                   value={themeSettings.radius}
                   onIonChange={(e) => onThemeChange({ radius: e.detail.value })}
                 >
-                  <IonSelectOption value="none">None</IonSelectOption>
-                  <IonSelectOption value="small">Small</IonSelectOption>
-                  <IonSelectOption value="medium">Medium</IonSelectOption>
-                  <IonSelectOption value="large">Large</IonSelectOption>
+                  <IonSelectOption value="sharp">Sharp</IonSelectOption>
+                  <IonSelectOption value="soft">Soft</IonSelectOption>
                   <IonSelectOption value="round">Round</IonSelectOption>
+                  <IonSelectOption value="pill">Pill</IonSelectOption>
                 </IonSelect>
               </IonItem>
 
@@ -216,7 +218,7 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                 >
                   <IonSelectOption value="compact">Compact</IonSelectOption>
                   <IonSelectOption value="normal">Normal</IonSelectOption>
-                  <IonSelectOption value="comfortable">Comfortable</IonSelectOption>
+                  <IonSelectOption value="spacious">Spacious</IonSelectOption>
                 </IonSelect>
               </IonItem>
 
