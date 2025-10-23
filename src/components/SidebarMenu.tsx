@@ -134,15 +134,6 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
             </IonList>
           ) : null}
 
-          {/* App Config Section */}
-          <IonList>
-            <IonItem>
-              <IonLabel>
-                <h2>App Config</h2>
-              </IonLabel>
-            </IonItem>
-          </IonList>
-
           {/* ChatKit Theme Settings */}
           {themeSettings && onThemeChange && (
             <IonList>
