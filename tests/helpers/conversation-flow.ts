@@ -1,4 +1,5 @@
-import { expect, type Page, type Locator } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 
 /**
  * 🏆 Gold Standard ChatKit Synchronization Helper (v2)

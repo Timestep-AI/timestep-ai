@@ -1,5 +1,6 @@
 import { Given, When, Then, Before, After, setDefaultTimeout } from '@cucumber/cucumber';
-import { chromium, type Browser, type Page, expect } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { runConversationFlow } from '../../helpers/conversation-flow.ts';
 import { personalAssistantFlow, weatherAssistantFlow } from '../../helpers/math-weather-flow.ts';
 
