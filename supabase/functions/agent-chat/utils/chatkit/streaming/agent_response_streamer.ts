@@ -124,7 +124,7 @@ export async function* streamAgentResponse(
 
       if (eventName === 'tool_called') {
         console.log('🔧 Handling tool_called event');
-        await toolCalledHandler.handle(event, threadId);
+        yield* toolCalledHandler.handle(event, threadId);
         continue;
       }
 

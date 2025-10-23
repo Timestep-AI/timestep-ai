@@ -9,8 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "cucumber-js",
-    "test:feature": "cucumber-js --name",
+    "test": "playwright test --reporter=list",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -28,11 +29,10 @@
     "@tanstack/react-query": "^5.83.0",
     "@timestep-ai/timestep": "^2025.9.172034",
     "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "history": "^5.3.0",
     "input-otp": "^1.4.2",
-    "lucide-react": "^0.546.0",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -47,9 +47,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^12.2.0",
     "@eslint/js": "^9.32.0",
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.48.0",
     "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
@@ -65,7 +64,6 @@
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "tailwindcss": "^3.4.17",
-    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19"

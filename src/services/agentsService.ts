@@ -1,4 +1,5 @@
-import { CreateAgentRequest, UpdateAgentRequest, AgentRecord } from '@/types/agent';
+import { CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
+import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 import { supabase } from '@/integrations/supabase/client';
 
 // Use environment-based URL for server functions

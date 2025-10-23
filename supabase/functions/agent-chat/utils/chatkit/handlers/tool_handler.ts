@@ -1,13 +1,13 @@
 import { ThreadsStore } from '../../../stores/threads_store.ts';
-import { Runner, RunState } from 'npm:@openai/agents-core';
-import { OpenAIProvider } from 'npm:@openai/agents-openai';
+import { Runner, RunState } from '@openai/agents-core';
+import { OpenAIProvider } from '@openai/agents-openai';
 import { RunnerFactory } from '../../../utils/runner_factory.ts';
 import type {
   ThreadMetadata,
   ThreadStreamEvent,
   ThreadUpdatedEvent,
 } from '../../../types/chatkit.ts';
-import { Agent } from 'npm:@openai/agents-core';
+import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
   constructor(
@@ -33,7 +33,7 @@ export class ToolHandler {
   }
 
   private extractToolCallId(action: any, params?: any): string {
-    const toolCallId = action?.toolCallId || action?.payload?.tool_call_id || action?.tool_call_id;
+    let toolCallId = action?.toolCallId || action?.payload?.tool_call_id || action?.tool_call_id;
 
     if (!toolCallId) {
       const itemId = action?.item_id || params?.item_id;

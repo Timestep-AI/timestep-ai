@@ -1,5 +1,5 @@
-import { Runner } from 'npm:@openai/agents-core';
-import { OpenAIProvider } from 'npm:@openai/agents-openai';
+import { Runner } from '@openai/agents-core';
+import { OpenAIProvider } from '@openai/agents-openai';
 import type { ThreadMetadata } from '../types/chatkit.ts';
 
 export interface RunnerConfig {

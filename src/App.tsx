@@ -3,9 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { IonApp, setupIonicReact } from '@ionic/react';
 import { Toaster } from 'sonner';
 import Chat from './pages/Chat';
-import Chats from './pages/Chats';
-import Agents from './pages/Agents';
-import Agent from './pages/Agent';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -37,9 +34,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Chat />} />
-          <Route path="/chats" element={<Chats />} />
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/agent/:id" element={<Agent />} />
         </Routes>
       </BrowserRouter>
     </IonApp>

@@ -1,51 +1,41 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
-import type { AgentRecord } from '@/types/agent';
+import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 import {
   IonPage,
   IonHeader,
   IonToolbar,
   IonTitle,
   IonContent,
+  IonSelect,
+  IonSelectOption,
   IonIcon,
   IonSpinner,
-  IonButton,
   IonButtons,
 } from '@ionic/react';
-import { menu, chatbubblesOutline, peopleOutline } from 'ionicons/icons';
-import { ModernSidebar } from '@/components/ModernSidebar';
-import type { ThemeSettings } from '@/components/SidebarMenu';
+import { personCircleOutline } from 'ionicons/icons';
+import SidebarMenu from '@/components/SidebarMenu';
 
 const Chat = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
-  const [threads, setThreads] = useState<any[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Theme settings state
-  const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
-    return {
-      colorScheme: 'light' as const,
-      accentColor: '#3B82F6',
-      accentLevel: 2,
-      radius: 'soft' as const,
-      density: 'normal' as const,
-      fontFamily: "'Inter', sans-serif"
-    };
-  });
+  // Settings state
+  const [darkMode, setDarkMode] = useState(true);
 
   // Agent details state
   const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
   const [loadingAgentDetails, setLoadingAgentDetails] = useState(false);
+
+  // Menu refs
+  const leftMenuRef = useRef<HTMLIonMenuElement>(null);
+  const rightMenuRef = useRef<HTMLIonMenuElement>(null);
 
   // Get server base URL
   const getServerBaseUrl = () => {
@@ -54,28 +44,15 @@ const Chat = () => {
   };
 
   // Load agents
-  const loadAgents = useCallback(async () => {
+  const loadAgents = async () => {
     try {
       setLoadingAgents(true);
       const agentsData = await agentsService.getAll();
       setAgents(agentsData);
 
-      // Set initial agent from URL or first agent
-      if (!selectedAgent) {
-        const agentParam = searchParams.get('agent');
-        const agent = agentParam 
-          ? agentsData.find((a) => a.id === agentParam)
-          : agentsData[0];
-        
-        if (agent) {
-          setSelectedAgent(agent);
-          // Update URL if no agent param exists
-          if (!agentParam && agentsData.length > 0) {
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('agent', agent.id);
-            window.history.replaceState({}, '', newUrl);
-          }
-        }
+      // Auto-select the first agent if available
+      if (agentsData.length > 0 && !selectedAgent) {
+        setSelectedAgent(agentsData[0]);
       }
     } catch (error) {
       console.error('Error loading agents:', error);
@@ -83,7 +60,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  }, [searchParams, selectedAgent]);
+  };
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {
@@ -99,37 +76,29 @@ const Chat = () => {
     }
   };
 
-  // Load all threads for the current user
-  const loadThreads = useCallback(async () => {
+  // Load the most recent thread for the current user
+  const loadMostRecentThread = async () => {
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(
-        `${getServerBaseUrl()}/agents/${selectedAgent?.id || '00000000-0000-0000-0000-000000000000'}/chatkit`,
-        {
-          method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({
-            type: 'threads.list',
-            params: { limit: 50, order: 'desc' }
-          }),
-        }
-      );
+      const response = await fetch(`${getServerBaseUrl()}/threads/list?limit=1&order=desc`, {
+        method: 'GET',
+        headers: authHeaders,
+      });
 
       if (response.ok) {
         const data = await response.json();
-        setThreads(data.data || []);
-        
-        // Auto-select the most recent thread if no thread is selected
-        if (data.data && data.data.length > 0 && !currentThreadId) {
+        if (data.data && data.data.length > 0) {
           const mostRecentThread = data.data[0];
           console.log('Loading most recent thread:', mostRecentThread.id);
           setCurrentThreadId(mostRecentThread.id);
+          return mostRecentThread.id;
         }
       }
     } catch (error) {
-      console.error('Error loading threads:', error);
+      console.error('Error loading most recent thread:', error);
     }
-  }, [selectedAgent, currentThreadId]);
+    return null;
+  };
 
   // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
@@ -145,6 +114,8 @@ const Chat = () => {
           // We have a valid session, use it
           setIsAuthenticated(true);
           await loadAgents();
+          // Load the most recent thread to continue the conversation
+          await loadMostRecentThread();
         } else {
           // No valid session, sign in anonymously
           const { data, error } = await supabase.auth.signInAnonymously();
@@ -154,6 +125,8 @@ const Chat = () => {
           } else {
             setIsAuthenticated(true);
             await loadAgents();
+            // Load the most recent thread to continue the conversation
+            await loadMostRecentThread();
           }
         }
       } catch (error) {
@@ -180,8 +153,7 @@ const Chat = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadAgents]);
-
+  }, []);
 
   // Load agent details when selected agent changes
   useEffect(() => {
@@ -189,19 +161,6 @@ const Chat = () => {
       loadAgentDetails(selectedAgent.id);
     }
   }, [selectedAgent?.id]);
-
-  // Load threads when agent is selected
-  useEffect(() => {
-    if (selectedAgent && isAuthenticated) {
-      loadThreads();
-    }
-  }, [selectedAgent, isAuthenticated, loadThreads]);
-
-  // Handle theme changes
-  const handleThemeChange = (updates: Partial<ThemeSettings>) => {
-    const newSettings = { ...themeSettings, ...updates };
-    setThemeSettings(newSettings);
-  };
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -219,102 +178,37 @@ const Chat = () => {
     };
   };
 
-
   // Handle agent switching
-  const handleAgentChange = (agentId: string) => {
+  const handleAgentChange = (e: CustomEvent) => {
+    const agentId = e.detail.value;
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
-      
-      // Update URL to reflect agent change
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('agent', agent.id);
-      window.history.pushState({}, '', newUrl);
+      // Show a toast notification when switching agents
+      toast.success(`Switched to ${agent.name}`);
     }
   };
 
-  // Create a new thread
-  const handleCreateThread = async () => {
-    if (!setThreadId) return;
-    
-    try {
-      await setThreadId(null);
-      setCurrentThreadId(null);
-      toast.success('New thread started');
-    } catch (error) {
-      console.error('Error creating thread:', error);
-      toast.error('Failed to create thread');
-    }
-  };
-
-  // Switch to a different thread  
-  const handleSelectThread = async (threadId: string) => {
-    if (!setThreadId) return;
-    
-    try {
-      const targetId: string | null = threadId && threadId.length > 0 ? threadId : null;
-      await setThreadId(targetId);
-      setCurrentThreadId(targetId);
-
-      // Update URL
-      const newUrl = new URL(window.location.href);
-      if (targetId) {
-        newUrl.searchParams.set('thread', targetId);
-      } else {
-        newUrl.searchParams.delete('thread');
-      }
-      window.history.pushState({}, '', newUrl);
-    } catch (error) {
-      console.error('Error switching thread:', error);
-      toast.error('Failed to switch thread');
-    }
-  };
-
-  // ChatKit configuration - use a generic agents endpoint and route dynamically
-  const chatKitUrl = `${getServerBaseUrl()}/agents`;
-  const selectedAgentRef = useRef(selectedAgent);
-  
-  // Keep ref updated without triggering re-renders
-  useEffect(() => {
-    selectedAgentRef.current = selectedAgent;
-  }, [selectedAgent]);
-
+  // ChatKit configuration
+  const chatKitUrl = selectedAgent
+    ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit`
+    : `${getServerBaseUrl()}/api/chatkit`;
   console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
 
-  const { control, setThreadId } = useChatKit({
+  const { control } = useChatKit({
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
-      
-      // Update URL to reflect current thread
-      const newUrl = new URL(window.location.href);
-      if (threadId) {
-        newUrl.searchParams.set('thread', threadId);
-      } else {
-        newUrl.searchParams.delete('thread');
-      }
-      window.history.replaceState({}, '', newUrl);
-      
-      loadThreads();
     },
     api: {
       url: chatKitUrl,
 
-      // Custom fetch with auth injection and dynamic agent routing
+      // Custom fetch with auth injection
       async fetch(url: string, options: RequestInit) {
         const auth = await getAuthHeaders();
-        const currentAgent = selectedAgentRef.current;
 
-        // Route requests to the currently selected agent
-        let targetUrl = url;
-        if (currentAgent && url.includes('/agents')) {
-          // Replace the generic /agents endpoint with the specific agent endpoint
-          targetUrl = url.replace('/agents', `/agents/${currentAgent.id}/chatkit`);
-          console.log('Routing request to agent:', currentAgent.name, 'URL:', targetUrl);
-        }
-
-        return fetch(targetUrl, {
+        return fetch(url, {
           ...options,
           headers: {
             ...options.headers,
@@ -323,20 +217,41 @@ const Chat = () => {
         });
       },
 
-      // Upload strategy for attachments - use generic endpoint
+      // Upload strategy for attachments
       uploadStrategy: {
         type: 'direct',
-        uploadUrl: `${getServerBaseUrl()}/agents/chatkit/upload`,
+        uploadUrl: selectedAgent
+          ? `${getServerBaseUrl()}/agents/${selectedAgent.id}/chatkit/upload`
+          : `${getServerBaseUrl()}/api/chatkit/upload`,
       },
 
       // Domain key for security
       domainKey: 'localhost-dev',
     },
     composer: {
-      placeholder: 'Message your AI agent...',
+      placeholder: `Message your ${selectedAgent?.name} AI agent...`,
+      // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
     },
-    header: { enabled: false },
-    history: { enabled: false },
+    header: {
+      leftAction: {
+        icon: 'sidebar-left',
+        onClick: async () => {
+          // Open the left settings menu
+          if (leftMenuRef.current) {
+            await leftMenuRef.current.open();
+          }
+        },
+      },
+      rightAction: {
+        icon: 'sidebar-right',
+        onClick: async () => {
+          // Open the right menu
+          if (rightMenuRef.current) {
+            await rightMenuRef.current.open();
+          }
+        },
+      },
+    },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
       // prompts: [
@@ -349,24 +264,13 @@ const Chat = () => {
       // ]
     },
     theme: {
-      colorScheme: themeSettings.colorScheme,
-      color: { accent: { primary: themeSettings.accentColor, level: themeSettings.accentLevel } },
-      radius: themeSettings.radius,
-      density: themeSettings.density,
-      typography: { fontFamily: themeSettings.fontFamily },
+      colorScheme: darkMode ? 'dark' : 'light',
+      color: { accent: { primary: '#D7263D', level: 2 } },
+      radius: 'round',
+      density: 'normal',
+      typography: { fontFamily: 'Open Sans, sans-serif' },
     },
   });
-
-  // Load thread from URL when ChatKit is ready
-  useEffect(() => {
-    const threadParam = searchParams.get('thread');
-    
-    if (isAuthenticated && selectedAgent && threadParam && setThreadId) {
-      console.log('Loading thread from URL:', threadParam);
-      setThreadId(threadParam);
-      setCurrentThreadId(threadParam);
-    }
-  }, [isAuthenticated, selectedAgent, setThreadId, searchParams]);
 
   console.log('ChatKit: Control object:', control);
 
@@ -395,17 +299,26 @@ const Chat = () => {
 
   return (
     <>
-      <ModernSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        agents={agents}
-        selectedAgent={selectedAgent}
-        onAgentChange={handleAgentChange}
-        threads={threads}
-        currentThreadId={currentThreadId}
-        onThreadChange={handleSelectThread}
-        themeSettings={themeSettings}
-        onThemeChange={handleThemeChange}
+      <SidebarMenu
+        ref={leftMenuRef}
+        id="left-menu"
+        side="start"
+        title="Settings"
+        color="primary"
+        darkMode={darkMode}
+        onDarkModeChange={setDarkMode}
+        agentDetails={agentDetails}
+        loadingAgentDetails={loadingAgentDetails}
+      />
+
+      <SidebarMenu
+        ref={rightMenuRef}
+        id="right-menu"
+        side="end"
+        title="Settings"
+        color="primary"
+        darkMode={darkMode}
+        onDarkModeChange={setDarkMode}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
       />
@@ -413,31 +326,29 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              <IonButton onClick={() => setSidebarOpen(true)}>
-                <IonIcon slot="icon-only" icon={menu} />
-              </IonButton>
-            </IonButtons>
-            <IonTitle>{selectedAgent?.name || 'Timestep AI'}</IonTitle>
+            <IonTitle>Timestep AI</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => navigate('/chats')}>
-                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
-              </IonButton>
-              <IonButton onClick={() => navigate('/agents')}>
-                <IonIcon slot="icon-only" icon={peopleOutline} />
-              </IonButton>
+              <IonIcon
+                icon={personCircleOutline}
+                style={{ fontSize: '24px', marginRight: '8px' }}
+              />
+              <IonSelect
+                value={selectedAgent?.id || ''}
+                placeholder="Select Agent"
+                onIonChange={handleAgentChange}
+                interface="popover"
+              >
+                {agents.map((agent) => (
+                  <IonSelectOption key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
             </IonButtons>
           </IonToolbar>
         </IonHeader>
-        
         <IonContent fullscreen>
-          {control ? (
-            <ChatKit control={control} className="h-full w-full" />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <IonSpinner name="crescent" />
-            </div>
-          )}
+          <ChatKit control={control} className="h-full w-full" />
         </IonContent>
       </IonPage>
     </>

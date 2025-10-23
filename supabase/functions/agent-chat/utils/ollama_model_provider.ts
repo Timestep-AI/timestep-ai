@@ -1,4 +1,4 @@
-import { Model, ModelProvider } from 'npm:@openai/agents-core';
+import { Model, ModelProvider } from '@openai/agents-core';
 import { OllamaModel } from './ollama_model.ts';
 
 /**
@@ -38,7 +38,7 @@ export class OllamaModelProvider implements ModelProvider {
   async #getClient(): Promise<any> {
     if (!this.#client) {
       // Dynamically import Ollama only when needed
-      const { Ollama } = await import('npm:ollama');
+      const { Ollama } = await import('ollama');
 
       // Use Ollama Cloud URL if model name ends with "-cloud", otherwise use localhost
       const defaultHost = this.#currentModelName?.endsWith('-cloud')

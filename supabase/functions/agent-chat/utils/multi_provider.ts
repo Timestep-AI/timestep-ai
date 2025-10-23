@@ -1,5 +1,5 @@
-import { Model, ModelProvider } from 'npm:@openai/agents-core';
-import { OpenAIProvider } from 'npm:@openai/agents-openai';
+import { Model, ModelProvider } from '@openai/agents-core';
+import { OpenAIProvider } from '@openai/agents-openai';
 
 export class MultiProviderMap {
   /** A map of model name prefixes to ModelProviders. */
