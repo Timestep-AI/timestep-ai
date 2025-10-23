@@ -19,6 +19,7 @@ import {
 } from '@ionic/react';
 import { personCircleOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
+import { DraggableResizableContainer } from '@/components/DraggableResizableContainer';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -343,8 +344,16 @@ const Chat = () => {
             <div slot="end" style={{ fontWeight: 600, marginRight: '16px' }}>Timestep AI</div>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <ChatKit control={control} className="h-full w-full" />
+        <IonContent fullscreen className="relative">
+          <DraggableResizableContainer
+            initialWidth={800}
+            initialHeight={600}
+            initialX={100}
+            initialY={50}
+            gridSize={20}
+          >
+            <ChatKit control={control} className="h-full w-full" />
+          </DraggableResizableContainer>
         </IonContent>
       </IonPage>
     </>
