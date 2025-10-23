@@ -33,11 +33,11 @@ const Chat = () => {
     const saved = localStorage.getItem('chatkitTheme');
     return saved ? JSON.parse(saved) : {
       colorScheme: 'dark' as const,
-      accentColor: '#D7263D',
+      accentColor: '#00FFFF',
       accentLevel: 2,
       radius: 'round' as const,
       density: 'normal' as const,
-      fontFamily: "'Open Sans', sans-serif"
+      fontFamily: "'Rajdhani', sans-serif"
     };
   });
 
