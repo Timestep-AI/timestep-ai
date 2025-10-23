@@ -361,73 +361,68 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonSelect
-              slot="start"
-              value={currentThreadId || ''}
-              placeholder="Thread"
-              interface="popover"
-              onIonChange={(e) => handleSelectThread(e.detail.value)}
-            >
-              <IonSelectOption value="">New Thread</IonSelectOption>
-              {threads.map((thread) => (
-                <IonSelectOption key={thread.id} value={thread.id}>
-                  {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-            
-            <IonSelect
-              slot="start"
-              value={selectedAgent?.id || ''}
-              placeholder="Agent"
-              onIonChange={handleAgentChange}
-              interface="popover"
-            >
-              {agents.map((agent) => (
-                <IonSelectOption key={agent.id} value={agent.id}>
-                  {agent.name}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-            
+            <IonButtons slot="start">
+              <IonButton id="thread-selector">
+                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
+              </IonButton>
+              <IonButton id="agent-selector">
+                <IonIcon slot="icon-only" icon={personCircleOutline} />
+              </IonButton>
+            </IonButtons>
             <IonTitle slot="end">Timestep AI</IonTitle>
           </IonToolbar>
         </IonHeader>
         
-        <IonPopover trigger="threads-trigger" dismissOnSelect={true}>
+        <IonPopover trigger="thread-selector" dismissOnSelect={true}>
           <IonContent>
             <IonList>
-              {threads.length === 0 ? (
-                <IonItem>
-                  <IonLabel>No threads yet</IonLabel>
+              <IonItem button onClick={() => handleSelectThread('')}>
+                <IonLabel>New Thread</IonLabel>
+              </IonItem>
+              {threads.map((thread) => (
+                <IonItem
+                  key={thread.id}
+                  button
+                  onClick={() => handleSelectThread(thread.id)}
+                  color={thread.id === currentThreadId ? 'primary' : undefined}
+                >
+                  <IonLabel>
+                    <h3>{thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}</h3>
+                    <p>
+                      {thread.created_at 
+                        ? new Date(
+                            typeof thread.created_at === 'number' 
+                              ? thread.created_at * 1000 
+                              : thread.created_at
+                          ).toLocaleString()
+                        : 'No date'}
+                    </p>
+                  </IonLabel>
                 </IonItem>
-              ) : (
-                threads.map((thread) => (
-                  <IonItem
-                    key={thread.id}
-                    button
-                    onClick={() => handleSelectThread(thread.id)}
-                    color={thread.id === currentThreadId ? 'primary' : undefined}
-                  >
-                    <IonLabel>
-                      <h3>{thread.metadata?.title || 'Untitled Thread'}</h3>
-                      <p>
-                        {thread.created_at 
-                          ? new Date(
-                              typeof thread.created_at === 'number' 
-                                ? thread.created_at * 1000 
-                                : thread.created_at
-                            ).toLocaleString()
-                          : 'No date'}
-                      </p>
-                    </IonLabel>
-                  </IonItem>
-                ))
-              )}
+              ))}
             </IonList>
           </IonContent>
         </IonPopover>
-
+        
+        <IonPopover trigger="agent-selector" dismissOnSelect={true}>
+          <IonContent>
+            <IonList>
+              {agents.map((agent) => (
+                <IonItem
+                  key={agent.id}
+                  button
+                  onClick={() => {
+                    const event = { detail: { value: agent.id } } as CustomEvent;
+                    handleAgentChange(event);
+                  }}
+                  color={agent.id === selectedAgent?.id ? 'primary' : undefined}
+                >
+                  <IonLabel>{agent.name}</IonLabel>
+                </IonItem>
+              ))}
+            </IonList>
+          </IonContent>
+        </IonPopover>
         <IonContent fullscreen>
           {control ? (
             <ChatKit control={control} className="h-full w-full" />
