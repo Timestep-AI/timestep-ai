@@ -267,7 +267,6 @@ const Chat = () => {
       }
 
       setShowThreads(false);
-      toast.success(targetId ? 'Thread loaded' : 'New thread started');
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
