@@ -209,7 +209,10 @@ const Chat = () => {
 
   // Create a new thread
   const handleCreateThread = async () => {
+    if (!setThreadId) return;
+    
     try {
+      await setThreadId(null);
       setCurrentThreadId(null);
       toast.success('New thread started');
     } catch (error) {
@@ -220,17 +223,13 @@ const Chat = () => {
 
   // Switch to a different thread  
   const handleSelectThread = async (threadId: string) => {
+    if (!setThreadId) return;
+    
     try {
-      // Update state - ChatKit will pick this up on next render
+      await setThreadId(threadId);
       setCurrentThreadId(threadId);
       setShowThreads(false);
-      
-      // Force a re-render of ChatKit by unmounting and remounting
-      setSelectedAgent(null);
-      setTimeout(() => {
-        const agent = agents.find(a => a.id === selectedAgent?.id);
-        setSelectedAgent(agent || agents[0]);
-      }, 0);
+      toast.success('Thread loaded');
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
@@ -241,7 +240,7 @@ const Chat = () => {
   const chatKitUrl = `${getServerBaseUrl()}/agents`;
   console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
 
-  const { control } = useChatKit({
+  const { control, setThreadId } = useChatKit({
     onThreadChange: ({ threadId }) => {
       console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
