@@ -232,15 +232,22 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
                 </IonSelect>
               </IonItem>
 
-              <IonItem>
-                <IonLabel>Accent Color</IonLabel>
-                <IonInput
-                  type="text"
-                  value={themeSettings.accentColor}
-                  placeholder="#D7263D"
-                  onIonChange={(e) => onThemeChange({ accentColor: e.detail.value as string })}
-                />
-              </IonItem>
+                  <IonItem>
+                    <IonLabel>Accent Color</IonLabel>
+                    <input
+                      type="color"
+                      value={themeSettings.accentColor}
+                      onChange={(e) => onThemeChange({ accentColor: e.target.value })}
+                      style={{ 
+                        width: '60px', 
+                        height: '40px', 
+                        border: 'none', 
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginLeft: 'auto'
+                      }}
+                    />
+                  </IonItem>
 
               <IonItem>
                 <IonLabel>Accent Level</IonLabel>
