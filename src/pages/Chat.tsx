@@ -389,14 +389,6 @@ const Chat = () => {
                 ))}
               </IonSelect>
             </IonButtons>
-            <IonButtons slot="end">
-              <IonButton id="threads-trigger">
-                <IonIcon slot="icon-only" icon={chatbubblesOutline} />
-              </IonButton>
-              <IonButton onClick={handleCreateThread}>
-                <IonIcon slot="icon-only" icon={addOutline} />
-              </IonButton>
-            </IonButtons>
             <IonTitle slot="end">Timestep AI</IonTitle>
           </IonToolbar>
         </IonHeader>
