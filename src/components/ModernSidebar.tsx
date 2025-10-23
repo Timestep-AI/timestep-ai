@@ -184,7 +184,7 @@ export const ModernSidebar = ({
           </div>
 
           {/* Theme Settings */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-6 border-t border-white/10">
             <button
               onClick={() => setExpandedTheme(!expandedTheme)}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
