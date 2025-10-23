@@ -186,13 +186,13 @@ jobs:
       - name: Create Supabase preview branch
         run: |
           echo "Creating Supabase preview branch for PR #${{ github.event.number }}"
-          supabase branches create pr-${{ github.event.number }} --project-ref $PROJECT_ID
+          supabase branches create pr-${{ github.event.number }}
 
       - name: Deploy to Supabase preview branch
         run: |
           echo "Deploying to Supabase preview branch..."
-          supabase db push --project-ref $PROJECT_ID --branch pr-${{ github.event.number }} --yes
-          supabase functions deploy --project-ref $PROJECT_ID --branch pr-${{ github.event.number }}
+          supabase db push --linked --yes
+          supabase functions deploy --linked --yes
 
       - name: Build application
         run: npm run build
@@ -374,7 +374,7 @@ jobs:
       - name: Run database migrations
         run: |
           echo "Applying migrations to production..."
-          supabase db push --project-ref $PROJECT_ID --yes
+          supabase db push --linked --yes
 
       - name: Verify migrations were applied
         run: |
@@ -382,7 +382,7 @@ jobs:
           supabase migration list
 
       - name: Deploy Supabase functions
-        run: supabase functions deploy --project-ref $PROJECT_ID
+        run: supabase functions deploy --linked --yes
 
       - name: Build application
         run: npm run build
@@ -414,5 +414,5 @@ jobs:
       - name: Delete Supabase preview branch
         run: |
           echo "Deleting Supabase preview branch for PR #${{ github.event.number }}"
-          supabase branches delete pr-${{ github.event.number }} --project-ref $PROJECT_ID --yes
+          supabase branches delete pr-${{ github.event.number }} --yes
         continue-on-error: true
