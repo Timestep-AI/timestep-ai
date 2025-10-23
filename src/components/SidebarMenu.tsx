@@ -58,33 +58,6 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
           </IonToolbar>
         </IonHeader>
         <IonContent>
-          {/* Thread Selection */}
-          {threads && onThreadChange && (
-            <IonList>
-              <IonItem>
-                <IonIcon icon={chatbubblesOutline} slot="start" />
-                <IonLabel>
-                  <h2>Thread</h2>
-                </IonLabel>
-              </IonItem>
-              <IonItem>
-                <IonSelect
-                  value={currentThreadId || ''}
-                  placeholder="Select Thread"
-                  onIonChange={(e) => onThreadChange(e.detail.value)}
-                  interface="popover"
-                >
-                  <IonSelectOption value="">New Thread</IonSelectOption>
-                  {threads.map((thread) => (
-                    <IonSelectOption key={thread.id} value={thread.id}>
-                      {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
-                    </IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
-            </IonList>
-          )}
-
           {/* Agent Config Section with Selection */}
           <IonList>
             <IonItem>
@@ -186,6 +159,34 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               </IonItem>
             </IonList>
           ) : null}
+
+          {/* Chat Thread Selection */}
+          {threads && onThreadChange && (
+            <IonList>
+              <IonItem>
+                <IonIcon icon={chatbubblesOutline} slot="start" />
+                <IonLabel>
+                  <h2>Chat Thread</h2>
+                </IonLabel>
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Select Thread</IonLabel>
+                <IonSelect
+                  value={currentThreadId || ''}
+                  placeholder="Choose a thread"
+                  onIonChange={(e) => onThreadChange(e.detail.value)}
+                  interface="popover"
+                >
+                  <IonSelectOption value="">New Thread</IonSelectOption>
+                  {threads.map((thread) => (
+                    <IonSelectOption key={thread.id} value={thread.id}>
+                      {thread.metadata?.title || `Thread ${thread.id.slice(0, 8)}`}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            </IonList>
+          )}
 
           {/* ChatKit Theme Settings */}
           {themeSettings && onThemeChange && (
