@@ -192,7 +192,7 @@ jobs:
         run: |
           echo "Deploying to Supabase preview branch..."
           supabase db push --linked --yes
-          supabase functions deploy --linked --yes
+          supabase functions deploy --project-ref $PROJECT_ID --yes
 
       - name: Build application
         run: npm run build
@@ -382,7 +382,7 @@ jobs:
           supabase migration list
 
       - name: Deploy Supabase functions
-        run: supabase functions deploy --linked --yes
+        run: supabase functions deploy --project-ref $PROJECT_ID --yes
 
       - name: Build application
         run: npm run build
