@@ -234,8 +234,6 @@ const Chat = () => {
       if (preservedThreadId) {
         localStorage.setItem('currentThreadId', preservedThreadId);
       }
-      
-      toast.success(`Switched to ${agent.name}`);
     }
   };
 
