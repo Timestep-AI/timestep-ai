@@ -33,8 +33,7 @@ const Chat = () => {
   const [threads, setThreads] = useState<any[]>([]);
   const [showThreads, setShowThreads] = useState(false);
 
-  // Settings state
-  const [darkMode, setDarkMode] = useState(true);
+  // Theme settings state
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
     const saved = localStorage.getItem('chatkitTheme');
     return saved ? JSON.parse(saved) : {
@@ -393,8 +392,6 @@ const Chat = () => {
         side="start"
         title="Settings"
         color="primary"
-        darkMode={darkMode}
-        onDarkModeChange={setDarkMode}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
         themeSettings={themeSettings}
@@ -407,10 +404,10 @@ const Chat = () => {
         side="end"
         title="Settings"
         color="primary"
-        darkMode={darkMode}
-        onDarkModeChange={setDarkMode}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
+        themeSettings={themeSettings}
+        onThemeChange={handleThemeChange}
       />
 
       <IonPage id="main-content">

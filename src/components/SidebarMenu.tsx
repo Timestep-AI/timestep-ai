@@ -33,8 +33,6 @@ interface SidebarMenuProps {
   side: 'start' | 'end';
   title: string;
   color: 'primary' | 'secondary';
-  darkMode?: boolean;
-  onDarkModeChange?: (checked: boolean) => void;
   agentDetails?: AgentRecord | null;
   loadingAgentDetails?: boolean;
   themeSettings?: ThemeSettings;
@@ -43,7 +41,7 @@ interface SidebarMenuProps {
 
 const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
   (
-    { id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails, themeSettings, onThemeChange },
+    { id, side, title, color, agentDetails, loadingAgentDetails, themeSettings, onThemeChange },
     ref
   ) => {
     return (
@@ -142,15 +140,6 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               <IonLabel>
                 <h2>App Config</h2>
               </IonLabel>
-            </IonItem>
-            <IonItem>
-              <IonIcon icon={colorPaletteOutline} slot="start" />
-              <IonLabel>Dark Mode</IonLabel>
-              <IonToggle
-                slot="end"
-                checked={darkMode}
-                onIonChange={(e) => onDarkModeChange?.(e.detail.checked)}
-              />
             </IonItem>
           </IonList>
 
