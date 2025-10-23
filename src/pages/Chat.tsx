@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
@@ -228,27 +229,6 @@ const Chat = () => {
     },
     composer: {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
-      // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
-    },
-    header: {
-      leftAction: {
-        icon: 'sidebar-left',
-        onClick: async () => {
-          // Open the left settings menu
-          if (leftMenuRef.current) {
-            await leftMenuRef.current.open();
-          }
-        },
-      },
-      rightAction: {
-        icon: 'sidebar-right',
-        onClick: async () => {
-          // Open the right menu
-          if (rightMenuRef.current) {
-            await rightMenuRef.current.open();
-          }
-        },
-      },
     },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
@@ -324,6 +304,25 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
+            <div slot="start" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px' }}>
+              <button
+                onClick={async () => {
+                  if (leftMenuRef.current) {
+                    await leftMenuRef.current.open();
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Settings size={24} />
+              </button>
+            </div>
             <IonTitle>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <IonIcon icon={personCircleOutline} style={{ fontSize: '24px' }} />
