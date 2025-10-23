@@ -280,9 +280,9 @@ const Chat = () => {
     },
     composer: {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
-      // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
     },
     header: { enabled: false },
+    history: { enabled: false },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
       // prompts: [
