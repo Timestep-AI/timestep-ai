@@ -326,11 +326,11 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Timestep AI</IonTitle>
-            <IonButtons slot="end">
+            <IonTitle slot="start">Timestep AI</IonTitle>
+            <div slot="primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <IonIcon
                 icon={personCircleOutline}
-                style={{ fontSize: '24px', marginRight: '8px' }}
+                style={{ fontSize: '24px' }}
               />
               <IonSelect
                 value={selectedAgent?.id || ''}
@@ -344,7 +344,7 @@ const Chat = () => {
                   </IonSelectOption>
                 ))}
               </IonSelect>
-            </IonButtons>
+            </div>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
