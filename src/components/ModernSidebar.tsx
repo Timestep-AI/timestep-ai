@@ -49,17 +49,18 @@ export const ModernSidebar = ({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 right-0 h-full w-96 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-l border-white/10 shadow-2xl z-50 transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-96 bg-gradient-to-br from-background via-surface to-background border-l-2 border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.3)] z-50 transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        style={{ boxShadow: '0 0 50px rgba(0, 255, 255, 0.3), inset 0 0 100px rgba(0, 255, 255, 0.05)' }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-white/10 backdrop-blur-sm bg-white/5">
+        <div className="p-6 border-b-2 border-primary/30 backdrop-blur-sm bg-primary/5">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Settings</h2>
+            <h2 className="text-xl font-bold text-primary" style={{ textShadow: '0 0 20px rgba(0, 255, 255, 0.8)' }}>SETTINGS</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+              className="p-2 rounded-lg hover:bg-primary/20 transition-all text-primary/70 hover:text-primary border border-primary/30 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)]"
             >
               <X size={20} />
             </button>
@@ -70,7 +71,7 @@ export const ModernSidebar = ({
         <div className="h-[calc(100%-88px)] overflow-y-auto p-6 space-y-6">
           {/* Agents Section */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Agents</h3>
+            <h3 className="text-sm font-semibold text-primary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(0, 255, 255, 0.5)' }}>AGENTS</h3>
             <div className="grid gap-3">
               {agents.map((agent) => (
                 <AgentCard
@@ -169,7 +170,7 @@ export const ModernSidebar = ({
 
           {/* Threads Section */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Chat Threads</h3>
+            <h3 className="text-sm font-semibold text-secondary/90 uppercase tracking-wider" style={{ textShadow: '0 0 10px rgba(200, 0, 255, 0.5)' }}>CHAT THREADS</h3>
             <div className="space-y-2">
               <ThreadCard isNewThread onClick={() => onThreadChange('')} isActive={!currentThreadId} />
               {threads.slice(0, 5).map((thread) => (

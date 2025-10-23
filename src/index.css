@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
 @import '@ionic/react/css/core.css';
 @import '@ionic/react/css/normalize.css';
@@ -19,54 +19,54 @@
 
 @layer base {
   :root {
-    --background: 220 13% 9%;
-    --foreground: 210 40% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 180 100% 90%;
 
-    --card: 220 13% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 180 100% 90%;
 
-    --popover: 220 13% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 180 100% 90%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 220 13% 9%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 240 10% 3.9%;
 
-    --secondary: 220 13% 15%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 280 100% 60%;
+    --secondary-foreground: 180 100% 90%;
 
-    --muted: 220 13% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 180 50% 70%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 220 13% 9%;
+    --accent: 320 100% 50%;
+    --accent-foreground: 180 100% 90%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 13% 20%;
-    --input: 220 13% 15%;
-    --ring: 217 91% 60%;
+    --border: 180 50% 20%;
+    --input: 180 50% 20%;
+    --ring: 180 100% 50%;
 
     --radius: 0.75rem;
 
     /* Custom tokens for the platform */
-    --surface: 220 13% 12%;
-    --surface-elevated: 220 13% 16%;
-    --text-primary: 210 40% 98%;
-    --text-secondary: 215 20% 65%;
-    --text-tertiary: 215 15% 50%;
-    --accent-glow: 217 91% 60%;
+    --surface: 240 10% 8%;
+    --surface-elevated: 240 10% 12%;
+    --text-primary: 180 100% 90%;
+    --text-secondary: 180 50% 70%;
+    --text-tertiary: 180 30% 50%;
+    --accent-glow: 180 100% 50%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 45%) 100%);
-    --gradient-surface: linear-gradient(135deg, hsl(220 13% 12%) 0%, hsl(220 13% 9%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(180 100% 50%) 0%, hsl(280 100% 60%) 100%);
+    --gradient-surface: linear-gradient(135deg, hsl(240 10% 8%) 0%, hsl(240 10% 3.9%) 100%);
 
     /* Shadows */
-    --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.3);
-    --shadow-elevated: 0 8px 32px hsl(220 13% 3% / 0.4);
+    --shadow-glow: 0 0 30px hsl(180 100% 50% / 0.5);
+    --shadow-elevated: 0 8px 32px hsl(180 100% 50% / 0.2);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -90,33 +90,33 @@
   }
 
   .dark {
-    --background: 220 13% 9%;
-    --foreground: 210 40% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 180 100% 90%;
 
-    --card: 220 13% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 180 100% 90%;
 
-    --popover: 220 13% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 180 100% 90%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 220 13% 9%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 240 10% 3.9%;
 
-    --secondary: 220 13% 15%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 280 100% 60%;
+    --secondary-foreground: 180 100% 90%;
 
-    --muted: 220 13% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 180 50% 70%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 220 13% 9%;
+    --accent: 320 100% 50%;
+    --accent-foreground: 180 100% 90%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 13% 20%;
-    --input: 220 13% 15%;
-    --ring: 217 91% 60%;
+    --border: 180 50% 20%;
+    --input: 180 50% 20%;
+    --ring: 180 100% 50%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -135,7 +135,16 @@
 
   body {
     @apply bg-background text-foreground dark;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Rajdhani', sans-serif;
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
   }
 
   /* Apply dark theme by default */
