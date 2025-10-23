@@ -197,13 +197,19 @@ const Chat = () => {
   };
 
   // Handle agent switching
-  const handleAgentChange = (e: CustomEvent) => {
+  const handleAgentChange = async (e: CustomEvent) => {
     const agentId = e.detail.value;
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
+      const preservedThreadId = currentThreadId;
       setSelectedAgent(agent);
-      // Keep the current thread when switching agents
+      
+      // Preserve the current thread when switching agents
+      if (setThreadId && preservedThreadId) {
+        await setThreadId(preservedThreadId);
+      }
+      
       toast.success(`Switched to ${agent.name}`);
     }
   };
