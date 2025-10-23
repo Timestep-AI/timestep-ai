@@ -1,4 +1,4 @@
-import { tool } from '@openai/agents-core';
+import { tool } from 'npm:@openai/agents-core';
 import { Client } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/index.js';
 import { StreamableHTTPClientTransport } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/streamableHttp.js';
 import { McpServerRecord } from '../stores/mcp_servers_store.ts';
