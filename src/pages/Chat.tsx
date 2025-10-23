@@ -351,8 +351,6 @@ const Chat = () => {
           <DraggableResizableContainer
             initialWidth={800}
             initialHeight={600}
-            initialX={100}
-            initialY={50}
             gridSize={20}
           >
             <ChatKit control={control} className="h-full w-full" />
