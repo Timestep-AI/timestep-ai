@@ -203,6 +203,7 @@ const Chat = () => {
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
+      // Keep the current thread when switching agents
       toast.success(`Switched to ${agent.name}`);
     }
   };
