@@ -1,4 +1,4 @@
-import { Model, ModelProvider } from '@openai/agents-core';
+import { Model, ModelProvider } from 'npm:@openai/agents-core';
 import { OllamaModel } from './ollama_model.ts';
 
 /**

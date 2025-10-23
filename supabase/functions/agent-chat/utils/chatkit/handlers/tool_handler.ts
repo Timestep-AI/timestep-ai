@@ -1,13 +1,13 @@
 import { ThreadsStore } from '../../../stores/threads_store.ts';
-import { Runner, RunState } from '@openai/agents-core';
-import { OpenAIProvider } from '@openai/agents-openai';
+import { Runner, RunState } from 'npm:@openai/agents-core';
+import { OpenAIProvider } from 'npm:@openai/agents-openai';
 import { RunnerFactory } from '../../../utils/runner_factory.ts';
 import type {
   ThreadMetadata,
   ThreadStreamEvent,
   ThreadUpdatedEvent,
 } from '../../../types/chatkit.ts';
-import { Agent } from '@openai/agents-core';
+import { Agent } from 'npm:@openai/agents-core';
 
 export class ToolHandler {
   constructor(

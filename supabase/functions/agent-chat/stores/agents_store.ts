@@ -1,7 +1,13 @@
 // Type-only shims for build tooling; no runtime impact
 declare const Deno: any;
 type SupabaseClient = any;
-import type { ModelSettings } from '@openai/agents-core';
+
+// Define ModelSettings inline to avoid import issues
+export type ModelSettings = {
+  temperature?: number;
+  toolChoice?: string | any;
+  [key: string]: any;
+};
 
 export interface AgentRecord {
   id: string;
