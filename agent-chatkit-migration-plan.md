@@ -191,8 +191,8 @@ export abstract class BaseEventProcessor implements EventProcessor {
 #### 2.1 Create Agent Orchestrator
 ```typescript
 // core/agent_orchestrator.ts
-import { AgentsService } from '../services/agents_service.ts';
-import { ThreadsService } from '../services/threads_service.ts';
+import { AgentService } from '../services/agent_service.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { EventPipeline } from './event_pipeline.ts';
 import { AgentRunner } from './agent_runner.ts';
 
@@ -315,6 +315,37 @@ export class EventRouter {
 }
 ```
 
+#### 2.5 Create Streaming State Manager
+```typescript
+// core/streaming_state_manager.ts
+import { StreamingState } from '../types/index.ts';
+
+export class StreamingStateManager {
+  createState(): StreamingState {
+    return {
+      threadId: '',
+      itemId: this.generateId('item'),
+      createdAt: Math.floor(Date.now() / 1000),
+      fullText: '',
+      itemAdded: false,
+      contentPartAdded: false,
+      paused: false
+    };
+  }
+
+  async *finalizeState(state: StreamingState): AsyncIterable<ChatKitEvent> {
+    // Handle any final cleanup or completion events
+    if (state.paused) {
+      // Handle paused state if needed
+    }
+  }
+
+  private generateId(prefix: string = 'item'): string {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+}
+```
+
 ### Phase 3: Extract Processors
 
 #### 3.1 Create Text Stream Processor
@@ -417,18 +448,11 @@ export class ToolCallProcessor extends BaseEventProcessor {
 #### 3.3 Create Tool Output Processor
 ```typescript
 // processors/tool_output_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
-import { WidgetFactory } from '../utils/widget_factory.ts';
-import { MessageStore } from '../stores/message_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class ToolOutputProcessor implements EventProcessor {
+export class ToolOutputProcessor extends BaseEventProcessor {
   readonly name = 'tool_output';
-  
-  constructor(
-    private itemFactory: ItemFactory,
-    private messageStore: MessageStore
-  ) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'run_item_stream_event' && 
@@ -436,24 +460,23 @@ export class ToolOutputProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current ToolCallOutputHandler
     const tool = event.item?.rawItem;
     const toolCallId = tool?.callId || tool?.call_id || tool?.id;
     const toolName = tool?.name;
     const output = tool?.output;
 
     // Save tool call output
-    const toolCallOutputItem = this.itemFactory.createToolCallOutputItem(
+    const toolCallOutputItem = this.deps.factory.createToolCallOutputItem(
       state.threadId,
       toolName,
       toolCallId,
       output
     );
-    await this.messageStore.add(state.threadId, toolCallOutputItem);
+    await this.saveMessage(state.threadId, toolCallOutputItem);
 
     // Create and emit tool result widget
-    const toolResultWidget = WidgetFactory.createToolResultWidget(toolName, output);
-    const toolResultItem = this.itemFactory.createWidgetItem(
+    const toolResultWidget = this.deps.factory.createToolResultWidget(toolName, output);
+    const toolResultItem = this.deps.factory.createWidgetItem(
       state.threadId,
       'tool_result',
       toolResultWidget
@@ -470,18 +493,11 @@ export class ToolOutputProcessor implements EventProcessor {
 #### 3.4 Create Tool Approval Processor
 ```typescript
 // processors/tool_approval_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
-import { WidgetFactory } from '../utils/widget_factory.ts';
-import { ThreadStore } from '../stores/thread_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class ToolApprovalProcessor implements EventProcessor {
+export class ToolApprovalProcessor extends BaseEventProcessor {
   readonly name = 'tool_approval';
-  
-  constructor(
-    private itemFactory: ItemFactory,
-    private threadStore: ThreadStore
-  ) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'run_item_stream_event' && 
@@ -489,7 +505,6 @@ export class ToolApprovalProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current ToolApprovalHandler
     const tool = event.item?.rawItem;
     const toolCallId = tool?.callId || tool?.call_id || tool?.id;
     const toolName = tool?.name;
@@ -497,19 +512,19 @@ export class ToolApprovalProcessor implements EventProcessor {
 
     // Save run state for resumption after approval
     if (event.state) {
-      await this.threadStore.saveRunState(state.threadId, JSON.stringify(event.state));
+      await this.deps.threadStore.saveRunState(state.threadId, JSON.stringify(event.state));
     }
 
     // Create approval widget
-    const approvalItemId = this.itemFactory.generateId();
-    const widget = WidgetFactory.createToolApprovalWidget(
+    const approvalItemId = this.generateId();
+    const widget = this.deps.factory.createToolApprovalWidget(
       toolName,
       argumentsText,
       toolCallId,
       approvalItemId
     );
 
-    const widgetItem = this.itemFactory.createWidgetItem(
+    const widgetItem = this.deps.factory.createWidgetItem(
       state.threadId,
       'widget',
       widget
@@ -536,18 +551,11 @@ export class ToolApprovalProcessor implements EventProcessor {
 #### 3.5 Create Handoff Processors
 ```typescript
 // processors/handoff_call_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
-import { WidgetFactory } from '../utils/widget_factory.ts';
-import { MessageStore } from '../stores/message_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class HandoffCallProcessor implements EventProcessor {
+export class HandoffCallProcessor extends BaseEventProcessor {
   readonly name = 'handoff_call';
-  
-  constructor(
-    private itemFactory: ItemFactory,
-    private messageStore: MessageStore
-  ) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'run_item_stream_event' && 
@@ -555,24 +563,23 @@ export class HandoffCallProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current HandoffCallHandler
     const handoff = event.item?.rawItem;
     const handoffCallId = handoff?.callId || handoff?.call_id || handoff?.id;
     const handoffName = handoff?.name;
     const argumentsText = handoff?.arguments;
 
     // Create handoff tool call item
-    const handoffToolCallItem = this.itemFactory.createHandoffToolCallItem(
+    const handoffToolCallItem = this.deps.factory.createHandoffToolCallItem(
       state.threadId,
       handoffName,
       handoffCallId,
       argumentsText
     );
-    await this.messageStore.add(state.threadId, handoffToolCallItem);
+    await this.saveMessage(state.threadId, handoffToolCallItem);
 
     // Create handoff widget
-    const handoffWidget = WidgetFactory.createHandoffWidget(handoffName);
-    const handoffItem = this.itemFactory.createWidgetItem(
+    const handoffWidget = this.deps.factory.createHandoffWidget(handoffName);
+    const handoffItem = this.deps.factory.createWidgetItem(
       state.threadId,
       'handoff',
       handoffWidget
@@ -586,18 +593,11 @@ export class HandoffCallProcessor implements EventProcessor {
 }
 
 // processors/handoff_output_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { ItemFactory } from '../utils/item_factory.ts';
-import { WidgetFactory } from '../utils/widget_factory.ts';
-import { MessageStore } from '../stores/message_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class HandoffOutputProcessor implements EventProcessor {
+export class HandoffOutputProcessor extends BaseEventProcessor {
   readonly name = 'handoff_output';
-  
-  constructor(
-    private itemFactory: ItemFactory,
-    private messageStore: MessageStore
-  ) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'run_item_stream_event' && 
@@ -605,22 +605,21 @@ export class HandoffOutputProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current HandoffOutputHandler
     const handoff = event.item?.rawItem;
     const handoffCallId = handoff?.callId || handoff?.call_id || handoff?.id;
     const output = handoff?.output;
 
     // Create handoff result item
-    const handoffResultItem = this.itemFactory.createHandoffResultToolItem(
+    const handoffResultItem = this.deps.factory.createHandoffResultToolItem(
       state.threadId,
       handoffCallId,
       output
     );
-    await this.messageStore.add(state.threadId, handoffResultItem);
+    await this.saveMessage(state.threadId, handoffResultItem);
 
     // Create handoff result widget
-    const handoffResultWidget = WidgetFactory.createHandoffResultWidget(output);
-    const handoffResultItem = this.itemFactory.createWidgetItem(
+    const handoffResultWidget = this.deps.factory.createHandoffResultWidget(output);
+    const handoffResultItem = this.deps.factory.createWidgetItem(
       state.threadId,
       'handoff_result',
       handoffResultWidget
@@ -637,13 +636,11 @@ export class HandoffOutputProcessor implements EventProcessor {
 #### 3.6 Create Completion Processor
 ```typescript
 // processors/completion_processor.ts
-import { EventProcessor } from './base_event_processor.ts';
-import { MessageStore } from '../stores/message_store.ts';
+import { BaseEventProcessor } from './base_event_processor.ts';
+import { AgentEvent, StreamingState, ChatKitEvent } from '../types/index.ts';
 
-export class CompletionProcessor implements EventProcessor {
+export class CompletionProcessor extends BaseEventProcessor {
   readonly name = 'completion';
-  
-  constructor(private messageStore: MessageStore) {}
 
   canProcess(event: AgentEvent, state: StreamingState): boolean {
     return event.type === 'stream_complete' || 
@@ -651,7 +648,6 @@ export class CompletionProcessor implements EventProcessor {
   }
 
   async *process(event: AgentEvent, state: StreamingState): AsyncIterable<ChatKitEvent> {
-    // Move logic from current completion handling
     if (state.fullText) {
       const finalItem = {
         type: 'assistant_message',
@@ -681,7 +677,7 @@ export class CompletionProcessor implements EventProcessor {
       };
 
       // Save final message
-      await this.messageStore.add(state.threadId, finalItem);
+      await this.saveMessage(state.threadId, finalItem);
     }
   }
 }
@@ -1516,9 +1512,18 @@ import { ThreadService } from '../services/thread_service.ts';
 import { EventPipeline } from '../core/event_pipeline.ts';
 import { EventRouter } from '../core/event_router.ts';
 import { AgentRunner } from '../core/agent_runner.ts';
+import { StreamingStateManager } from '../core/streaming_state_manager.ts';
 import { ThreadStore } from '../stores/thread_store.ts';
 import { MessageStore } from '../stores/message_store.ts';
 import { VectorStore } from '../stores/vector_store.ts';
+import { Factory } from '../utils/factory.ts';
+import { TextStreamProcessor } from '../processors/text_stream_processor.ts';
+import { ToolCallProcessor } from '../processors/tool_call_processor.ts';
+import { ToolOutputProcessor } from '../processors/tool_output_processor.ts';
+import { ToolApprovalProcessor } from '../processors/tool_approval_processor.ts';
+import { HandoffCallProcessor } from '../processors/handoff_call_processor.ts';
+import { HandoffOutputProcessor } from '../processors/handoff_output_processor.ts';
+import { CompletionProcessor } from '../processors/completion_processor.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -1585,8 +1590,22 @@ export async function handlePostChatKitRequest(
 
         // Create event pipeline and router
         const factory = new Factory();
-        const eventRouter = new EventRouter(/* processor map */);
-        const eventPipeline = new EventPipeline(eventRouter, /* state manager */);
+        const stateManager = new StreamingStateManager();
+        
+        // Create processors
+        const processorDeps = { factory, messageStore, threadStore };
+        const processors = new Map([
+          ['text_stream', [new TextStreamProcessor(processorDeps)]],
+          ['tool_call', [new ToolCallProcessor(processorDeps)]],
+          ['tool_output', [new ToolOutputProcessor(processorDeps)]],
+          ['tool_approval', [new ToolApprovalProcessor(processorDeps)]],
+          ['handoff_call', [new HandoffCallProcessor(processorDeps)]],
+          ['handoff_output', [new HandoffOutputProcessor(processorDeps)]],
+          ['completion', [new CompletionProcessor(processorDeps)]]
+        ]);
+        
+        const eventRouter = new EventRouter(processors);
+        const eventPipeline = new EventPipeline(eventRouter, stateManager);
         const agentRunner = new AgentRunner(eventPipeline);
 
         // Create orchestrator
@@ -1721,6 +1740,33 @@ Update all import statements to reference the new file locations.
 
 - **Before**: Inconsistent naming (`agents_api.ts`, `agents_service.ts`, `agents_store.ts`, `mcp_servers_service.ts`, `mcp_servers_store.ts`, `threads_service.ts`)
 - **After**: Consistent singular naming (`agent_api.ts`, `agent_service.ts`, `agent_store.ts`, `mcp_server_service.ts`, `mcp_server_store.ts`, `thread_service.ts`)
+
+## Implementation Checklist
+
+### Required Dependencies
+- [ ] All imports updated to use new file structure
+- [ ] `StreamingStateManager` class implemented
+- [ ] All processor classes extend `BaseEventProcessor`
+- [ ] `Factory` class consolidates all factory methods
+- [ ] `BaseStore` class provides common Supabase setup
+- [ ] All stores extend `BaseStore`
+- [ ] Processor dependencies injected via `ProcessorDependencies` interface
+
+### File Creation Order
+1. Create `types/index.ts` with all type definitions
+2. Create `utils/factory.ts` with consolidated factory methods
+3. Create `stores/base_store.ts` and individual store classes
+4. Create `processors/base_event_processor.ts` and all processor classes
+5. Create `core/` classes (orchestrator, runner, pipeline, router, state manager)
+6. Create `services/` classes (agent, thread)
+7. Update `apis/` classes to use new architecture
+8. Update main `index.ts` entry point
+
+### Testing Requirements
+- [ ] Unit tests for each processor
+- [ ] Integration tests for complete request flow
+- [ ] Performance tests comparing old vs new architecture
+- [ ] Error handling tests for all components
 
 ## Migration Benefits
 
