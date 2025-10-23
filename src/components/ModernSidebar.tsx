@@ -201,7 +201,7 @@ export const ModernSidebar = ({
               <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
                 {/* Color Scheme */}
                 <div className="space-y-2">
-                  <label className="text-xs text-white/50 uppercase tracking-wide">Color Scheme</label>
+                  <label className="text-xs text-white/80 uppercase tracking-wide font-medium">Color Scheme</label>
                   <div className="flex gap-2">
                     {(['dark', 'light'] as const).map((scheme) => (
                       <button
@@ -221,7 +221,7 @@ export const ModernSidebar = ({
 
                 {/* Accent Color */}
                 <div className="space-y-2">
-                  <label className="text-xs text-white/50 uppercase tracking-wide">Accent Color</label>
+                  <label className="text-xs text-white/80 uppercase tracking-wide font-medium">Accent Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
@@ -235,7 +235,7 @@ export const ModernSidebar = ({
 
                 {/* Radius */}
                 <div className="space-y-2">
-                  <label className="text-xs text-white/50 uppercase tracking-wide">Border Radius</label>
+                  <label className="text-xs text-white/80 uppercase tracking-wide font-medium">Border Radius</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['sharp', 'soft', 'round', 'pill'] as const).map((radius) => (
                       <button
@@ -255,7 +255,7 @@ export const ModernSidebar = ({
 
                 {/* Density */}
                 <div className="space-y-2">
-                  <label className="text-xs text-white/50 uppercase tracking-wide">Density</label>
+                  <label className="text-xs text-white/80 uppercase tracking-wide font-medium">Density</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['compact', 'normal', 'spacious'] as const).map((density) => (
                       <button
