@@ -210,7 +210,6 @@ const Chat = () => {
   // Create a new thread
   const handleCreateThread = async () => {
     try {
-      // Clear current thread to start fresh
       setCurrentThreadId(null);
       toast.success('New thread started');
     } catch (error) {
@@ -219,14 +218,19 @@ const Chat = () => {
     }
   };
 
-  // Switch to a different thread
+  // Switch to a different thread  
   const handleSelectThread = async (threadId: string) => {
     try {
+      // Update state - ChatKit will pick this up on next render
       setCurrentThreadId(threadId);
       setShowThreads(false);
       
-      // Force ChatKit to reload with the new thread
-      window.location.reload();
+      // Force a re-render of ChatKit by unmounting and remounting
+      setSelectedAgent(null);
+      setTimeout(() => {
+        const agent = agents.find(a => a.id === selectedAgent?.id);
+        setSelectedAgent(agent || agents[0]);
+      }, 0);
     } catch (error) {
       console.error('Error switching thread:', error);
       toast.error('Failed to switch thread');
@@ -404,7 +408,15 @@ const Chat = () => {
                   >
                     <IonLabel>
                       <h3>{thread.metadata?.title || 'Untitled Thread'}</h3>
-                      <p>{new Date(thread.created_at * 1000).toLocaleString()}</p>
+                      <p>
+                        {thread.created_at 
+                          ? new Date(
+                              typeof thread.created_at === 'number' 
+                                ? thread.created_at * 1000 
+                                : thread.created_at
+                            ).toLocaleString()
+                          : 'No date'}
+                      </p>
                     </IonLabel>
                   </IonItem>
                 ))
