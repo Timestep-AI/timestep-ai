@@ -139,7 +139,11 @@ jobs:
 
       - name: Start frontend development server
         run: |
+          # Start server in background and save PID for cleanup
           npm run dev &
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+
           # Wait for the server to be ready
           for i in {1..30}; do
             if curl -f http://localhost:8080 > /dev/null 2>&1; then
@@ -153,13 +157,22 @@ jobs:
           # Final check
           if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
             echo "Frontend server failed to start properly"
+            kill $SERVER_PID 2>/dev/null || true
             exit 1
           fi
 
       - name: Run E2E tests (headed)
         run: |
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24' \
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24 -ac' \
             npm run test
+
+      - name: Stop frontend development server
+        if: always()
+        run: |
+          if [ ! -z "$SERVER_PID" ]; then
+            echo "Stopping frontend development server (PID: $SERVER_PID)..."
+            kill $SERVER_PID 2>/dev/null || true
+          fi
 
       - name: Stop Supabase local development
         if: always()
@@ -306,7 +319,11 @@ jobs:
 
       - name: Start frontend development server
         run: |
+          # Start server in background and save PID for cleanup
           npm run dev &
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+
           # Wait for the server to be ready
           for i in {1..30}; do
             if curl -f http://localhost:8080 > /dev/null 2>&1; then
@@ -320,13 +337,22 @@ jobs:
           # Final check
           if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
             echo "Frontend server failed to start properly"
+            kill $SERVER_PID 2>/dev/null || true
             exit 1
           fi
 
       - name: Run E2E tests (headed)
         run: |
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24' \
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x960x24 -ac' \
             npm run test
+
+      - name: Stop frontend development server
+        if: always()
+        run: |
+          if [ ! -z "$SERVER_PID" ]; then
+            echo "Stopping frontend development server (PID: $SERVER_PID)..."
+            kill $SERVER_PID 2>/dev/null || true
+          fi
 
       - name: Stop Supabase local development
         if: always()
