@@ -20,7 +20,7 @@ export class McpServerStore {
       .in('id', serverIds);
 
     if (error) {
-      console.error('[McpServerRepository] Error fetching MCP servers:', error);
+      console.error('[McpServerStore] Error fetching MCP servers:', error);
       throw new Error('Failed to fetch MCP servers');
     }
 
@@ -40,7 +40,7 @@ export class McpServerStore {
         // Not found
         return null;
       }
-      console.error('[McpServerRepository] Error fetching MCP server:', error);
+      console.error('[McpServerStore] Error fetching MCP server:', error);
       throw error;
     }
 
@@ -70,7 +70,7 @@ export class McpServerStore {
       if (error.code === '23505') {
         return;
       }
-      console.error('[McpServerRepository] Error creating default MCP server:', error);
+      console.error('[McpServerStore] Error creating default MCP server:', error);
       throw new Error(`Failed to create default MCP server: ${error.message}`);
     }
   }

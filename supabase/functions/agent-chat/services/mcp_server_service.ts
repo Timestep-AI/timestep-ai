@@ -6,7 +6,12 @@ import { McpServerStore } from '../stores/mcp_server_store.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 export class McpServerService {
-  private McpServerStore: McpServerStore;
+  private store: McpServerStore;
+  
+  // Expose the underlying store for utility classes that need direct access
+  get mcpServerStore(): McpServerStore {
+    return this.store;
+  }
 
   constructor(
     private supabaseUrl: string,
@@ -24,7 +29,7 @@ export class McpServerService {
         },
       },
     });
-    this.McpServerStore = new McpServerStore(supabaseClient);
+    this.store = new McpServerStore(supabaseClient);
   }
 
   /**
@@ -256,13 +261,13 @@ export class McpServerService {
    * Get MCP servers by their IDs
    */
   async getMcpServersByIds(serverIds: string[]): Promise<McpServerRecord[]> {
-    return await this.McpServerStore.getMcpServersByIds(serverIds);
+    return await this.store.getMcpServersByIds(serverIds);
   }
 
   /**
    * Create the default MCP server for a user if it doesn't exist
    */
   async createDefaultMcpServer(userId: string): Promise<void> {
-    return await this.McpServerStore.createDefaultMcpServer(userId);
+    return await this.store.createDefaultMcpServer(userId);
   }
 }

@@ -25,7 +25,7 @@ export class AgentStore {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('[AgentRepository] Error fetching agents:', error);
+      console.error('[AgentStore] Error fetching agents:', error);
       throw error;
     }
 
@@ -45,7 +45,7 @@ export class AgentStore {
         // Not found
         return null;
       }
-      console.error('[AgentRepository] Error fetching agent:', error);
+      console.error('[AgentStore] Error fetching agent:', error);
       throw error;
     }
 
@@ -76,7 +76,7 @@ export class AgentStore {
     if (error) {
       // Ignore duplicate key errors - it means another process created it
       if (error.code !== '23505') {
-        console.error('[AgentRepository] Error creating default agent:', error);
+        console.error('[AgentStore] Error creating default agent:', error);
         throw new Error(`Failed to create default agent: ${error.message}`);
       }
     }

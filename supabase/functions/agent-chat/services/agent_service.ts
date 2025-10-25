@@ -1,19 +1,23 @@
 import { Agent } from '@openai/agents-core';
-import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../stores/agent_store.ts';
 import { ThreadService } from './thread_service.ts';
 import { AgentStore } from '../stores/agent_store.ts';
 import { McpServerService } from './mcp_server_service.ts';
 
 export class AgentsService {
-  private supabaseClient: SupabaseClient;
-  private AgentStore: AgentStore;
+  private store: AgentStore;
   private McpServerService: McpServerService;
   private ThreadService: ThreadService;
+  
+  // Expose the underlying store for utility classes that need direct access
+  get agentStore(): AgentStore {
+    return this.store;
+  }
 
   constructor(supabaseUrl: string, anonKey: string, userJwt: string, ThreadService: ThreadService) {
     // Create Supabase client with user's JWT for RLS
-    this.supabaseClient = createClient(supabaseUrl, anonKey, {
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {
           Authorization: `Bearer ${userJwt}`,
@@ -21,7 +25,7 @@ export class AgentsService {
       },
     });
 
-    this.AgentStore = new AgentStore(this.supabaseClient);
+    this.store = new AgentStore(supabaseClient);
     this.McpServerService = new McpServerService(supabaseUrl, anonKey, userJwt);
     this.ThreadService = ThreadService;
   }
@@ -31,11 +35,11 @@ export class AgentsService {
    */
   async getAllAgents(userId: string): Promise<AgentRecord[]> {
     // Ensure default agents exist first
-    await this.AgentStore.ensureDefaultAgentsExist(userId);
+    await this.store.ensureDefaultAgentsExist(userId);
     await this.McpServerService.createDefaultMcpServer(userId);
 
     // Fetch all agents for the user
-    return await this.AgentStore.getAllAgents(userId);
+    return await this.store.getAllAgents(userId);
   }
 
   /**
@@ -43,15 +47,15 @@ export class AgentsService {
    */
   async createAgent(agentId: string, userId: string): Promise<Agent> {
     // Fetch agent configuration from database
-    const agentData = await this.AgentStore.getAgentById(agentId, userId);
+    const agentData = await this.store.getAgentById(agentId, userId);
 
     // If agent not found and it's a default agent ID, create it in the database
     if (!agentData && this.isDefaultAgentId(agentId)) {
-      await this.AgentStore.ensureDefaultAgentsExist(userId);
+      await this.store.ensureDefaultAgentsExist(userId);
       await this.McpServerService.createDefaultMcpServer(userId);
 
       // Fetch the newly created agent - must match both id AND user_id for RLS
-      const newAgentData = await this.AgentStore.getAgentById(agentId, userId);
+      const newAgentData = await this.store.getAgentById(agentId, userId);
 
       if (!newAgentData) {
         console.error('[AgentsService] Error fetching newly created agent:', agentId);
