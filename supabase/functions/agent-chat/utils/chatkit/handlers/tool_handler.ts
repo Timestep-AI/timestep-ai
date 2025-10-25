@@ -1,20 +1,20 @@
 import { ThreadStore } from '../../../stores/thread_store.ts';
-import { Runner, RunState } from '@openai/agents-core';
-import { OpenAIProvider } from '@openai/agents-openai';
+import { RunState } from '@openai/agents-core';
 import { RunnerFactory } from '../../../utils/runner_factory.ts';
-import type {
-  ThreadMetadata,
-  ThreadStreamEvent,
-  ThreadUpdatedEvent,
-} from '../../../types/chatkit.ts';
+import { ItemFactory } from '../factories/item_factory.ts';
+import type { ThreadMetadata, ThreadStreamEvent } from '../../../types/chatkit.ts';
 import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
+  private itemFactory: ItemFactory;
+
   constructor(
     private store: ThreadStore,
     private agent: Agent,
     private context: any
-  ) {}
+  ) {
+    this.itemFactory = new ItemFactory(store);
+  }
 
   async *handleApproval(
     thread: ThreadMetadata,
@@ -57,7 +57,7 @@ export class ToolHandler {
   ): AsyncIterable<ThreadStreamEvent> {
     const serializedState = await this.store.loadRunState(thread.id);
     if (!serializedState) {
-      yield this.createThreadUpdatedEvent(thread);
+      yield this.itemFactory.createThreadUpdatedEvent(thread);
       return;
     }
 
@@ -89,7 +89,7 @@ export class ToolHandler {
   ): AsyncIterable<ThreadStreamEvent> {
     const serializedState = await this.store.loadRunState(thread.id);
     if (!serializedState) {
-      yield this.createThreadUpdatedEvent(thread);
+      yield this.itemFactory.createThreadUpdatedEvent(thread);
       return;
     }
 
@@ -124,21 +124,5 @@ export class ToolHandler {
       context: { threadId: thread.id, userId: this.context.userId },
       stream: true,
     });
-  }
-
-  private createThreadUpdatedEvent(thread: ThreadMetadata): ThreadUpdatedEvent {
-    return {
-      type: 'thread.updated',
-      thread: {
-        id: thread.id,
-        created_at:
-          typeof thread.created_at === 'number'
-            ? thread.created_at
-            : Math.floor(new Date(thread.created_at as any).getTime() / 1000),
-        status: { type: 'active' },
-        metadata: thread.metadata || {},
-        items: { data: [], has_more: false, after: null },
-      },
-    };
   }
 }

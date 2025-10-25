@@ -1,4 +1,10 @@
 import { ThreadStore } from '../../../stores/thread_store.ts';
+import type {
+  ThreadMetadata,
+  ThreadUpdatedEvent,
+  Thread,
+  ThreadCreatedEvent,
+} from '../../../types/chatkit.ts';
 
 export class ItemFactory {
   constructor(private store: ThreadStore) {}
@@ -98,6 +104,35 @@ export class ItemFactory {
         },
       ],
       created_at: createdAt,
+    };
+  }
+
+  createThreadUpdatedEvent(thread: ThreadMetadata): ThreadUpdatedEvent {
+    return {
+      type: 'thread.updated',
+      thread: {
+        id: thread.id,
+        created_at:
+          typeof thread.created_at === 'number'
+            ? thread.created_at
+            : Math.floor(new Date(thread.created_at as any).getTime() / 1000),
+        status: { type: 'active' },
+        metadata: thread.metadata || {},
+        items: { data: [], has_more: false, after: null },
+      },
+    };
+  }
+
+  createThreadCreatedEvent(thread: Thread): ThreadCreatedEvent {
+    return {
+      type: 'thread.created',
+      thread: {
+        id: thread.id,
+        created_at: thread.created_at,
+        status: thread.status,
+        metadata: thread.metadata,
+        items: { data: [], has_more: false, after: null },
+      },
     };
   }
 }

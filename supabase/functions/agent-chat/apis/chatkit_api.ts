@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ThreadService } from '../services/thread_service.ts';
 import { AgentsService } from '../services/agent_service.ts';
-import { AgentOrchestrator } from '../core/agent_orchestrator.ts';
+import { ChatKitService } from '../services/chatkit_service.ts';
+import { isStreamingReq, type ChatKitRequest } from '../types/chatkit.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -75,14 +76,19 @@ export async function handlePostChatKitRequest(
           agentId: agentId, // Use the agent ID from the URL
         };
 
-        // Create the agent and then use AgentOrchestrator directly
+        // Create the agent and use ChatKitService directly
         const agent = await agentService.createAgent(agentId, currentUserId);
-        const agentOrchestrator = new AgentOrchestrator(agent, context, store);
-        const result = await agentOrchestrator.processRequest(JSON.stringify(body));
+        const chatKitService = new ChatKitService(store, agent, context);
 
-        if (result.streaming) {
+        // Parse the request and determine if it's streaming
+        const parsedRequest: ChatKitRequest = body;
+
+        if (isStreamingReq(parsedRequest)) {
           // Return streaming response
-          return new Response(result.result as ReadableStream, {
+          const stream = chatKitService.encodeStream(
+            chatKitService.processStreamingRequest(parsedRequest)
+          );
+          return new Response(stream as ReadableStream, {
             headers: {
               ...corsHeaders,
               'Content-Type': 'text/event-stream',
@@ -92,7 +98,8 @@ export async function handlePostChatKitRequest(
           });
         } else {
           // Return non-streaming response
-          return new Response(JSON.stringify(result.result), {
+          const result = await chatKitService.processNonStreamingRequest(parsedRequest);
+          return new Response(JSON.stringify(result), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
