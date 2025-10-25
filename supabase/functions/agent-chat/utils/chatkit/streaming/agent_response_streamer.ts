@@ -1,10 +1,11 @@
-import { ThreadStore } from '../../../stores/thread_store.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
 import type {
   ThreadStreamEvent,
   ThreadItemAddedEvent,
   ThreadItemDoneEvent,
 } from '../../../types/chatkit.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../factories/widget_factory.ts';
 import { ToolCallOutputHandler } from '../handlers/tool_call_output_handler.ts';
 import { ToolCalledHandler } from '../handlers/tool_called_handler.ts';
@@ -17,17 +18,18 @@ import { ModelStreamHandler } from '../handlers/model_stream_handler.ts';
 export async function* streamAgentResponse(
   result: AsyncIterable<any>,
   threadId: string,
-  store: ThreadStore
+  store: ThreadMessageStore,
+  runStateService: ThreadRunStateService
 ): AsyncIterable<ThreadStreamEvent> {
-  const itemFactory = new ItemFactory(store);
+  const itemFactory = new ChatKitItemFactory(store);
 
   // Initialize event handlers
   const processedHandoffs = new Set<string>();
-  const toolCallOutputHandler = new ToolCallOutputHandler(store, itemFactory);
-  const toolCalledHandler = new ToolCalledHandler(store, itemFactory);
-  const handoffCallHandler = new HandoffCallHandler(store, itemFactory, processedHandoffs);
-  const handoffOutputHandler = new HandoffOutputHandler(store, itemFactory, processedHandoffs);
-  const toolApprovalHandler = new ToolApprovalHandler(store, itemFactory);
+  const toolCallOutputHandler = new ToolCallOutputHandler(store);
+  const toolCalledHandler = new ToolCalledHandler(store);
+  const handoffCallHandler = new HandoffCallHandler(store, processedHandoffs);
+  const handoffOutputHandler = new HandoffOutputHandler(store, processedHandoffs);
+  const toolApprovalHandler = new ToolApprovalHandler(store, runStateService);
   const modelStreamHandler = new ModelStreamHandler(itemFactory);
 
   // Streaming state
@@ -66,7 +68,7 @@ export async function* streamAgentResponse(
       const runState = (result as any).state;
       if (runState) {
         const serializedState = JSON.stringify(runState);
-        await store.saveRunState(threadId, serializedState);
+        await runStateService.saveRunState(threadId, serializedState);
       }
 
       // Generate approval item ID first

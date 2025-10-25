@@ -1,13 +1,18 @@
 import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
-import { ThreadStore } from '../../../stores/thread_store.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../factories/widget_factory.ts';
 
 export class ToolApprovalHandler {
+  private itemFactory: ChatKitItemFactory;
+
   constructor(
-    private store: ThreadStore,
-    private itemFactory: ItemFactory
-  ) {}
+    private store: ThreadMessageStore,
+    private runStateService: ThreadRunStateService
+  ) {
+    this.itemFactory = new ChatKitItemFactory(store);
+  }
 
   async *handle(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
     const item = event.item;
@@ -20,7 +25,7 @@ export class ToolApprovalHandler {
     const runState = (event as any).state;
     if (runState) {
       const serializedState = JSON.stringify(runState);
-      await this.store.saveRunState(threadId, serializedState);
+      await this.runStateService.saveRunState(threadId, serializedState);
     }
 
     // Create approval widget

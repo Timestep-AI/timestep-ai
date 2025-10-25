@@ -1,14 +1,17 @@
 import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
-import { ThreadStore } from '../../../stores/thread_store.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../factories/widget_factory.ts';
 
 export class HandoffOutputHandler {
+  private itemFactory: ChatKitItemFactory;
+
   constructor(
-    private store: ThreadStore,
-    private itemFactory: ItemFactory,
+    private store: ThreadMessageStore,
     private processedHandoffs: Set<string>
-  ) {}
+  ) {
+    this.itemFactory = new ChatKitItemFactory(store);
+  }
 
   async *handle(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
     const item = event.item;

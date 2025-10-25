@@ -1,5 +1,7 @@
 import { ThreadService } from '../services/thread_service.ts';
-import { Agent } from '@openai/agents-core';
+import { ThreadMessageService } from '../services/thread_message_service.ts';
+import { ThreadRunStateService } from '../services/thread_run_state_service.ts';
+import { Agent } from 'https://esm.sh/@openai/agents-core@0.0.1';
 import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
   type ChatKitRequest,
@@ -9,9 +11,10 @@ import {
   type ThreadStreamEvent,
 } from '../types/chatkit.ts';
 
-import { MessageProcessor } from '../utils/chatkit/processors/message_processor.ts';
+import { ChatKitMessageProcessor } from '../utils/chatkit/processors/chatkit_message_processor.ts';
+import { AgentMessageConverter } from '../utils/chatkit/converters/agent_message_converter.ts';
+import { ChatKitEventFactory } from '../utils/chatkit/factories/chatkit_event_factory.ts';
 import { ToolHandler } from '../utils/chatkit/handlers/tool_handler.ts';
-import { ItemFactory } from '../utils/chatkit/factories/item_factory.ts';
 import { streamAgentResponse } from '../utils/chatkit/streaming/agent_response_streamer.ts';
 
 /**
@@ -19,19 +22,23 @@ import { streamAgentResponse } from '../utils/chatkit/streaming/agent_response_s
  * Responsible for processing requests, executing agent workflows, and streaming results
  */
 export class ChatKitService {
-  private messageProcessor: MessageProcessor;
+  private messageProcessor: ChatKitMessageProcessor;
+  private agentConverter: AgentMessageConverter;
+  private eventFactory: ChatKitEventFactory;
   private toolHandler: ToolHandler;
-  private itemFactory: ItemFactory;
 
   constructor(
-    private store: ThreadService,
+    private threadService: ThreadService,
+    private threadMessageService: ThreadMessageService,
+    private threadRunStateService: ThreadRunStateService,
     private agent: Agent,
     private context: any
   ) {
-    // Initialize utility classes directly
-    this.itemFactory = new ItemFactory(this.store.threadStore);
-    this.messageProcessor = new MessageProcessor(this.store.threadStore, this.itemFactory);
-    this.toolHandler = new ToolHandler(this.store.threadStore, agent, context);
+    // Initialize specialized services
+    this.eventFactory = new ChatKitEventFactory();
+    this.messageProcessor = new ChatKitMessageProcessor(this.threadMessageService.threadMessageStore);
+    this.agentConverter = new AgentMessageConverter();
+    this.toolHandler = new ToolHandler(this.threadMessageService.threadMessageStore, this.threadRunStateService, agent, context);
   }
 
   /**
@@ -40,17 +47,17 @@ export class ChatKitService {
   async processNonStreamingRequest(request: ChatKitRequest): Promise<object> {
     switch (request.type) {
       case 'threads.get_by_id':
-        return await this.store.loadFullThread(request.params!.thread_id!);
+        return await this.threadService.loadThread(request.params!.thread_id!);
 
       case 'threads.list': {
         const params = request.params || {};
-        const threads = await this.store.loadThreads(
+        const threads = await this.threadService.loadThreads(
           params.limit || 20,
           params.after || null,
           params.order || 'desc'
         );
         return {
-          data: await Promise.all(threads.data.map((t) => this.store.loadFullThread(t.id))),
+          data: await Promise.all(threads.data.map((t) => this.threadService.loadThread(t.id))),
           has_more: threads.has_more,
           after: threads.after,
         };
@@ -58,7 +65,7 @@ export class ChatKitService {
 
       case 'items.list': {
         const params = request.params!;
-        return await this.store.loadThreadItems(
+        return await this.threadMessageService.loadThreadItems(
           params.thread_id!,
           params.after || null,
           params.limit || 20,
@@ -67,14 +74,14 @@ export class ChatKitService {
       }
 
       case 'threads.update': {
-        const thread = await this.store.loadThread(request.params!.thread_id!);
+        const thread = await this.threadService.loadThread(request.params!.thread_id!);
         thread.title = request.params!.title;
-        await this.store.saveThread(thread);
-        return await this.store.loadFullThread(request.params!.thread_id!);
+        await this.threadService.saveThread(thread);
+        return await this.threadService.loadThread(request.params!.thread_id!);
       }
 
       case 'threads.delete':
-        await this.store.deleteThread(request.params!.thread_id!);
+        await this.threadService.deleteThread(request.params!.thread_id!);
         return {};
 
       case 'threads.retry_after_item':
@@ -92,15 +99,15 @@ export class ChatKitService {
     switch (request.type) {
       case 'threads.action':
       case 'threads.custom_action': {
-        const thread = await this.store.loadThread(request.params.thread_id);
-        yield this.itemFactory.createThreadUpdatedEvent(thread);
+        const thread = await this.threadService.loadThread(request.params.thread_id);
+        yield this.eventFactory.createThreadUpdatedEvent(thread);
         yield* this.toolHandler.handleApproval(thread, request.params.action, request.params);
         break;
       }
 
       case 'threads.create': {
         const thread = await this.createThread();
-        yield this.itemFactory.createThreadCreatedEvent(thread);
+        yield this.eventFactory.createThreadCreatedEvent(thread);
 
         if (request.params!.input) {
           const threadMetadata = this.threadToMetadata(thread);
@@ -114,7 +121,7 @@ export class ChatKitService {
       }
 
       case 'threads.add_user_message': {
-        const thread = await this.store.loadThread(request.params!.thread_id!);
+        const thread = await this.threadService.loadThread(request.params!.thread_id!);
         const userMessage = this.messageProcessor.buildUserMessageItem(
           request.params!.input!,
           thread
@@ -135,17 +142,10 @@ export class ChatKitService {
     thread: ThreadMetadata,
     userMessage: UserMessageItem
   ): AsyncIterable<ThreadStreamEvent> {
-    await this.store.addThreadItem(thread.id, userMessage);
+    await this.threadMessageService.addThreadItem(thread.id, userMessage);
 
-    yield {
-      type: 'thread.item.added',
-      item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    };
-
-    yield {
-      type: 'thread.item.done',
-      item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    };
+    yield this.eventFactory.createItemAddedEvent(userMessage);
+    yield this.eventFactory.createItemDoneEvent(userMessage);
 
     yield* this.processEvents(thread, () => this.respond(thread, userMessage));
   }
@@ -163,7 +163,7 @@ export class ChatKitService {
     try {
       const messages = await this.messageProcessor.loadConversationHistory(thread.id);
       const agent = this.agent;
-      const inputItems = this.messageProcessor.convertToAgentFormat(messages);
+      const inputItems = this.agentConverter.convertToAgentFormat(messages);
 
       const runner = await RunnerFactory.createRunner({
         threadId: thread.id,
@@ -176,9 +176,9 @@ export class ChatKitService {
         stream: true,
       });
 
-      await this.store.saveRunState(thread.id, (result as any).state);
+      await this.threadRunStateService.saveRunState(thread.id, (result as any).state);
 
-      yield* streamAgentResponse(result as any, thread.id, this.store.threadStore);
+              yield* streamAgentResponse(result as any, thread.id, this.threadMessageService.threadMessageStore, this.threadRunStateService);
     } catch (error) {
       console.error('[AgentRunner] Error:', error);
       throw error;
@@ -189,14 +189,14 @@ export class ChatKitService {
    * Create a new thread
    */
   private async createThread(): Promise<Thread> {
-    const threadId = this.store.generateThreadId();
+    const threadId = this.threadService.generateThreadId();
     const threadMetadata: ThreadMetadata = {
       id: threadId,
       created_at: new Date(),
       status: { type: 'active' },
       metadata: {},
     };
-    await this.store.saveThread(threadMetadata);
+    await this.threadService.saveThread(threadMetadata);
 
     // Return as Thread type for compatibility
     const thread: Thread = {
@@ -232,9 +232,9 @@ export class ChatKitService {
 
     try {
       for await (const event of stream()) {
-        if (event.type === 'thread.item.done' && event.item.type !== 'widget') {
-          await this.store.threadStore.addThreadItem(thread.id, event.item);
-        }
+                if (event.type === 'thread.item.done' && event.item.type !== 'widget') {
+                  await this.threadMessageService.addThreadItem(thread.id, event.item);
+                }
         yield event;
       }
     } catch (error) {

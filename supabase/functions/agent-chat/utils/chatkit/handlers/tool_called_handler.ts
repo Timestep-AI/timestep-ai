@@ -1,11 +1,14 @@
-import { ThreadStore } from '../../../stores/thread_store.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 
 export class ToolCalledHandler {
+  private itemFactory: ChatKitItemFactory;
+
   constructor(
-    private store: ThreadStore,
-    private itemFactory: ItemFactory
-  ) {}
+    private store: ThreadMessageStore
+  ) {
+    this.itemFactory = new ChatKitItemFactory(store);
+  }
 
   async handle(event: any, threadId: string): Promise<void> {
     const item = event.item;

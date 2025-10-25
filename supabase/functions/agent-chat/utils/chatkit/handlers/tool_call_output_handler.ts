@@ -1,13 +1,19 @@
 import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
-import { ThreadStore } from '../../../stores/thread_store.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
+import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
 import { WidgetFactory } from '../factories/widget_factory.ts';
 
 export class ToolCallOutputHandler {
+  private itemFactory: ChatKitItemFactory;
+  private eventFactory: ChatKitEventFactory;
+
   constructor(
-    private store: ThreadStore,
-    private itemFactory: ItemFactory
-  ) {}
+    private store: ThreadMessageStore
+  ) {
+    this.itemFactory = new ChatKitItemFactory(store);
+    this.eventFactory = new ChatKitEventFactory();
+  }
 
   async *handle(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
     const item = event.item;
@@ -33,9 +39,6 @@ export class ToolCallOutputHandler {
       toolResultWidget
     );
 
-    yield {
-      type: 'thread.item.added',
-      item: toolResultItem,
-    } as ThreadItemAddedEvent;
+    yield this.eventFactory.createItemAddedEvent(toolResultItem);
   }
 }

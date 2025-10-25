@@ -1,8 +1,8 @@
 import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 
 export class ModelStreamHandler {
-  constructor(private itemFactory: ItemFactory) {}
+  constructor(private itemFactory: ChatKitItemFactory) {}
 
   async *handleRawModelStream(
     event: any,

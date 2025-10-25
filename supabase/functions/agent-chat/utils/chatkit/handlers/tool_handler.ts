@@ -1,19 +1,21 @@
-import { ThreadStore } from '../../../stores/thread_store.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
+import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
 import { RunState } from '@openai/agents-core';
 import { RunnerFactory } from '../../../utils/runner_factory.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
+import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
 import type { ThreadMetadata, ThreadStreamEvent } from '../../../types/chatkit.ts';
 import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
-  private itemFactory: ItemFactory;
+  private eventFactory: ChatKitEventFactory;
 
   constructor(
-    private store: ThreadStore,
+    private store: ThreadMessageStore,
+    private runStateService: ThreadRunStateService,
     private agent: Agent,
     private context: any
   ) {
-    this.itemFactory = new ItemFactory(store);
+    this.eventFactory = new ChatKitEventFactory();
   }
 
   async *handleApproval(
@@ -55,9 +57,9 @@ export class ToolHandler {
     thread: ThreadMetadata,
     toolCallId: string
   ): AsyncIterable<ThreadStreamEvent> {
-    const serializedState = await this.store.loadRunState(thread.id);
+    const serializedState = await this.runStateService.loadRunState(thread.id);
     if (!serializedState) {
-      yield this.itemFactory.createThreadUpdatedEvent(thread);
+      yield this.eventFactory.createThreadUpdatedEvent(thread);
       return;
     }
 
@@ -77,19 +79,19 @@ export class ToolHandler {
     }
 
     const result = await this.runAgent(agent, runState, thread);
-    await this.store.clearRunState(thread.id);
+    await this.runStateService.clearRunState(thread.id);
 
     const { streamAgentResponse } = await import('../streaming/agent_response_streamer.ts');
-    yield* streamAgentResponse(result, thread.id, this.store);
+    yield* streamAgentResponse(result, thread.id, this.store, this.runStateService);
   }
 
   private async *rejectToolCall(
     thread: ThreadMetadata,
     toolCallId: string
   ): AsyncIterable<ThreadStreamEvent> {
-    const serializedState = await this.store.loadRunState(thread.id);
+    const serializedState = await this.runStateService.loadRunState(thread.id);
     if (!serializedState) {
-      yield this.itemFactory.createThreadUpdatedEvent(thread);
+      yield this.eventFactory.createThreadUpdatedEvent(thread);
       return;
     }
 
@@ -109,10 +111,10 @@ export class ToolHandler {
     }
 
     const result = await this.runAgent(agent, runState, thread);
-    await this.store.clearRunState(thread.id);
+    await this.runStateService.clearRunState(thread.id);
 
     const { streamAgentResponse } = await import('../streaming/agent_response_streamer.ts');
-    yield* streamAgentResponse(result, thread.id, this.store);
+    yield* streamAgentResponse(result, thread.id, this.store, this.runStateService);
   }
 
   private async runAgent(agent: any, runState: RunState, thread: ThreadMetadata) {

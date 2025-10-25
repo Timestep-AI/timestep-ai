@@ -1,37 +1,27 @@
-import { ThreadStore } from '../../../stores/thread_store.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 import type { UserMessageItem } from '../../../types/chatkit.ts';
-import { ItemFactory } from '../factories/item_factory.ts';
 
 /**
- * Handles message processing and data transformation for ChatKit operations.
- *
- * This class is responsible for:
- * - Converting between different message formats (ChatKit ↔ Agent format)
- * - Extracting text content from complex message structures
- * - Building properly formatted user message items
- * - Loading and formatting conversation history for agents
- *
- * The MessageProcessor bridges the gap between ChatKit's rich message format
- * (which supports attachments, quoted text, inference options) and the simpler
- * format expected by OpenAI agents (role + content).
+ * Processes ChatKit message formats and handles ChatKit-specific message operations.
+ * 
+ * This processor is responsible for:
+ * - Extracting text content from ChatKit message structures
+ * - Building properly formatted ChatKit user message items
+ * - Loading and formatting ChatKit conversation history
+ * 
+ * It works exclusively with ChatKit formats and does not handle Agent format conversion.
  */
-export class MessageProcessor {
-  constructor(
-    private store: ThreadStore,
-    private itemFactory: ItemFactory
-  ) {}
+export class ChatKitMessageProcessor {
+  constructor(private store: ThreadMessageStore) {}
 
   /**
-   * Extracts plain text content from a user message item.
-   *
+   * Extracts plain text content from a ChatKit user message item.
+   * 
    * ChatKit messages can have complex content structures:
    * - Simple string content
    * - Array of content parts with different types
-   *
+   * 
    * This method normalizes all formats into a single plain text string.
-   *
-   * @param item - The user message item to extract text from
-   * @returns The extracted plain text content, trimmed of whitespace
    */
   async extractMessageText(item: UserMessageItem): Promise<string> {
     if (typeof item.content === 'string') {
@@ -47,21 +37,16 @@ export class MessageProcessor {
   }
 
   /**
-   * Loads and formats conversation history for agent consumption.
-   *
+   * Loads and formats ChatKit conversation history.
+   * 
    * This method retrieves all thread items from the database and converts them
-   * into a simplified format that agents can understand. It handles three types
-   * of thread items:
-   *
+   * into a simplified format. It handles three types of thread items:
+   * 
    * - user_message: Extracts text using extractMessageText()
    * - assistant_message: Extracts text from output_text content parts
    * - client_tool_call: Formats as a descriptive text string
-   *
-   * The result is a chronological array of role-based messages that agents
-   * can use to understand the conversation context.
-   *
-   * @param threadId - The ID of the thread to load history from
-   * @returns Array of messages with role and content for agent consumption
+   * 
+   * The result is a chronological array of role-based messages.
    */
   async loadConversationHistory(
     threadId: string
@@ -103,23 +88,18 @@ export class MessageProcessor {
   }
 
   /**
-   * Builds a properly formatted UserMessageItem from raw input data.
-   *
+   * Builds a properly formatted ChatKit UserMessageItem from raw input data.
+   * 
    * This method takes raw input from ChatKit requests and creates a standardized
-   * UserMessageItem that can be stored in the database and processed by agents.
-   * It handles:
-   *
+   * UserMessageItem that can be stored in the database. It handles:
+   * 
    * - Content normalization (ensures content is always an array)
    * - ID generation using the thread store
    * - Timestamp creation
    * - Optional fields (attachments, quoted_text, inference_options)
-   *
+   * 
    * The method ensures that even malformed input results in a valid UserMessageItem
    * by providing default values when necessary.
-   *
-   * @param input - Raw input data from ChatKit request
-   * @param thread - Thread metadata containing thread ID
-   * @returns A properly formatted UserMessageItem ready for storage
    */
   buildUserMessageItem(input: any, thread: any): UserMessageItem {
     let content = Array.isArray(input.content) ? input.content : [input.content as any];
@@ -149,51 +129,5 @@ export class MessageProcessor {
     }
 
     return userMessage;
-  }
-
-  /**
-   * Converts simplified conversation messages into the format expected by OpenAI agents.
-   *
-   * This method transforms the simplified role-based messages (from loadConversationHistory)
-   * into the structured format that OpenAI agents require. The agent format includes:
-   *
-   * - type: 'message' for all items
-   * - role: 'user' or 'assistant'
-   * - content: Array with properly typed content parts
-   * - status: 'completed' for assistant messages
-   *
-   * This is the final transformation step before sending messages to the agent,
-   * ensuring compatibility with the OpenAI agents-core library.
-   *
-   * @param messages - Array of simplified role-based messages
-   * @returns Array of messages in OpenAI agent format
-   */
-  convertToAgentFormat(messages: Array<{ role: 'user' | 'assistant'; content: string }>): any[] {
-    return messages.map((msg) => {
-      if (msg.role === 'user') {
-        return {
-          type: 'message',
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: msg.content,
-            },
-          ],
-        };
-      } else {
-        return {
-          type: 'message',
-          role: 'assistant',
-          status: 'completed',
-          content: [
-            {
-              type: 'output_text',
-              text: msg.content,
-            },
-          ],
-        };
-      }
-    });
   }
 }

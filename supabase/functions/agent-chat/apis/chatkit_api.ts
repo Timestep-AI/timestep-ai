@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ThreadService } from '../services/thread_service.ts';
+import { ThreadMessageService } from '../services/thread_message_service.ts';
+import { ThreadRunStateService } from '../services/thread_run_state_service.ts';
 import { AgentsService } from '../services/agent_service.ts';
 import { ChatKitService } from '../services/chatkit_service.ts';
 import { isStreamingReq, type ChatKitRequest } from '../types/chatkit.ts';
@@ -59,13 +61,15 @@ export async function handlePostChatKitRequest(
         const authHeader = req.headers.get('Authorization') ?? '';
         const userJwt = authHeader.replace('Bearer ', '');
 
-        const store = new ThreadService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const threadService = new ThreadService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const threadMessageService = new ThreadMessageService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const threadRunStateService = new ThreadRunStateService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
 
         const agentService = new AgentsService(
           Deno.env.get('SUPABASE_URL') ?? '',
           Deno.env.get('SUPABASE_ANON_KEY') ?? '',
           userJwt, // Use the clean JWT without "Bearer " prefix
-          store
+          threadService
         );
 
         const context = {
@@ -78,7 +82,7 @@ export async function handlePostChatKitRequest(
 
         // Create the agent and use ChatKitService directly
         const agent = await agentService.createAgent(agentId, currentUserId);
-        const chatKitService = new ChatKitService(store, agent, context);
+        const chatKitService = new ChatKitService(threadService, threadMessageService, threadRunStateService, agent, context);
 
         // Parse the request and determine if it's streaming
         const parsedRequest: ChatKitRequest = body;

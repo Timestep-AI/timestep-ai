@@ -1,14 +1,24 @@
-import { ThreadStore } from '../../../stores/thread_store.ts';
-import type {
-  ThreadMetadata,
-  ThreadUpdatedEvent,
-  Thread,
-  ThreadCreatedEvent,
-} from '../../../types/chatkit.ts';
+import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 
-export class ItemFactory {
-  constructor(private store: ThreadStore) {}
+/**
+ * Creates ChatKit items for database storage.
+ * 
+ * This factory is responsible for creating all types of ChatKit items that get
+ * stored in the database. These are persistent data objects, not streaming events.
+ * 
+ * ChatKit items include:
+ * - Tool call items (requests and results)
+ * - Handoff items (requests and results) 
+ * - Widget items
+ * - Assistant message items
+ */
+export class ChatKitItemFactory {
+  constructor(private store: ThreadMessageStore) {}
 
+  /**
+   * Creates a tool call output item for database storage.
+   * Represents the result of a tool call execution.
+   */
   createToolCallOutputItem(threadId: string, toolName: string, toolCallId: string, output: any) {
     return {
       type: 'client_tool_call' as const,
@@ -24,6 +34,10 @@ export class ItemFactory {
     };
   }
 
+  /**
+   * Creates a tool call item for database storage.
+   * Represents a tool call request.
+   */
   createToolCallItem(
     threadId: string,
     toolName: string,
@@ -44,6 +58,10 @@ export class ItemFactory {
     };
   }
 
+  /**
+   * Creates a handoff tool call item for database storage.
+   * Represents a handoff request between agents.
+   */
   createHandoffToolCallItem(
     threadId: string,
     handoffName: string,
@@ -69,6 +87,10 @@ export class ItemFactory {
     };
   }
 
+  /**
+   * Creates a handoff result tool item for database storage.
+   * Represents the result of a handoff operation.
+   */
   createHandoffResultToolItem(threadId: string, handoffCallId: string, output: any) {
     return {
       type: 'tool_message' as const,
@@ -80,6 +102,10 @@ export class ItemFactory {
     };
   }
 
+  /**
+   * Creates a widget item for database storage.
+   * Represents a UI widget in the conversation.
+   */
   createWidgetItem(threadId: string, widgetType: string, widget: any) {
     return {
       type: 'widget' as const,
@@ -91,6 +117,10 @@ export class ItemFactory {
     };
   }
 
+  /**
+   * Creates an assistant message item for database storage.
+   * Represents an assistant's response message.
+   */
   createAssistantMessageItem(threadId: string, itemId: string, createdAt: number) {
     return {
       type: 'assistant_message',
@@ -104,35 +134,6 @@ export class ItemFactory {
         },
       ],
       created_at: createdAt,
-    };
-  }
-
-  createThreadUpdatedEvent(thread: ThreadMetadata): ThreadUpdatedEvent {
-    return {
-      type: 'thread.updated',
-      thread: {
-        id: thread.id,
-        created_at:
-          typeof thread.created_at === 'number'
-            ? thread.created_at
-            : Math.floor(new Date(thread.created_at as any).getTime() / 1000),
-        status: { type: 'active' },
-        metadata: thread.metadata || {},
-        items: { data: [], has_more: false, after: null },
-      },
-    };
-  }
-
-  createThreadCreatedEvent(thread: Thread): ThreadCreatedEvent {
-    return {
-      type: 'thread.created',
-      thread: {
-        id: thread.id,
-        created_at: thread.created_at,
-        status: thread.status,
-        metadata: thread.metadata,
-        items: { data: [], has_more: false, after: null },
-      },
     };
   }
 }

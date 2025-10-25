@@ -1,17 +1,17 @@
 import { ThreadStore } from '../stores/thread_store.ts';
-import type { ThreadMetadata, ThreadItem } from '../types/chatkit.ts';
-import type { Page, ThreadMessage } from '../stores/thread_store.ts';
+import type { ThreadMetadata } from '../types/chatkit.ts';
+import type { Page } from '../stores/thread_message_store.ts';
 
 /**
- * Service layer for thread operations
- * Provides business logic and delegates to ThreadStore repository
+ * Service layer for thread metadata operations
+ * Handles thread lifecycle, metadata, and basic thread management
  */
 export class ThreadService {
-  private store: ThreadStore;
+  private _threadStore: ThreadStore;
 
   // Expose the underlying store for utility classes that need direct access
   get threadStore(): ThreadStore {
-    return this.store;
+    return this._threadStore;
   }
 
   constructor(
@@ -19,97 +19,31 @@ export class ThreadService {
     private userJwt: string,
     private userId: string
   ) {
-    this.store = new ThreadStore(supabaseUrl, userJwt, userId);
+    this._threadStore = new ThreadStore(supabaseUrl, userJwt, userId);
   }
 
   /**
    * Generate a unique thread ID
    */
   generateThreadId(): string {
-    return this.store.generateThreadId();
+    return this._threadStore.generateThreadId();
   }
 
-  /**
-   * Generate a unique item ID
-   */
-  generateItemId(): string {
-    return this.store.generateItemId();
-  }
 
   /**
    * Load a thread by ID
    */
   async loadThread(threadId: string): Promise<ThreadMetadata> {
-    return await this.store.loadThread(threadId);
+    return await this._threadStore.loadThread(threadId);
   }
 
   /**
    * Save a thread
    */
   async saveThread(thread: ThreadMetadata): Promise<void> {
-    return await this.store.saveThread(thread);
+    return await this._threadStore.saveThread(thread);
   }
 
-  /**
-   * Load thread items with pagination
-   */
-  async loadThreadItems(
-    threadId: string,
-    after: string | null,
-    limit: number,
-    order: string
-  ): Promise<Page<ThreadItem>> {
-    return await this.store.loadThreadItems(threadId, after, limit, order);
-  }
-
-  /**
-   * Add a new item to a thread
-   */
-  async addThreadItem(threadId: string, item: ThreadItem): Promise<void> {
-    return await this.store.addThreadItem(threadId, item);
-  }
-
-  /**
-   * Save/update a thread item
-   */
-  async saveThreadItem(threadId: string, item: ThreadItem): Promise<void> {
-    return await this.store.saveThreadItem(threadId, item);
-  }
-
-  /**
-   * Load a specific item from a thread
-   */
-  async loadItem(threadId: string, itemId: string): Promise<ThreadItem> {
-    return await this.store.loadItem(threadId, itemId);
-  }
-
-  /**
-   * Load a thread item by ID
-   */
-  async loadThreadItem(itemId: string, threadId: string): Promise<ThreadItem | null> {
-    return await this.store.loadThreadItem(itemId, threadId);
-  }
-
-  /**
-   * Save run state for a thread
-   */
-  async saveRunState(threadId: string, state: string): Promise<void> {
-    return await this.store.saveRunState(threadId, state);
-  }
-
-  /**
-   * Load run state for a thread
-   */
-  async loadRunState(threadId: string): Promise<string | null> {
-    return await this.store.loadRunState(threadId);
-  }
-
-  /**
-   * Clear run state for a thread
-   */
-  async clearRunState(threadId: string): Promise<void> {
-    return await this.store.clearRunState(threadId);
-  }
 
   /**
    * Load all threads with pagination
@@ -119,41 +53,14 @@ export class ThreadService {
     after: string | null,
     order: string
   ): Promise<Page<ThreadMetadata>> {
-    return await this.store.loadThreads(limit, after, order);
+    return await this._threadStore.loadThreads(limit, after, order);
   }
 
   /**
-   * Load a full thread with all its items
-   */
-  async loadFullThread(threadId: string): Promise<any> {
-    return await this.store.loadFullThread(threadId);
-  }
-
-  /**
-   * Delete a thread and all its items
+   * Delete a thread
    */
   async deleteThread(threadId: string): Promise<void> {
-    return await this.store.deleteThread(threadId);
-  }
-
-  /**
-   * Get conversation context using K+N retrieval pattern
-   * This is a higher-level business operation that combines recent and similar messages
-   */
-  async getConversationContext(
-    threadId: string,
-    userMessage: string,
-    options: {
-      recentCount?: number;
-      similarCount?: number;
-      scoreThreshold?: number;
-    } = {}
-  ): Promise<{
-    recentMessages: ThreadMessage[];
-    similarMessages: Array<ThreadMessage & { similarity_score: number }>;
-    combinedMessages: ThreadMessage[];
-  }> {
-    return await this.store.getConversationContext(threadId, userMessage, options);
+    return await this._threadStore.deleteThread(threadId);
   }
 
   /**
@@ -184,20 +91,18 @@ export class ThreadService {
     return thread;
   }
 
-  /**
-   * Get thread statistics
-   */
-  async getThreadStats(threadId: string): Promise<{
-    messageCount: number;
-    lastActivity: Date | null;
-  }> {
-    const items = await this.loadThreadItems(threadId, null, 1000, 'desc');
-    const messageCount = items.data.length;
-    const lastActivity = items.data.length > 0 ? new Date(items.data[0].created_at * 1000) : null;
 
-    return {
-      messageCount,
-      lastActivity,
-    };
+  /**
+   * Get thread count for user
+   */
+  async getThreadCount(): Promise<number> {
+    return await this._threadStore.getThreadCount();
+  }
+
+  /**
+   * Update thread metadata
+   */
+  async updateThreadMetadata(threadId: string, metadata: Record<string, any>): Promise<void> {
+    return await this._threadStore.updateThreadMetadata(threadId, metadata);
   }
 }
