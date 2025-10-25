@@ -51,7 +51,7 @@ export interface ToolCall {
 
 export type ThreadMessage = UserMessage | AssistantMessage | ToolMessage;
 
-export class ThreadsStore {
+export class ThreadStore {
   private supabase: ReturnType<typeof createClient>;
   private attachments: Map<string, Attachment> = new Map();
   private openai: ReturnType<typeof createOpenAIClient>;
@@ -92,13 +92,13 @@ export class ThreadsStore {
       .single();
 
     if (error || !data) {
-      console.error('[ThreadsStore] Error loading thread:', error);
+      console.error('[ThreadStore] Error loading thread:', error);
       throw new Error(`Thread not found: ${threadId}`);
     }
 
     // Ensure thread has a vector store
     if (!data.vector_store_id) {
-      console.log(`[ThreadsStore] Thread ${threadId} missing vector store, creating one`);
+      console.log(`[ThreadStore] Thread ${threadId} missing vector store, creating one`);
       try {
         const vectorStore = await this.openai.vectorStores.create({
           name: `Thread ${threadId}`,
@@ -116,18 +116,15 @@ export class ThreadsStore {
           .eq('user_id', this.userId);
 
         if (updateError) {
-          console.error('[ThreadsStore] Error updating thread with vector store:', updateError);
+          console.error('[ThreadStore] Error updating thread with vector store:', updateError);
           throw updateError;
         }
 
         console.log(
-          `[ThreadsStore] Created vector store ${vectorStore.id} for existing thread ${threadId}`
+          `[ThreadStore] Created vector store ${vectorStore.id} for existing thread ${threadId}`
         );
       } catch (error) {
-        console.error(
-          `[ThreadsStore] Failed to create vector store for thread ${threadId}:`,
-          error
-        );
+        console.error(`[ThreadStore] Failed to create vector store for thread ${threadId}:`, error);
         throw error;
       }
     }
@@ -161,7 +158,7 @@ export class ThreadsStore {
 
     // Create vector store if this is a new thread
     if (!vectorStoreId) {
-      console.log(`[ThreadsStore] Creating vector store for thread ${thread.id}`);
+      console.log(`[ThreadStore] Creating vector store for thread ${thread.id}`);
       try {
         const vectorStore = await this.openai.vectorStores.create({
           name: `Thread ${thread.id}`,
@@ -171,10 +168,10 @@ export class ThreadsStore {
           },
         });
         vectorStoreId = vectorStore.id;
-        console.log(`[ThreadsStore] Created vector store ${vectorStoreId} for thread ${thread.id}`);
+        console.log(`[ThreadStore] Created vector store ${vectorStoreId} for thread ${thread.id}`);
       } catch (error) {
         console.error(
-          `[ThreadsStore] Failed to create vector store for thread ${thread.id}:`,
+          `[ThreadStore] Failed to create vector store for thread ${thread.id}:`,
           error
         );
         throw error;
@@ -195,7 +192,7 @@ export class ThreadsStore {
     });
 
     if (error) {
-      console.error('[ThreadsStore] Error saving thread:', error);
+      console.error('[ThreadStore] Error saving thread:', error);
       throw error;
     }
   }
@@ -225,7 +222,7 @@ export class ThreadsStore {
         .single();
 
       if (afterError || !afterItem) {
-        console.error('[ThreadsStore] Error finding "after" item:', afterError);
+        console.error('[ThreadStore] Error finding "after" item:', afterError);
         throw new Error(`"after" item not found: ${after}`);
       }
       query = query.gt('message_index', afterItem.message_index);
@@ -234,7 +231,7 @@ export class ThreadsStore {
     const { data: messagesData, error } = await query;
 
     if (error) {
-      console.error('[ThreadsStore] Error loading thread messages:', error);
+      console.error('[ThreadStore] Error loading thread messages:', error);
       throw error;
     }
 
@@ -343,7 +340,7 @@ export class ThreadsStore {
         );
 
         if (indexError || nextIndex === null || nextIndex === undefined) {
-          console.error('[ThreadsStore] Error getting next message index:', indexError);
+          console.error('[ThreadStore] Error getting next message index:', indexError);
           throw new Error(
             `Failed to get next message index: ${indexError?.message || 'unknown error'}`
           );
@@ -377,7 +374,7 @@ export class ThreadsStore {
             error.message.includes('thread_messages_thread_id_message_index_key')
           ) {
             console.warn(
-              `[ThreadsStore] Index constraint violation on attempt ${attempt + 1}, retrying...`
+              `[ThreadStore] Index constraint violation on attempt ${attempt + 1}, retrying...`
             );
             lastError = error;
             // Small delay before retry
@@ -385,7 +382,7 @@ export class ThreadsStore {
             continue;
           } else if (error.code === '23505') {
             // Duplicate message ID - this is expected, skip
-            console.log(`[ThreadsStore] Message ${message.id} already exists, skipping`);
+            console.log(`[ThreadStore] Message ${message.id} already exists, skipping`);
             return;
           } else {
             throw error;
@@ -397,7 +394,7 @@ export class ThreadsStore {
       } catch (error) {
         lastError = error;
         if (attempt === maxRetries - 1) {
-          console.error('[ThreadsStore] Error saving thread message after retries:', error);
+          console.error('[ThreadStore] Error saving thread message after retries:', error);
           throw error;
         }
         // Small delay before retry
@@ -585,7 +582,7 @@ export class ThreadsStore {
       .single();
 
     if (error || !messageData) {
-      console.error('[ThreadsStore] Error loading thread message:', error);
+      console.error('[ThreadStore] Error loading thread message:', error);
       throw new Error(`Thread message not found: ${itemId}`);
     }
 
@@ -609,7 +606,7 @@ export class ThreadsStore {
       const result = this.convertThreadMessageToChatKit(messageData, threadId);
       return result;
     } catch (error) {
-      console.error('[ThreadsStore] Error loading thread item:', error);
+      console.error('[ThreadStore] Error loading thread item:', error);
       throw error; // Re-throw to avoid hiding issues
     }
   }
@@ -624,7 +621,7 @@ export class ThreadsStore {
     });
 
     if (error) {
-      console.error('[ThreadsStore] Error saving run state:', error);
+      console.error('[ThreadStore] Error saving run state:', error);
       throw error;
     }
   }
@@ -642,7 +639,7 @@ export class ThreadsStore {
         // No run state found
         return null;
       }
-      console.error('[ThreadsStore] Error loading run state:', error);
+      console.error('[ThreadStore] Error loading run state:', error);
       throw error;
     }
 
@@ -657,7 +654,7 @@ export class ThreadsStore {
       .eq('user_id', this.userId);
 
     if (error) {
-      console.error('[ThreadsStore] Error clearing run state:', error);
+      console.error('[ThreadStore] Error clearing run state:', error);
       throw error;
     }
   }
@@ -685,7 +682,7 @@ export class ThreadsStore {
         .single();
 
       if (afterError || !afterThread) {
-        console.error('[ThreadsStore] Error finding "after" thread:', afterError);
+        console.error('[ThreadStore] Error finding "after" thread:', afterError);
         throw new Error(`"after" thread not found: ${after}`);
       }
       query = query.lt('created_at', afterThread.created_at);
@@ -694,7 +691,7 @@ export class ThreadsStore {
     const { data: threadsData, error } = await query;
 
     if (error) {
-      console.error('[ThreadsStore] Error loading threads:', error);
+      console.error('[ThreadStore] Error loading threads:', error);
       throw error;
     }
 
@@ -722,7 +719,7 @@ export class ThreadsStore {
       .single();
 
     if (convError || !threadData) {
-      console.error('[ThreadsStore] Error loading full thread:', convError);
+      console.error('[ThreadStore] Error loading full thread:', convError);
       throw new Error(`Thread not found: ${threadId}`);
     }
 
@@ -759,7 +756,7 @@ export class ThreadsStore {
       .eq('user_id', this.userId);
 
     if (itemsError) {
-      console.error('[ThreadsStore] Error deleting thread messages:', itemsError);
+      console.error('[ThreadStore] Error deleting thread messages:', itemsError);
       throw itemsError;
     }
 
@@ -770,7 +767,7 @@ export class ThreadsStore {
       .eq('user_id', this.userId);
 
     if (threadError) {
-      console.error('[ThreadsStore] Error deleting thread:', threadError);
+      console.error('[ThreadStore] Error deleting thread:', threadError);
       throw threadError;
     }
   }

@@ -1,10 +1,10 @@
-import { ThreadsStore } from '../../../stores/threads_store.ts';
+import { ThreadStore } from '../../../stores/thread_store.ts';
 import type { UserMessageItem } from '../../../types/chatkit.ts';
 import { ItemFactory } from '../factories/item_factory.ts';
 
 export class MessageProcessor {
   constructor(
-    private store: ThreadsStore,
+    private store: ThreadStore,
     private itemFactory: ItemFactory
   ) {}
 

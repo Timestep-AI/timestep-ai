@@ -1,4 +1,4 @@
-import { ThreadsStore } from '../../../stores/threads_store.ts';
+import { ThreadStore } from '../../../stores/thread_store.ts';
 import { Runner, RunState } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import { RunnerFactory } from '../../../utils/runner_factory.ts';
@@ -11,7 +11,7 @@ import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
   constructor(
-    private store: ThreadsStore,
+    private store: ThreadStore,
     private agent: Agent,
     private context: any
   ) {}

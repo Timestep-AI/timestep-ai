@@ -14,7 +14,7 @@ export interface AgentRecord {
   updated_at: string;
 }
 
-export class AgentsStore {
+export class AgentStore {
   constructor(private supabaseClient: SupabaseClient) {}
 
   async getAllAgents(userId: string): Promise<AgentRecord[]> {

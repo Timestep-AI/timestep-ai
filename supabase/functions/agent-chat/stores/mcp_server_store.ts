@@ -10,7 +10,7 @@ export interface McpServerRecord {
   updated_at: string;
 }
 
-export class McpServersStore {
+export class McpServerStore {
   constructor(private supabaseClient: SupabaseClient) {}
 
   async getMcpServersByIds(serverIds: string[]): Promise<McpServerRecord[]> {
