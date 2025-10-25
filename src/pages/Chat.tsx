@@ -185,8 +185,6 @@ const Chat = () => {
     if (agent) {
       console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
-      // Show a toast notification when switching agents
-      toast.success(`Switched to ${agent.name}`);
     }
   };
 
@@ -331,7 +329,7 @@ const Chat = () => {
 
       <IonPage id="main-content">
         <IonHeader>
-          <IonToolbar>
+          <IonToolbar mode="ios">
             <IonButtons slot="start">
               <span style={{ marginRight: '8px', marginLeft: '16px', fontSize: '16px' }}>
                 Agent:
@@ -349,7 +347,7 @@ const Chat = () => {
                 ))}
               </IonSelect>
             </IonButtons>
-            <IonTitle slot="end">Timestep AI</IonTitle>
+            <IonTitle>Timestep AI</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>

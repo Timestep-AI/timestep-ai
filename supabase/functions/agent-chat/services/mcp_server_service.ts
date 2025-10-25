@@ -7,7 +7,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 export class McpServerService {
   private store: McpServerStore;
-  
+
   // Expose the underlying store for utility classes that need direct access
   get mcpServerStore(): McpServerStore {
     return this.store;

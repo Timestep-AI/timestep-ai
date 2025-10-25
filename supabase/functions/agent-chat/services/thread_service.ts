@@ -8,7 +8,7 @@ import type { Page, ThreadMessage } from '../stores/thread_store.ts';
  */
 export class ThreadService {
   private store: ThreadStore;
-  
+
   // Expose the underlying store for utility classes that need direct access
   get threadStore(): ThreadStore {
     return this.store;
@@ -193,9 +193,7 @@ export class ThreadService {
   }> {
     const items = await this.loadThreadItems(threadId, null, 1000, 'desc');
     const messageCount = items.data.length;
-    const lastActivity = items.data.length > 0 
-      ? new Date(items.data[0].created_at * 1000) 
-      : null;
+    const lastActivity = items.data.length > 0 ? new Date(items.data[0].created_at * 1000) : null;
 
     return {
       messageCount,

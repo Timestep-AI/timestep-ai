@@ -9,7 +9,7 @@ export class AgentsService {
   private store: AgentStore;
   private McpServerService: McpServerService;
   private ThreadService: ThreadService;
-  
+
   // Expose the underlying store for utility classes that need direct access
   get agentStore(): AgentStore {
     return this.store;
