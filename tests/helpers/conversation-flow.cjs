@@ -95,13 +95,7 @@ async function waitForNextAssistantTurn(assistantTurns, prevCount) {
   return count - 1;
 }
 
-async function handleToolApprovals(
-  root,
-  page,
-  assistantTurns,
-  currentTurn,
-  approvals
-) {
+async function handleToolApprovals(root, page, assistantTurns, currentTurn, approvals) {
   console.log(`→ Expecting ${approvals.length} tool approvals...`);
 
   const anyApproval = assistantTurns.filter({ hasText: /Tool approval required/i });
@@ -110,7 +104,8 @@ async function handleToolApprovals(
   );
   console.log('✓ At least one tool approval prompt has appeared');
 
-  await root.waitForTimeout?.(TIMEOUTS.UI_SETTLE) || await page.waitForTimeout(TIMEOUTS.UI_SETTLE);
+  (await root.waitForTimeout?.(TIMEOUTS.UI_SETTLE)) ||
+    (await page.waitForTimeout(TIMEOUTS.UI_SETTLE));
 
   for (const [index, city] of approvals.entries()) {
     const approvalPrompt = new RegExp(`Tool approval required.*get_weather.*${city}`, 'i');

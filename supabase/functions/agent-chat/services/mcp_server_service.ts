@@ -3,9 +3,9 @@ import { Client } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/index.js';
 import { StreamableHTTPClientTransport } from 'npm:@modelcontextprotocol/sdk@^1.0.0/client/streamableHttp.js';
 import { McpServerRecord } from '../stores/mcp_servers_store.ts';
 import { McpServersStore } from '../stores/mcp_servers_store.ts';
-import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-export class McpServersService {
+export class McpServerService {
   private mcpServersStore: McpServersStore;
 
   constructor(
@@ -53,7 +53,7 @@ export class McpServersService {
     servers: McpServerRecord[]
   ): Promise<ReturnType<typeof tool>[]> {
     if (!toolIds || toolIds.length === 0) {
-      console.warn('[McpServersService] No tool IDs specified, returning empty tools array');
+      console.warn('[McpServerService] No tool IDs specified, returning empty tools array');
       return [];
     }
 
@@ -62,7 +62,7 @@ export class McpServersService {
     for (const toolId of toolIds) {
       const [serverId, toolName] = toolId.split('.', 2);
       if (!serverId || !toolName) {
-        console.warn(`[McpServersService] Invalid tool ID format: ${toolId}`);
+        console.warn(`[McpServerService] Invalid tool ID format: ${toolId}`);
         continue;
       }
       if (!serverToolMap.has(serverId)) {
@@ -121,7 +121,7 @@ export class McpServersService {
         if (shouldAddAuth) {
           const headers = new Headers(init?.headers);
           if (!headers.has('Authorization') && this.userJwt) {
-            console.log(`[McpServersService] Adding auth header to request: ${url}`);
+            console.log(`[McpServerService] Adding auth header to request: ${url}`);
             headers.set('Authorization', `Bearer ${this.userJwt}`);
           }
 
@@ -145,7 +145,7 @@ export class McpServersService {
           const mcpTool = mcpTools.find((t) => t.name === toolName);
 
           if (!mcpTool) {
-            console.warn(`[McpServersService] Tool '${toolName}' not found in MCP server`);
+            console.warn(`[McpServerService] Tool '${toolName}' not found in MCP server`);
             continue;
           }
 
@@ -189,7 +189,7 @@ export class McpServersService {
                   const headers = new Headers(init?.headers);
                   if (!headers.has('Authorization') && userJwt) {
                     console.log(
-                      `[McpServersService] Adding auth header to tool execution request: ${url}`
+                      `[McpServerService] Adding auth header to tool execution request: ${url}`
                     );
                     headers.set('Authorization', `Bearer ${userJwt}`);
                   }
@@ -230,7 +230,7 @@ export class McpServersService {
               } catch (error) {
                 // Restore original fetch on error
                 globalThis.fetch = originalFetch;
-                console.error(`[McpServersService] Error executing MCP tool ${toolName}:`, error);
+                console.error(`[McpServerService] Error executing MCP tool ${toolName}:`, error);
                 throw error;
               }
             },
@@ -245,7 +245,7 @@ export class McpServersService {
       } catch (error) {
         // Restore original fetch on error
         globalThis.fetch = originalFetch;
-        console.error(`[McpServersService] Error creating tool wrapper for ${toolName}:`, error);
+        console.error(`[McpServerService] Error creating tool wrapper for ${toolName}:`, error);
       }
     }
 
