@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { setDefaultOpenAIKey, setDefaultOpenAITracingExporter } from '@openai/agents-openai';
-import { handleGetAgentsRequest } from './apis/agents_api.ts';
+import { handleGetAgentsRequest } from './apis/agent_api.ts';
 import { handlePostChatKitRequest, handlePostChatKitUploadRequest } from './apis/chatkit_api.ts';
 
 // Configure OpenAI API key and tracing exporter
