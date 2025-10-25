@@ -1,7 +1,7 @@
 import { ThreadService } from '../services/thread_service.ts';
 import { ThreadMessageService } from '../services/thread_message_service.ts';
 import { ThreadRunStateService } from '../services/thread_run_state_service.ts';
-import { Agent } from 'https://esm.sh/@openai/agents-core@0.0.1';
+import { Agent, RunState } from 'https://esm.sh/@openai/agents-core@0.0.1';
 import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
   type ChatKitRequest,
@@ -14,8 +14,8 @@ import {
 import { ChatKitMessageProcessor } from '../utils/chatkit/processors/chatkit_message_processor.ts';
 import { AgentMessageConverter } from '../utils/chatkit/converters/agent_message_converter.ts';
 import { ChatKitEventFactory } from '../utils/chatkit/factories/chatkit_event_factory.ts';
-import { ToolHandler } from './chatkit/tool_service.ts';
 import { streamAgentResponse } from './chatkit/agent_response_service.ts';
+import { ToolHandler } from './chatkit/tool_service.ts';
 
 /**
  * Handles all ChatKit operations
@@ -43,8 +43,8 @@ export class ChatKitService {
     this.toolHandler = new ToolHandler(
       this.threadMessageService.threadMessageStore,
       this.threadRunStateService,
-      agent,
-      context
+      this.agent,
+      this.context
     );
   }
 
@@ -108,7 +108,20 @@ export class ChatKitService {
       case 'threads.custom_action': {
         const thread = await this.threadService.loadThread(request.params.thread_id);
         yield this.eventFactory.createThreadUpdatedEvent(thread);
-        yield* this.toolHandler.handleApproval(thread, request.params.action, request.params);
+        const approvalResult = await this.toolHandler.handleApproval(thread, request.params.action, request.params);
+        
+        if (approvalResult.shouldExecute && approvalResult.runState) {
+          // Execute the agent with the modified run state
+          const result = await this.runAgent(approvalResult.runState, thread);
+          await this.threadRunStateService.clearRunState(thread.id);
+          
+          yield* streamAgentResponse(
+            result,
+            thread.id,
+            this.threadMessageService.threadMessageStore,
+            this.threadRunStateService
+          );
+        }
         break;
       }
 
@@ -156,6 +169,7 @@ export class ChatKitService {
 
     yield* this.processEvents(thread, () => this.respond(thread, userMessage));
   }
+
 
   /**
    * Execute agent response to a user message
@@ -231,6 +245,24 @@ export class ChatKitService {
       status: thread.status,
       metadata: thread.metadata,
     };
+  }
+
+
+
+
+
+  /**
+   * Execute agent with a run state
+   */
+  private async runAgent(runState: any, thread: ThreadMetadata) {
+    const runner = await RunnerFactory.createRunner({
+      threadId: thread.id,
+      userId: this.context.userId,
+    });
+    return await runner.run(this.agent, runState, {
+      context: { threadId: thread.id, userId: this.context.userId },
+      stream: true,
+    });
   }
 
   /**
