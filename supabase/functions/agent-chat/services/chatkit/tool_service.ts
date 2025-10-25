@@ -1,13 +1,15 @@
 import { ThreadMessageStore } from '../../stores/thread_message_store.ts';
 import { ThreadRunStateService } from '../thread_run_state_service.ts';
 import { RunState } from '@openai/agents-core';
-import { RunnerFactory } from '../../utils/runner_factory.ts';
 import { ChatKitEventFactory } from '../../utils/chatkit/factories/chatkit_event_factory.ts';
-import type { ThreadMetadata, ThreadStreamEvent } from '../../types/chatkit.ts';
+import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
+import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
+import type { ThreadMetadata, ThreadStreamEvent, ThreadMessageAddedEvent } from '../../types/chatkit.ts';
 import { Agent } from '@openai/agents-core';
 
-export class ToolHandler {
+export class ToolService {
   private eventFactory: ChatKitEventFactory;
+  private itemFactory: ChatKitItemFactory;
 
   constructor(
     private store: ThreadMessageStore,
@@ -16,6 +18,7 @@ export class ToolHandler {
     private context: any
   ) {
     this.eventFactory = new ChatKitEventFactory();
+    this.itemFactory = new ChatKitItemFactory(store);
   }
 
   async handleApproval(
@@ -107,6 +110,92 @@ export class ToolHandler {
     }
 
     return { runState, shouldExecute: true };
+  }
+
+  // Tool Called Handler functionality
+  async handleToolCalled(event: any, threadId: string): Promise<void> {
+    const item = event.item;
+    const tool = item?.rawItem;
+    const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
+    const toolName = tool?.name || 'tool';
+    const argumentsText = tool?.arguments || '';
+
+    // Save the tool call to conversation history
+    const toolCallItem = this.itemFactory.createToolCallItem(
+      threadId,
+      toolName,
+      toolCallId,
+      argumentsText
+    );
+    await this.store.saveThreadMessage(threadId, toolCallItem);
+  }
+
+  // Tool Approval Handler functionality
+  async *handleToolApproval(event: any, threadId: string, runState?: any): AsyncIterable<ThreadStreamEvent> {
+    const item = event.item;
+    const tool = item?.rawItem;
+    const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
+    const toolName = tool?.name || 'tool';
+    const argumentsText = tool?.arguments || '';
+
+    // Save the run state so we can resume after approval/rejection
+    if (runState) {
+      const serializedState = JSON.stringify(runState);
+      await this.runStateService.saveRunState(threadId, serializedState);
+    }
+
+    // Create approval widget
+    const approvalItemId = this.itemFactory.createWidgetItem(threadId, 'widget', {}).id;
+    const widget = WidgetFactory.createToolApprovalWidget(
+      toolName,
+      argumentsText,
+      toolCallId,
+      approvalItemId
+    );
+
+    const widgetItem = this.itemFactory.createWidgetItem(threadId, 'widget', widget);
+    widgetItem.id = approvalItemId; // Override with the specific ID
+
+    yield {
+      type: 'thread.item.added',
+      item: widgetItem,
+    } as ThreadMessageAddedEvent;
+
+    yield {
+      type: 'thread.item.done',
+      item: widgetItem,
+    } as any;
+
+    // Pause further streaming until action arrives
+    return;
+  }
+
+  // Tool Call Output Handler functionality
+  async *handleToolCallOutput(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
+    const item = event.item;
+    const tool = item?.rawItem;
+    const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
+    const toolName = tool?.name || 'tool';
+    const output = tool?.output || '';
+
+    // Save the tool call output to conversation history
+    const toolCallOutputItem = this.itemFactory.createToolCallOutputItem(
+      threadId,
+      toolName,
+      toolCallId,
+      output
+    );
+    await this.store.saveThreadMessage(threadId, toolCallOutputItem);
+
+    // Create and emit tool result widget
+    const toolResultWidget = WidgetFactory.createToolResultWidget(toolName, output);
+    const toolResultItem = this.itemFactory.createWidgetItem(
+      threadId,
+      'tool_result',
+      toolResultWidget
+    );
+
+    yield this.eventFactory.createItemAddedEvent(toolResultItem);
   }
 
 }

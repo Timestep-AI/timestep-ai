@@ -15,7 +15,7 @@ import { ChatKitMessageProcessor } from '../utils/chatkit/processors/chatkit_mes
 import { AgentMessageConverter } from '../utils/chatkit/converters/agent_message_converter.ts';
 import { ChatKitEventFactory } from '../utils/chatkit/factories/chatkit_event_factory.ts';
 import { streamAgentResponse } from './chatkit/agent_response_service.ts';
-import { ToolHandler } from './chatkit/tool_service.ts';
+import { ToolService } from './chatkit/tool_service.ts';
 
 /**
  * Handles all ChatKit operations
@@ -25,7 +25,7 @@ export class ChatKitService {
   private messageProcessor: ChatKitMessageProcessor;
   private agentConverter: AgentMessageConverter;
   private eventFactory: ChatKitEventFactory;
-  private toolHandler: ToolHandler;
+  private toolService: ToolService;
 
   constructor(
     private threadService: ThreadService,
@@ -40,7 +40,7 @@ export class ChatKitService {
       this.threadMessageService.threadMessageStore
     );
     this.agentConverter = new AgentMessageConverter();
-    this.toolHandler = new ToolHandler(
+    this.toolService = new ToolService(
       this.threadMessageService.threadMessageStore,
       this.threadRunStateService,
       this.agent,
@@ -108,7 +108,7 @@ export class ChatKitService {
       case 'threads.custom_action': {
         const thread = await this.threadService.loadThread(request.params.thread_id);
         yield this.eventFactory.createThreadUpdatedEvent(thread);
-        const approvalResult = await this.toolHandler.handleApproval(thread, request.params.action, request.params);
+        const approvalResult = await this.toolService.handleApproval(thread, request.params.action, request.params);
         
         if (approvalResult.shouldExecute && approvalResult.runState) {
           // Execute the agent with the modified run state
@@ -119,7 +119,9 @@ export class ChatKitService {
             result,
             thread.id,
             this.threadMessageService.threadMessageStore,
-            this.threadRunStateService
+            this.threadRunStateService,
+            this.agent,
+            this.context
           );
         }
         break;
@@ -203,7 +205,9 @@ export class ChatKitService {
         result as any,
         thread.id,
         this.threadMessageService.threadMessageStore,
-        this.threadRunStateService
+        this.threadRunStateService,
+        this.agent,
+        this.context
       );
     } catch (error) {
       console.error('[AgentRunner] Error:', error);

@@ -7,10 +7,8 @@ import type {
 } from '../../types/chatkit.ts';
 import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
-import { ToolCallOutputHandler } from './tool_call_output_service.ts';
-import { ToolCalledHandler } from './tool_called_service.ts';
-import { HandoffCallHandler } from './handoff_call_service.ts';
-import { HandoffOutputHandler } from './handoff_output_service.ts';
+import { ToolService } from './tool_service.ts';
+import { HandoffService } from './handoff_service.ts';
 import { ModelStreamHandler } from './model_stream_service.ts';
 
 // Simplified helper to stream agent response to ChatKit events
@@ -18,16 +16,16 @@ export async function* streamAgentResponse(
   result: AsyncIterable<any>,
   threadId: string,
   store: ThreadMessageStore,
-  runStateService: ThreadRunStateService
+  runStateService: ThreadRunStateService,
+  agent: any,
+  context: any
 ): AsyncIterable<ThreadStreamEvent> {
   const itemFactory = new ChatKitItemFactory(store);
 
   // Initialize event handlers
   const processedHandoffs = new Set<string>();
-  const toolCallOutputHandler = new ToolCallOutputHandler(store);
-  const toolCalledHandler = new ToolCalledHandler(store);
-  const handoffCallHandler = new HandoffCallHandler(store, processedHandoffs);
-  const handoffOutputHandler = new HandoffOutputHandler(store, processedHandoffs);
+  const toolService = new ToolService(store, runStateService, agent, context);
+  const handoffService = new HandoffService(store, processedHandoffs);
   const modelStreamHandler = new ModelStreamHandler(itemFactory);
 
   // Streaming state
@@ -56,44 +54,8 @@ export async function* streamAgentResponse(
     // Handle tool approval requests → render a widget and pause (matches original logic)
     if (eventType === 'run_item_stream_event' && eventName === 'tool_approval_requested') {
       console.log('🔧 Processing tool approval request');
-      const item = (event as any).item;
-      const tool = item?.rawItem;
-      const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
-      const toolName = tool?.name || 'tool';
-      const argumentsText = tool?.arguments || '';
-
-      // Save the run state so we can resume after approval/rejection
       const runState = (result as any).state;
-      if (runState) {
-        const serializedState = JSON.stringify(runState);
-        await runStateService.saveRunState(threadId, serializedState);
-      }
-
-      // Generate approval item ID first
-      const approvalItemId = store.generateItemId();
-
-      // Create approval widget
-      const widget = WidgetFactory.createToolApprovalWidget(
-        toolName,
-        argumentsText,
-        toolCallId,
-        approvalItemId
-      );
-
-      const widgetItem = itemFactory.createWidgetItem(threadId, 'widget', widget);
-      widgetItem.id = approvalItemId;
-
-      yield {
-        type: 'thread.item.added',
-        item: widgetItem,
-      } as ThreadMessageAddedEvent;
-
-      yield {
-        type: 'thread.item.done',
-        item: widgetItem,
-      } as ThreadMessageDoneEvent;
-
-      // Pause further streaming until action arrives
+      yield* toolService.handleToolApproval(event, threadId, runState);
       return;
     }
 
@@ -106,25 +68,25 @@ export async function* streamAgentResponse(
 
       if (item?.type === 'tool_call_output_item') {
         console.log('🔧 Handling tool_call_output_item');
-        yield* toolCallOutputHandler.handle(event, threadId);
+        yield* toolService.handleToolCallOutput(event, threadId);
         continue;
       }
 
       if (item?.type === 'handoff_call_item') {
         console.log('🤝 Handling handoff_call_item');
-        yield* handoffCallHandler.handle(event, threadId);
+        yield* handoffService.handleHandoffCall(event, threadId);
         continue;
       }
 
       if (item?.type === 'handoff_output_item') {
         console.log('📤 Handling handoff_output_item');
-        yield* handoffOutputHandler.handle(event, threadId);
+        yield* handoffService.handleHandoffOutput(event, threadId);
         continue;
       }
 
       if (eventName === 'tool_called') {
         console.log('🔧 Handling tool_called event');
-        await toolCalledHandler.handle(event, threadId);
+        await toolService.handleToolCalled(event, threadId);
         continue;
       }
 

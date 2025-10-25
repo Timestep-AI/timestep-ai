@@ -4,7 +4,7 @@ import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_f
 import { ChatKitEventFactory } from '../../utils/chatkit/factories/chatkit_event_factory.ts';
 import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
 
-export class HandoffCallHandler {
+export class HandoffService {
   private itemFactory: ChatKitItemFactory;
   private eventFactory: ChatKitEventFactory;
 
@@ -16,7 +16,8 @@ export class HandoffCallHandler {
     this.eventFactory = new ChatKitEventFactory();
   }
 
-  async *handle(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
+  // Handoff Call Handler functionality
+  async *handleHandoffCall(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
     const item = event.item;
     const handoff = item?.rawItem;
     const handoffCallId = handoff?.callId || handoff?.call_id || handoff?.id || 'unknown';
@@ -44,5 +45,41 @@ export class HandoffCallHandler {
     await this.store.saveThreadMessage(threadId, handoffToolCallItem);
 
     yield this.eventFactory.createItemAddedEvent(handoffItem);
+  }
+
+  // Handoff Output Handler functionality
+  async *handleHandoffOutput(event: any, threadId: string): AsyncIterable<ThreadStreamEvent> {
+    const item = event.item;
+    const handoff = item?.rawItem;
+    const handoffCallId = handoff?.callId || handoff?.call_id || handoff?.id || 'unknown';
+    const output = handoff?.output || '';
+
+    // Check if we've already processed this handoff output to avoid duplicates
+    const handoffOutputKey = `handoff_output_${threadId}`;
+    if (this.processedHandoffs.has(handoffOutputKey)) {
+      return;
+    }
+    this.processedHandoffs.add(handoffOutputKey);
+
+    // Create and emit handoff result widget
+    const handoffResultWidget = WidgetFactory.createHandoffResultWidget(output);
+    const handoffResultItem = this.itemFactory.createWidgetItem(
+      threadId,
+      'handoff_result',
+      handoffResultWidget
+    );
+
+    // Save the handoff result to conversation history
+    const handoffResultToolItem = this.itemFactory.createHandoffResultToolItem(
+      threadId,
+      handoffCallId,
+      output
+    );
+    await this.store.saveThreadMessage(threadId, handoffResultToolItem);
+
+    yield {
+      type: 'thread.item.added',
+      item: handoffResultItem,
+    } as ThreadMessageAddedEvent;
   }
 }
