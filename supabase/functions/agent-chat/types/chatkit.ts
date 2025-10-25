@@ -48,7 +48,7 @@ export interface Attachment {
   size?: number;
 }
 
-export type ThreadItem = UserMessageItem | AssistantMessageItem | any;
+export type ThreadMessage = UserMessageItem | AssistantMessageItem | any;
 
 export interface ThreadStreamEvent {
   type: string;
@@ -65,12 +65,12 @@ export interface ThreadUpdatedEvent extends ThreadStreamEvent {
   thread: Thread;
 }
 
-export interface ThreadItemAddedEvent extends ThreadStreamEvent {
+export interface ThreadMessageAddedEvent extends ThreadStreamEvent {
   type: 'thread.item.added';
   item: any;
 }
 
-export interface ThreadItemDoneEvent extends ThreadStreamEvent {
+export interface ThreadMessageDoneEvent extends ThreadStreamEvent {
   type: 'thread.item.done';
   item: any;
 }

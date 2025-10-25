@@ -61,9 +61,21 @@ export async function handlePostChatKitRequest(
         const authHeader = req.headers.get('Authorization') ?? '';
         const userJwt = authHeader.replace('Bearer ', '');
 
-        const threadService = new ThreadService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
-        const threadMessageService = new ThreadMessageService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
-        const threadRunStateService = new ThreadRunStateService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const threadService = new ThreadService(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          userJwt,
+          currentUserId
+        );
+        const threadMessageService = new ThreadMessageService(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          userJwt,
+          currentUserId
+        );
+        const threadRunStateService = new ThreadRunStateService(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          userJwt,
+          currentUserId
+        );
 
         const agentService = new AgentsService(
           Deno.env.get('SUPABASE_URL') ?? '',
@@ -82,7 +94,13 @@ export async function handlePostChatKitRequest(
 
         // Create the agent and use ChatKitService directly
         const agent = await agentService.createAgent(agentId, currentUserId);
-        const chatKitService = new ChatKitService(threadService, threadMessageService, threadRunStateService, agent, context);
+        const chatKitService = new ChatKitService(
+          threadService,
+          threadMessageService,
+          threadRunStateService,
+          agent,
+          context
+        );
 
         // Parse the request and determine if it's streaming
         const parsedRequest: ChatKitRequest = body;

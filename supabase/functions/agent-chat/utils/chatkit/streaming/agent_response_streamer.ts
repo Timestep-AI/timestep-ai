@@ -2,8 +2,8 @@ import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
 import type {
   ThreadStreamEvent,
-  ThreadItemAddedEvent,
-  ThreadItemDoneEvent,
+  ThreadMessageAddedEvent,
+  ThreadMessageDoneEvent,
 } from '../../../types/chatkit.ts';
 import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../factories/widget_factory.ts';
@@ -11,7 +11,6 @@ import { ToolCallOutputHandler } from '../handlers/tool_call_output_handler.ts';
 import { ToolCalledHandler } from '../handlers/tool_called_handler.ts';
 import { HandoffCallHandler } from '../handlers/handoff_call_handler.ts';
 import { HandoffOutputHandler } from '../handlers/handoff_output_handler.ts';
-import { ToolApprovalHandler } from '../handlers/tool_approval_handler.ts';
 import { ModelStreamHandler } from '../handlers/model_stream_handler.ts';
 
 // Simplified helper to stream agent response to ChatKit events
@@ -29,7 +28,6 @@ export async function* streamAgentResponse(
   const toolCalledHandler = new ToolCalledHandler(store);
   const handoffCallHandler = new HandoffCallHandler(store, processedHandoffs);
   const handoffOutputHandler = new HandoffOutputHandler(store, processedHandoffs);
-  const toolApprovalHandler = new ToolApprovalHandler(store, runStateService);
   const modelStreamHandler = new ModelStreamHandler(itemFactory);
 
   // Streaming state
@@ -88,12 +86,12 @@ export async function* streamAgentResponse(
       yield {
         type: 'thread.item.added',
         item: widgetItem,
-      } as ThreadItemAddedEvent;
+      } as ThreadMessageAddedEvent;
 
       yield {
         type: 'thread.item.done',
         item: widgetItem,
-      } as ThreadItemDoneEvent;
+      } as ThreadMessageDoneEvent;
 
       // Pause further streaming until action arrives
       return;
@@ -207,19 +205,19 @@ export async function* streamAgentResponse(
     yield {
       type: 'thread.item.added',
       item: finalItem,
-    } as ThreadItemAddedEvent;
+    } as ThreadMessageAddedEvent;
   }
 
   console.log('✅ Emitting thread.item.done');
   yield {
     type: 'thread.item.done',
     item: finalItem,
-  } as ThreadItemDoneEvent;
+  } as ThreadMessageDoneEvent;
 
   // Save the final message to the database
   if (streamState.fullText) {
     console.log('💾 Saving final message to database');
-    await store.saveThreadItem(threadId, finalItem);
+    await store.saveThreadMessage(threadId, finalItem);
   } else {
     console.log('⚠️ No text content to save');
   }

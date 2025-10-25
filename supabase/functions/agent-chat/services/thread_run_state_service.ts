@@ -2,7 +2,7 @@ import { ThreadRunStateStore } from '../stores/thread_run_state_store.ts';
 
 /**
  * Service for managing thread run states
- * 
+ *
  * This service handles business logic related to agent execution state,
  * conversation context, and other runtime state information. It provides
  * a clean interface for managing run states while keeping the store
@@ -11,17 +11,13 @@ import { ThreadRunStateStore } from '../stores/thread_run_state_store.ts';
 export class ThreadRunStateService {
   private store: ThreadRunStateStore;
 
-  constructor(
-    supabaseUrl: string,
-    userJwt: string,
-    userId: string
-  ) {
+  constructor(supabaseUrl: string, userJwt: string, userId: string) {
     this.store = new ThreadRunStateStore(supabaseUrl, userJwt, userId);
   }
 
   /**
    * Save run state for a thread
-   * 
+   *
    * Stores agent execution state, conversation context, and other runtime
    * information that needs to persist across agent runs.
    */
@@ -31,7 +27,7 @@ export class ThreadRunStateService {
 
   /**
    * Load run state for a thread
-   * 
+   *
    * Retrieves the stored execution state for a thread, which can include
    * conversation context, tool call states, and other runtime information.
    */
@@ -41,7 +37,7 @@ export class ThreadRunStateService {
 
   /**
    * Clear run state for a thread
-   * 
+   *
    * Removes all stored execution state for a thread, effectively resetting
    * the agent's context and starting fresh.
    */
@@ -51,7 +47,7 @@ export class ThreadRunStateService {
 
   /**
    * Check if run state exists for a thread
-   * 
+   *
    * Useful for determining if a thread has any stored execution state
    * before attempting to load it.
    */
@@ -61,17 +57,19 @@ export class ThreadRunStateService {
 
   /**
    * Get all run states for debugging/admin purposes
-   * 
+   *
    * Returns all run states for the current user, useful for debugging
    * or administrative tasks.
    */
-  async getAllRunStates(): Promise<Array<{ thread_id: string; state_data: string; updated_at: string }>> {
+  async getAllRunStates(): Promise<
+    Array<{ thread_id: string; state_data: string; updated_at: string }>
+  > {
     return this.store.getAllRunStates();
   }
 
   /**
    * Cleanup old run states
-   * 
+   *
    * Removes run states older than the specified number of days to prevent
    * database bloat and maintain performance.
    */
@@ -81,7 +79,7 @@ export class ThreadRunStateService {
 
   /**
    * Parse run state as JSON
-   * 
+   *
    * Convenience method to parse stored run state as JSON object.
    * Returns null if parsing fails or state doesn't exist.
    */
@@ -101,7 +99,7 @@ export class ThreadRunStateService {
 
   /**
    * Save run state as JSON
-   * 
+   *
    * Convenience method to save a JavaScript object as JSON string
    * in the run state.
    */
@@ -112,7 +110,7 @@ export class ThreadRunStateService {
 
   /**
    * Update run state with partial data
-   * 
+   *
    * Loads existing run state, merges with new data, and saves back.
    * Useful for updating specific fields in the run state.
    */

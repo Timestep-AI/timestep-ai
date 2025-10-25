@@ -4,9 +4,7 @@ import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 export class ToolCalledHandler {
   private itemFactory: ChatKitItemFactory;
 
-  constructor(
-    private store: ThreadMessageStore
-  ) {
+  constructor(private store: ThreadMessageStore) {
     this.itemFactory = new ChatKitItemFactory(store);
   }
 
@@ -24,6 +22,6 @@ export class ToolCalledHandler {
       toolCallId,
       argumentsText
     );
-    await this.store.saveThreadItem(threadId, toolCallItem);
+    await this.store.saveThreadMessage(threadId, toolCallItem);
   }
 }

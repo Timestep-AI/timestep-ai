@@ -2,13 +2,13 @@ import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 
 /**
  * Creates ChatKit items for database storage.
- * 
+ *
  * This factory is responsible for creating all types of ChatKit items that get
  * stored in the database. These are persistent data objects, not streaming events.
- * 
+ *
  * ChatKit items include:
  * - Tool call items (requests and results)
- * - Handoff items (requests and results) 
+ * - Handoff items (requests and results)
  * - Widget items
  * - Assistant message items
  */

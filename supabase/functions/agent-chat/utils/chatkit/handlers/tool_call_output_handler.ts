@@ -1,4 +1,4 @@
-import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
 import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
@@ -8,9 +8,7 @@ export class ToolCallOutputHandler {
   private itemFactory: ChatKitItemFactory;
   private eventFactory: ChatKitEventFactory;
 
-  constructor(
-    private store: ThreadMessageStore
-  ) {
+  constructor(private store: ThreadMessageStore) {
     this.itemFactory = new ChatKitItemFactory(store);
     this.eventFactory = new ChatKitEventFactory();
   }
@@ -29,7 +27,7 @@ export class ToolCallOutputHandler {
       toolCallId,
       output
     );
-    await this.store.saveThreadItem(threadId, toolCallOutputItem);
+    await this.store.saveThreadMessage(threadId, toolCallOutputItem);
 
     // Create and emit tool result widget
     const toolResultWidget = WidgetFactory.createToolResultWidget(toolName, output);

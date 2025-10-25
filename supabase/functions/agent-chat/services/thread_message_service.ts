@@ -1,5 +1,5 @@
 import { ThreadMessageStore } from '../stores/thread_message_store.ts';
-import type { ThreadItem } from '../types/chatkit.ts';
+import type { ThreadMessage } from '../types/chatkit.ts';
 import type { Page, ThreadMessage } from '../stores/thread_message_store.ts';
 
 /**
@@ -30,45 +30,44 @@ export class ThreadMessageService {
   }
 
   /**
-   * Load thread items with pagination
+   * Load thread messages with pagination
    */
-  async loadThreadItems(
+  async loadThreadMessages(
     threadId: string,
     after: string | null,
     limit: number,
     order: string
-  ): Promise<Page<ThreadItem>> {
-    return await this.store.loadThreadItems(threadId, after, limit, order);
+  ): Promise<Page<ThreadMessage>> {
+    return await this.store.loadThreadMessages(threadId, after, limit, order);
   }
 
   /**
-   * Add a new item to a thread
+   * Add a new message to a thread
    */
-  async addThreadItem(threadId: string, item: ThreadItem): Promise<void> {
-    return await this.store.addThreadItem(threadId, item);
+  async addThreadMessage(threadId: string, message: ThreadMessage): Promise<void> {
+    return await this.store.addThreadMessage(threadId, message);
   }
 
   /**
-   * Save/update a thread item
+   * Save/update a thread message
    */
-  async saveThreadItem(threadId: string, item: ThreadItem): Promise<void> {
-    return await this.store.saveThreadItem(threadId, item);
+  async saveThreadMessage(threadId: string, message: ThreadMessage): Promise<void> {
+    return await this.store.saveThreadMessage(threadId, message);
   }
 
   /**
-   * Load a specific item from a thread
+   * Load a specific message from a thread
    */
-  async loadItem(threadId: string, itemId: string): Promise<ThreadItem> {
-    return await this.store.loadItem(threadId, itemId);
+  async loadMessage(threadId: string, messageId: string): Promise<ThreadMessage> {
+    return await this.store.loadMessage(threadId, messageId);
   }
 
   /**
-   * Load a thread item by ID
+   * Load a thread message by ID
    */
-  async loadThreadItem(itemId: string, threadId: string): Promise<ThreadItem | null> {
-    return await this.store.loadThreadItem(itemId, threadId);
+  async loadThreadMessage(messageId: string, threadId: string): Promise<ThreadMessage | null> {
+    return await this.store.loadThreadMessage(messageId, threadId);
   }
-
 
   /**
    * Get conversation context using K+N retrieval pattern
@@ -104,7 +103,7 @@ export class ThreadMessageService {
     messageCount: number;
     lastActivity: Date | null;
   }> {
-    const items = await this.loadThreadItems(threadId, null, 1000, 'desc');
+    const items = await this.loadThreadMessages(threadId, null, 1000, 'desc');
     const messageCount = items.data.length;
     const lastActivity = items.data.length > 0 ? new Date(items.data[0].created_at * 1000) : null;
 
@@ -121,16 +120,18 @@ export class ThreadMessageService {
     threadId: string,
     query: string,
     limit: number = 20
-  ): Promise<ThreadItem[]> {
+  ): Promise<ThreadMessage[]> {
     // This could be enhanced with full-text search or vector similarity
-    const items = await this.loadThreadItems(threadId, null, 1000, 'desc');
-    
-    return items.data.filter(item => {
-      if (typeof item.content === 'string') {
-        return item.content.toLowerCase().includes(query.toLowerCase());
-      }
-      return false;
-    }).slice(0, limit);
+    const items = await this.loadThreadMessages(threadId, null, 1000, 'desc');
+
+    return items.data
+      .filter((item) => {
+        if (typeof item.content === 'string') {
+          return item.content.toLowerCase().includes(query.toLowerCase());
+        }
+        return false;
+      })
+      .slice(0, limit);
   }
 
   /**

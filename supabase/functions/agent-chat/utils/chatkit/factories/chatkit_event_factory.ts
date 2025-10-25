@@ -1,11 +1,16 @@
-import type { ThreadMetadata, ThreadUpdatedEvent, Thread, ThreadCreatedEvent } from '../../../types/chatkit.ts';
+import type {
+  ThreadMetadata,
+  ThreadUpdatedEvent,
+  Thread,
+  ThreadCreatedEvent,
+} from '../../../types/chatkit.ts';
 
 /**
  * Creates ChatKit events for frontend streaming.
- * 
+ *
  * This factory is responsible for creating all types of ChatKit events that get
  * streamed to the frontend. These are transient notification objects, not persistent data.
- * 
+ *
  * ChatKit events include:
  * - Thread lifecycle events (created, updated)
  * - Item lifecycle events (added, done)

@@ -122,9 +122,7 @@ export class ThreadStore {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await this.supabase
-      .from('threads')
-      .upsert(threadData, { onConflict: 'id' });
+    const { error } = await this.supabase.from('threads').upsert(threadData, { onConflict: 'id' });
 
     if (error) {
       console.error('[ThreadStore] Error saving thread:', error);
@@ -183,7 +181,7 @@ export class ThreadStore {
    */
   async loadFullThread(threadId: string): Promise<any> {
     const thread = await this.loadThread(threadId);
-    
+
     // Return thread in the format expected by ChatKit
     return {
       id: thread.id,
@@ -200,12 +198,14 @@ export class ThreadStore {
   async deleteThread(threadId: string): Promise<void> {
     // First, get the thread to find its vector store
     const thread = await this.loadThread(threadId);
-    
+
     // Delete the vector store if it exists
     if (thread.metadata?.vector_store_id) {
       try {
         await this.openai.vectorStores.del(thread.metadata.vector_store_id);
-        console.log(`[ThreadStore] Deleted vector store ${thread.metadata.vector_store_id} for thread ${threadId}`);
+        console.log(
+          `[ThreadStore] Deleted vector store ${thread.metadata.vector_store_id} for thread ${threadId}`
+        );
       } catch (error) {
         console.warn(`[ThreadStore] Failed to delete vector store for thread ${threadId}:`, error);
       }

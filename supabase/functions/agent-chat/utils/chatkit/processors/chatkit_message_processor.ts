@@ -3,12 +3,12 @@ import type { UserMessageItem } from '../../../types/chatkit.ts';
 
 /**
  * Processes ChatKit message formats and handles ChatKit-specific message operations.
- * 
+ *
  * This processor is responsible for:
  * - Extracting text content from ChatKit message structures
  * - Building properly formatted ChatKit user message items
  * - Loading and formatting ChatKit conversation history
- * 
+ *
  * It works exclusively with ChatKit formats and does not handle Agent format conversion.
  */
 export class ChatKitMessageProcessor {
@@ -16,11 +16,11 @@ export class ChatKitMessageProcessor {
 
   /**
    * Extracts plain text content from a ChatKit user message item.
-   * 
+   *
    * ChatKit messages can have complex content structures:
    * - Simple string content
    * - Array of content parts with different types
-   * 
+   *
    * This method normalizes all formats into a single plain text string.
    */
   async extractMessageText(item: UserMessageItem): Promise<string> {
@@ -38,20 +38,20 @@ export class ChatKitMessageProcessor {
 
   /**
    * Loads and formats ChatKit conversation history.
-   * 
+   *
    * This method retrieves all thread items from the database and converts them
    * into a simplified format. It handles three types of thread items:
-   * 
+   *
    * - user_message: Extracts text using extractMessageText()
    * - assistant_message: Extracts text from output_text content parts
    * - client_tool_call: Formats as a descriptive text string
-   * 
+   *
    * The result is a chronological array of role-based messages.
    */
   async loadConversationHistory(
     threadId: string
   ): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
-    const threadItems = await this.store.loadThreadItems(threadId, null, 100, 'asc');
+    const threadItems = await this.store.loadThreadMessages(threadId, null, 100, 'asc');
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     for (const threadItem of threadItems.data) {
@@ -89,15 +89,15 @@ export class ChatKitMessageProcessor {
 
   /**
    * Builds a properly formatted ChatKit UserMessageItem from raw input data.
-   * 
+   *
    * This method takes raw input from ChatKit requests and creates a standardized
    * UserMessageItem that can be stored in the database. It handles:
-   * 
+   *
    * - Content normalization (ensures content is always an array)
    * - ID generation using the thread store
    * - Timestamp creation
    * - Optional fields (attachments, quoted_text, inference_options)
-   * 
+   *
    * The method ensures that even malformed input results in a valid UserMessageItem
    * by providing default values when necessary.
    */

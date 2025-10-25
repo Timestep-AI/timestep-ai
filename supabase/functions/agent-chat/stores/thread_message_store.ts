@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { ThreadItem } from '../types/chatkit.ts';
+import type { ThreadMessage } from '../types/chatkit.ts';
 import { createOpenAIClient } from '../utils/openai_client.ts';
 
 export interface Page<T> {
@@ -67,14 +67,14 @@ export class ThreadMessageStore {
   }
 
   /**
-   * Load thread items with pagination
+   * Load thread messages with pagination
    */
-  async loadThreadItems(
+  async loadThreadMessages(
     threadId: string,
     after: string | null,
     limit: number,
     order: string
-  ): Promise<Page<ThreadItem>> {
+  ): Promise<Page<ThreadMessage>> {
     let query = this.supabase
       .from('thread_messages')
       .select('*')
@@ -106,30 +106,30 @@ export class ThreadMessageStore {
     const lastItem = items.length > 0 ? items[items.length - 1] : null;
 
     return {
-      data: items.map(this.mapToThreadItem),
+      data: items.map(this.mapToThreadMessage),
       has_more: hasMore,
       after: lastItem ? lastItem.id : null,
     };
   }
 
   /**
-   * Add a new item to a thread
+   * Add a new message to a thread
    */
-  async addThreadItem(threadId: string, item: ThreadItem): Promise<void> {
+  async addThreadMessage(threadId: string, message: ThreadMessage): Promise<void> {
     // Get the next message index for this thread
-    const { data: nextIndex, error: indexError } = await this.supabase
-      .rpc('get_next_message_index', { p_thread_id: threadId });
+    const { data: nextIndex, error: indexError } = await this.supabase.rpc(
+      'get_next_message_index',
+      { p_thread_id: threadId }
+    );
 
     if (indexError) {
       console.error('Error getting next message index:', indexError);
       throw new Error(`Failed to get next message index: ${indexError.message}`);
     }
 
-    const messageData = this.mapFromThreadItem(threadId, item, nextIndex);
+    const messageData = this.mapFromThreadMessage(threadId, message, nextIndex);
 
-    const { error } = await this.supabase
-      .from('thread_messages')
-      .insert(messageData);
+    const { error } = await this.supabase.from('thread_messages').insert(messageData);
 
     if (error) {
       console.error('Error adding thread item:', error);
@@ -138,51 +138,55 @@ export class ThreadMessageStore {
   }
 
   /**
-   * Save/update a thread item
+   * Save/update a thread message
    */
-  async saveThreadItem(threadId: string, item: ThreadItem): Promise<void> {
+  async saveThreadMessage(threadId: string, message: ThreadMessage): Promise<void> {
     // For updates, we need to get the existing message index or create a new one
     let messageIndex = 0;
-    
+
     try {
-      const existing = await this.loadThreadItem(item.id, threadId);
+      const existing = await this.loadThreadMessage(message.id, threadId);
       if (existing) {
         // For updates, we'll use the existing message index
-        // We need to get it from the database since ThreadItem doesn't include it
+        // We need to get it from the database since ThreadMessage doesn't include it
         const { data: existingData } = await this.supabase
           .from('thread_messages')
           .select('message_index')
           .eq('id', item.id)
           .eq('thread_id', threadId)
           .single();
-        
+
         messageIndex = existingData?.message_index || 0;
       } else {
         // For new items, get the next message index
-        const { data: nextIndex, error: indexError } = await this.supabase
-          .rpc('get_next_message_index', { p_thread_id: threadId });
+        const { data: nextIndex, error: indexError } = await this.supabase.rpc(
+          'get_next_message_index',
+          { p_thread_id: threadId }
+        );
 
         if (indexError) {
           console.error('Error getting next message index:', indexError);
           throw new Error(`Failed to get next message index: ${indexError.message}`);
         }
-        
+
         messageIndex = nextIndex;
       }
     } catch (error) {
       // If we can't get the existing index, get a new one
-      const { data: nextIndex, error: indexError } = await this.supabase
-        .rpc('get_next_message_index', { p_thread_id: threadId });
+      const { data: nextIndex, error: indexError } = await this.supabase.rpc(
+        'get_next_message_index',
+        { p_thread_id: threadId }
+      );
 
       if (indexError) {
         console.error('Error getting next message index:', indexError);
         throw new Error(`Failed to get next message index: ${indexError.message}`);
       }
-      
+
       messageIndex = nextIndex;
     }
 
-    const messageData = this.mapFromThreadItem(threadId, item, messageIndex);
+    const messageData = this.mapFromThreadMessage(threadId, message, messageIndex);
 
     const { error } = await this.supabase
       .from('thread_messages')
@@ -195,14 +199,14 @@ export class ThreadMessageStore {
   }
 
   /**
-   * Load a specific item from a thread
+   * Load a specific message from a thread
    */
-  async loadItem(threadId: string, itemId: string): Promise<ThreadItem> {
+  async loadMessage(threadId: string, messageId: string): Promise<ThreadMessage> {
     const { data, error } = await this.supabase
       .from('thread_messages')
       .select('*')
       .eq('thread_id', threadId)
-      .eq('id', itemId)
+      .eq('id', messageId)
       .single();
 
     if (error) {
@@ -210,17 +214,17 @@ export class ThreadMessageStore {
       throw new Error(`Failed to load item: ${error.message}`);
     }
 
-    return this.mapToThreadItem(data);
+    return this.mapToThreadMessage(data);
   }
 
   /**
-   * Load a thread item by ID
+   * Load a thread message by ID
    */
-  async loadThreadItem(itemId: string, threadId: string): Promise<ThreadItem | null> {
+  async loadThreadMessage(messageId: string, threadId: string): Promise<ThreadMessage | null> {
     const { data, error } = await this.supabase
       .from('thread_messages')
       .select('*')
-      .eq('id', itemId)
+      .eq('id', messageId)
       .eq('thread_id', threadId)
       .single();
 
@@ -232,9 +236,8 @@ export class ThreadMessageStore {
       throw new Error(`Failed to load thread item: ${error.message}`);
     }
 
-    return this.mapToThreadItem(data);
+    return this.mapToThreadMessage(data);
   }
-
 
   /**
    * Get conversation context using K+N retrieval pattern
@@ -271,7 +274,7 @@ export class ThreadMessageStore {
 
     // Get similar messages using vector similarity
     let similarMessages: Array<ThreadMessage & { similarity_score: number }> = [];
-    
+
     try {
       // Create embedding for the user message
       const embeddingResponse = await this.openai.embeddings.create({
@@ -298,8 +301,8 @@ export class ThreadMessageStore {
 
     // Combine and deduplicate messages
     const allMessages = [...recentMessages, ...similarMessages];
-    const uniqueMessages = allMessages.filter((message, index, self) => 
-      index === self.findIndex(m => m.id === message.id)
+    const uniqueMessages = allMessages.filter(
+      (message, index, self) => index === self.findIndex((m) => m.id === message.id)
     );
 
     // Sort by creation time
@@ -328,9 +331,9 @@ export class ThreadMessageStore {
   }
 
   /**
-   * Map database record to ThreadItem
+   * Map database record to ThreadMessage
    */
-  private mapToThreadItem(data: any): ThreadItem {
+  private mapToThreadMessage(data: any): ThreadMessage {
     // Parse content back from JSON string to object/array
     let content = data.content;
     if (typeof content === 'string') {
@@ -346,9 +349,14 @@ export class ThreadMessageStore {
       id: data.id,
       thread_id: data.thread_id,
       created_at: Math.floor(new Date(data.created_at).getTime() / 1000), // Convert to Unix timestamp
-      type: data.role === 'user' ? 'user_message' : 
-            data.role === 'assistant' ? 'assistant_message' : 
-            data.role === 'tool' ? 'tool_message' : 'unknown',
+      type:
+        data.role === 'user'
+          ? 'user_message'
+          : data.role === 'assistant'
+            ? 'assistant_message'
+            : data.role === 'tool'
+              ? 'tool_message'
+              : 'unknown',
       content: content,
       ...(data.name && { name: data.name }),
       ...(data.tool_call_id && { tool_call_id: data.tool_call_id }),
@@ -356,23 +364,33 @@ export class ThreadMessageStore {
   }
 
   /**
-   * Map ThreadItem to database record
+   * Map ThreadMessage to database record
    */
-  private mapFromThreadItem(threadId: string, item: ThreadItem, messageIndex?: number): any {
-    const role = item.type === 'user_message' ? 'user' :
-                 item.type === 'assistant_message' ? 'assistant' :
-                 item.type === 'tool_message' ? 'tool' : 'system';
+  private mapFromThreadMessage(
+    threadId: string,
+    message: ThreadMessage,
+    messageIndex?: number
+  ): any {
+    const role =
+      message.type === 'user_message'
+        ? 'user'
+        : message.type === 'assistant_message'
+          ? 'assistant'
+          : message.type === 'tool_message'
+            ? 'tool'
+            : 'system';
 
     return {
-      id: item.id,
+      id: message.id,
       thread_id: threadId,
       user_id: this.userId,
       message_index: messageIndex || 0,
       role,
-      content: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
-      ...(item.name && { name: item.name }),
-      ...(item.tool_call_id && { tool_call_id: item.tool_call_id }),
-      created_at: new Date(item.created_at * 1000).toISOString(),
+      content:
+        typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
+      ...(message.name && { name: message.name }),
+      ...(message.tool_call_id && { tool_call_id: message.tool_call_id }),
+      created_at: new Date(message.created_at * 1000).toISOString(),
     };
   }
 }

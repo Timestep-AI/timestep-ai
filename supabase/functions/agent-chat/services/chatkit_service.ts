@@ -36,9 +36,16 @@ export class ChatKitService {
   ) {
     // Initialize specialized services
     this.eventFactory = new ChatKitEventFactory();
-    this.messageProcessor = new ChatKitMessageProcessor(this.threadMessageService.threadMessageStore);
+    this.messageProcessor = new ChatKitMessageProcessor(
+      this.threadMessageService.threadMessageStore
+    );
     this.agentConverter = new AgentMessageConverter();
-    this.toolHandler = new ToolHandler(this.threadMessageService.threadMessageStore, this.threadRunStateService, agent, context);
+    this.toolHandler = new ToolHandler(
+      this.threadMessageService.threadMessageStore,
+      this.threadRunStateService,
+      agent,
+      context
+    );
   }
 
   /**
@@ -65,7 +72,7 @@ export class ChatKitService {
 
       case 'items.list': {
         const params = request.params!;
-        return await this.threadMessageService.loadThreadItems(
+        return await this.threadMessageService.loadThreadMessages(
           params.thread_id!,
           params.after || null,
           params.limit || 20,
@@ -142,7 +149,7 @@ export class ChatKitService {
     thread: ThreadMetadata,
     userMessage: UserMessageItem
   ): AsyncIterable<ThreadStreamEvent> {
-    await this.threadMessageService.addThreadItem(thread.id, userMessage);
+    await this.threadMessageService.addThreadMessage(thread.id, userMessage);
 
     yield this.eventFactory.createItemAddedEvent(userMessage);
     yield this.eventFactory.createItemDoneEvent(userMessage);
@@ -178,7 +185,12 @@ export class ChatKitService {
 
       await this.threadRunStateService.saveRunState(thread.id, (result as any).state);
 
-              yield* streamAgentResponse(result as any, thread.id, this.threadMessageService.threadMessageStore, this.threadRunStateService);
+      yield* streamAgentResponse(
+        result as any,
+        thread.id,
+        this.threadMessageService.threadMessageStore,
+        this.threadRunStateService
+      );
     } catch (error) {
       console.error('[AgentRunner] Error:', error);
       throw error;
@@ -232,9 +244,9 @@ export class ChatKitService {
 
     try {
       for await (const event of stream()) {
-                if (event.type === 'thread.item.done' && event.item.type !== 'widget') {
-                  await this.threadMessageService.addThreadItem(thread.id, event.item);
-                }
+        if (event.type === 'thread.item.done' && event.item.type !== 'widget') {
+          await this.threadMessageService.addThreadMessage(thread.id, event.item);
+        }
         yield event;
       }
     } catch (error) {

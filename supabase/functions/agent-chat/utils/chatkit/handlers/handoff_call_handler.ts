@@ -1,4 +1,4 @@
-import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
 import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
@@ -41,7 +41,7 @@ export class HandoffCallHandler {
       handoffCallId,
       argumentsText
     );
-    await this.store.saveThreadItem(threadId, handoffToolCallItem);
+    await this.store.saveThreadMessage(threadId, handoffToolCallItem);
 
     yield this.eventFactory.createItemAddedEvent(handoffItem);
   }

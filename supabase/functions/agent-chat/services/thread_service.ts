@@ -29,7 +29,6 @@ export class ThreadService {
     return this._threadStore.generateThreadId();
   }
 
-
   /**
    * Load a thread by ID
    */
@@ -43,7 +42,6 @@ export class ThreadService {
   async saveThread(thread: ThreadMetadata): Promise<void> {
     return await this._threadStore.saveThread(thread);
   }
-
 
   /**
    * Load all threads with pagination
@@ -90,7 +88,6 @@ export class ThreadService {
     await this.saveThread(thread);
     return thread;
   }
-
 
   /**
    * Get thread count for user

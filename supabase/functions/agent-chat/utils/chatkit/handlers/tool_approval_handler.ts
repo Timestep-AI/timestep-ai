@@ -1,4 +1,4 @@
-import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
 import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
 import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
 import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
@@ -43,7 +43,7 @@ export class ToolApprovalHandler {
     yield {
       type: 'thread.item.added',
       item: widgetItem,
-    } as ThreadItemAddedEvent;
+    } as ThreadMessageAddedEvent;
 
     yield {
       type: 'thread.item.done',

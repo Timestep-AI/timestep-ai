@@ -246,15 +246,15 @@ const Chat = () => {
           }
         },
       },
-      rightAction: {
-        icon: 'sidebar-right',
-        onClick: async () => {
-          // Open the right menu
-          if (rightMenuRef.current) {
-            await rightMenuRef.current.open();
-          }
-        },
-      },
+      // rightAction: {
+      //   icon: 'sidebar-right',
+      //   onClick: async () => {
+      //     // Open the right menu
+      //     if (rightMenuRef.current) {
+      //       await rightMenuRef.current.open();
+      //     }
+      //   },
+      // },
     },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",

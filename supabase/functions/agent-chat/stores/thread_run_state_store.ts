@@ -3,7 +3,7 @@ import { createOpenAIClient } from '../utils/openai_client.ts';
 
 /**
  * Repository for thread run state operations
- * 
+ *
  * Handles all database interactions related to thread_run_states table.
  * This store is responsible for managing agent execution state, conversation
  * context, and other runtime state information that persists across agent runs.
@@ -35,14 +35,15 @@ export class ThreadRunStateStore {
    * Save run state for a thread
    */
   async saveRunState(threadId: string, state: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('thread_run_states')
-      .upsert({
+    const { error } = await this.supabase.from('thread_run_states').upsert(
+      {
         thread_id: threadId,
         user_id: this.userId,
         state_data: state,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'thread_id,user_id' });
+      },
+      { onConflict: 'thread_id,user_id' }
+    );
 
     if (error) {
       console.error('Error saving run state:', error);
@@ -113,7 +114,9 @@ export class ThreadRunStateStore {
   /**
    * Get all run states for a user (for debugging/admin purposes)
    */
-  async getAllRunStates(): Promise<Array<{ thread_id: string; state_data: string; updated_at: string }>> {
+  async getAllRunStates(): Promise<
+    Array<{ thread_id: string; state_data: string; updated_at: string }>
+  > {
     const { data, error } = await this.supabase
       .from('thread_run_states')
       .select('thread_id, state_data, updated_at')

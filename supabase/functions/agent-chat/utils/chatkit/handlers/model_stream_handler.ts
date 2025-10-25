@@ -1,4 +1,4 @@
-import type { ThreadStreamEvent, ThreadItemAddedEvent } from '../../../types/chatkit.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
 import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
 
 export class ModelStreamHandler {
@@ -49,7 +49,7 @@ export class ModelStreamHandler {
         yield {
           type: 'thread.item.added',
           item: assistantMessage,
-        } as ThreadItemAddedEvent;
+        } as ThreadMessageAddedEvent;
         state.itemAdded = true;
       }
 
@@ -112,7 +112,7 @@ export class ModelStreamHandler {
       yield {
         type: 'thread.item.added',
         item: assistantMessage,
-      } as ThreadItemAddedEvent;
+      } as ThreadMessageAddedEvent;
       state.itemAdded = true;
     }
 
