@@ -332,8 +332,7 @@ const Chat = () => {
       <IonPage id="main-content">
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Timestep AI</IonTitle>
-            <IonButtons slot="end">
+            <IonButtons slot="start">
               <IonIcon
                 icon={personCircleOutline}
                 style={{ fontSize: '24px', marginRight: '8px' }}
@@ -351,6 +350,7 @@ const Chat = () => {
                 ))}
               </IonSelect>
             </IonButtons>
+            <IonTitle slot="end">Timestep AI</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
