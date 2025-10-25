@@ -3,16 +3,9 @@ import { Agent } from '@openai/agents-core';
 import {
   isStreamingReq,
   type ChatKitRequest,
-  type ThreadMetadata,
-  type Thread,
-  type UserMessageItem,
   type ThreadStreamEvent,
-  type ThreadCreatedEvent,
-  type ThreadUpdatedEvent,
 } from '../types/chatkit.ts';
 
-import { EventRouter } from './event_router.ts';
-import { EventPipeline } from './event_pipeline.ts';
 import { AgentRunner } from './agent_runner.ts';
 
 /**
@@ -20,8 +13,6 @@ import { AgentRunner } from './agent_runner.ts';
  * Acts as the primary entry point for ChatKit requests
  */
 export class AgentOrchestrator {
-  private eventRouter: EventRouter;
-  private eventPipeline: EventPipeline;
   private agentRunner: AgentRunner;
 
   constructor(
@@ -29,8 +20,6 @@ export class AgentOrchestrator {
     private context: any,
     private store: ThreadService
   ) {
-    this.eventRouter = new EventRouter(store, agent, context);
-    this.eventPipeline = new EventPipeline(store);
     this.agentRunner = new AgentRunner(store, agent, context);
   }
 
@@ -46,7 +35,7 @@ export class AgentOrchestrator {
     if (isStreamingReq(parsedRequest)) {
       return {
         streaming: true,
-        result: this.eventPipeline.encodeStream(this.processStreamingRequest(parsedRequest)),
+        result: this.agentRunner.encodeStream(this.processStreamingRequest(parsedRequest)),
       };
     } else {
       return { streaming: false, result: await this.processNonStreamingRequest(parsedRequest) };
@@ -54,45 +43,12 @@ export class AgentOrchestrator {
   }
 
   /**
-   * Process streaming requests by routing to appropriate handlers
+   * Process streaming requests by delegating to AgentRunner
    */
   private async *processStreamingRequest(
     request: ChatKitRequest
   ): AsyncIterable<ThreadStreamEvent> {
-    switch (request.type) {
-      case 'threads.action':
-      case 'threads.custom_action': {
-        const thread = await this.store.loadThread(request.params.thread_id);
-        yield this.createThreadUpdatedEvent(thread);
-        yield* this.eventRouter.handleApproval(thread, request.params.action, request.params);
-        break;
-      }
-
-      case 'threads.create': {
-        const thread = await this.createThread();
-        yield this.createThreadCreatedEvent(thread);
-
-        if (request.params!.input) {
-          const threadMetadata = this.threadToMetadata(thread);
-          const userMessage = this.eventPipeline.buildUserMessageItem(
-            request.params!.input!,
-            threadMetadata
-          );
-          yield* this.processUserMessage(threadMetadata, userMessage);
-        }
-        break;
-      }
-
-      case 'threads.add_user_message': {
-        const thread = await this.store.loadThread(request.params!.thread_id!);
-        const userMessage = this.eventPipeline.buildUserMessageItem(request.params!.input!, thread);
-        yield* this.processUserMessage(thread, userMessage);
-        break;
-      }
-
-      default:
-        throw new Error(`Unknown streaming request type: ${(request as any).type}`);
-    }
+    yield* this.agentRunner.processStreamingRequest(request);
   }
 
   /**
@@ -146,95 +102,4 @@ export class AgentOrchestrator {
     }
   }
 
-  /**
-   * Process user messages and coordinate the response
-   */
-  private async *processUserMessage(
-    thread: ThreadMetadata,
-    userMessage: UserMessageItem
-  ): AsyncIterable<ThreadStreamEvent> {
-    await this.store.addThreadItem(thread.id, userMessage);
-
-    yield {
-      type: 'thread.item.added',
-      item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    };
-
-    yield {
-      type: 'thread.item.done',
-      item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    };
-
-    yield* this.eventPipeline.processEvents(thread, () =>
-      this.agentRunner.respond(thread, userMessage)
-    );
-  }
-
-  /**
-   * Create a new thread
-   */
-  private async createThread(): Promise<Thread> {
-    const threadId = this.store.generateThreadId();
-    const threadMetadata: ThreadMetadata = {
-      id: threadId,
-      created_at: new Date(),
-      status: { type: 'active' },
-      metadata: {},
-    };
-    await this.store.saveThread(threadMetadata);
-
-    // Return as Thread type for compatibility
-    const thread: Thread = {
-      id: threadId,
-      created_at: Math.floor(Date.now() / 1000),
-      status: { type: 'active' },
-      metadata: {},
-      items: { data: [], has_more: false, after: null },
-    };
-    return thread;
-  }
-
-  /**
-   * Convert Thread to ThreadMetadata
-   */
-  private threadToMetadata(thread: Thread): ThreadMetadata {
-    return {
-      id: thread.id,
-      created_at: new Date(thread.created_at * 1000),
-      status: thread.status,
-      metadata: thread.metadata,
-    };
-  }
-
-  /**
-   * Create thread created event
-   */
-  private createThreadCreatedEvent(thread: Thread): ThreadCreatedEvent {
-    return {
-      type: 'thread.created',
-      thread: {
-        id: thread.id,
-        created_at: thread.created_at,
-        status: thread.status,
-        metadata: thread.metadata,
-        items: { data: [], has_more: false, after: null },
-      },
-    };
-  }
-
-  /**
-   * Create thread updated event
-   */
-  private createThreadUpdatedEvent(thread: ThreadMetadata): ThreadUpdatedEvent {
-    return {
-      type: 'thread.updated',
-      thread: {
-        id: thread.id,
-        created_at: Math.floor(thread.created_at.getTime() / 1000),
-        status: { type: 'active' },
-        metadata: thread.metadata || {},
-        items: { data: [], has_more: false, after: null },
-      },
-    };
-  }
 }

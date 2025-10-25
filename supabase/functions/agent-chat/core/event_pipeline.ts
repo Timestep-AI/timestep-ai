@@ -9,6 +9,7 @@ import {
 import { MessageProcessor } from '../utils/chatkit/processors/message_processor.ts';
 import { StreamProcessor } from '../utils/chatkit/processors/stream_processor.ts';
 import { ItemFactory } from '../utils/chatkit/factories/item_factory.ts';
+import { EventRouter } from './event_router.ts';
 
 /**
  * Handles event processing and message pipeline operations
@@ -18,12 +19,14 @@ export class EventPipeline {
   private messageProcessor: MessageProcessor;
   private streamProcessor: StreamProcessor;
   private itemFactory: ItemFactory;
+  private eventRouter: EventRouter;
 
-  constructor(private store: ThreadService) {
+  constructor(private store: ThreadService, private agent?: any, private context?: any) {
     // Use the underlying ThreadStore for utility classes
     this.itemFactory = new ItemFactory(this.store.threadStore);
     this.messageProcessor = new MessageProcessor(this.store.threadStore, this.itemFactory);
     this.streamProcessor = new StreamProcessor(this.store.threadStore);
+    this.eventRouter = new EventRouter(store, agent, context);
   }
 
   /**
@@ -48,5 +51,16 @@ export class EventPipeline {
    */
   encodeStream(stream: AsyncIterable<ThreadStreamEvent>): AsyncIterable<Uint8Array> {
     return this.streamProcessor.encodeStream(stream);
+  }
+
+  /**
+   * Handle approval events by delegating to EventRouter
+   */
+  async *handleApproval(
+    thread: ThreadMetadata,
+    action: string,
+    params: any
+  ): AsyncIterable<ThreadStreamEvent> {
+    yield* this.eventRouter.handleApproval(thread, action, params);
   }
 }
