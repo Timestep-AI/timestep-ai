@@ -333,10 +333,7 @@ const Chat = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonIcon
-                icon={personCircleOutline}
-                style={{ fontSize: '24px', marginRight: '8px' }}
-              />
+              <span style={{ marginRight: '8px', marginLeft: '16px', fontSize: '16px' }}>Agent:</span>
               <IonSelect
                 value={selectedAgent?.id || ''}
                 placeholder="Select Agent"
