@@ -1,9 +1,9 @@
-import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
-import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
+import { ThreadMessageStore } from '../../stores/thread_message_store.ts';
+import { ThreadRunStateService } from '../thread_run_state_service.ts';
 import { RunState } from '@openai/agents-core';
-import { RunnerFactory } from '../../../utils/runner_factory.ts';
-import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
-import type { ThreadMetadata, ThreadStreamEvent } from '../../../types/chatkit.ts';
+import { RunnerFactory } from '../../utils/runner_factory.ts';
+import { ChatKitEventFactory } from '../../utils/chatkit/factories/chatkit_event_factory.ts';
+import type { ThreadMetadata, ThreadStreamEvent } from '../../types/chatkit.ts';
 import { Agent } from '@openai/agents-core';
 
 export class ToolHandler {
@@ -81,7 +81,7 @@ export class ToolHandler {
     const result = await this.runAgent(agent, runState, thread);
     await this.runStateService.clearRunState(thread.id);
 
-    const { streamAgentResponse } = await import('../streaming/agent_response_streamer.ts');
+    const { streamAgentResponse } = await import('./agent_response_service.ts');
     yield* streamAgentResponse(result, thread.id, this.store, this.runStateService);
   }
 
@@ -113,7 +113,7 @@ export class ToolHandler {
     const result = await this.runAgent(agent, runState, thread);
     await this.runStateService.clearRunState(thread.id);
 
-    const { streamAgentResponse } = await import('../streaming/agent_response_streamer.ts');
+    const { streamAgentResponse } = await import('./agent_response_service.ts');
     yield* streamAgentResponse(result, thread.id, this.store, this.runStateService);
   }
 

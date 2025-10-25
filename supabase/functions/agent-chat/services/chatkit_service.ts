@@ -14,8 +14,8 @@ import {
 import { ChatKitMessageProcessor } from '../utils/chatkit/processors/chatkit_message_processor.ts';
 import { AgentMessageConverter } from '../utils/chatkit/converters/agent_message_converter.ts';
 import { ChatKitEventFactory } from '../utils/chatkit/factories/chatkit_event_factory.ts';
-import { ToolHandler } from '../utils/chatkit/handlers/tool_handler.ts';
-import { streamAgentResponse } from '../utils/chatkit/streaming/agent_response_streamer.ts';
+import { ToolHandler } from './chatkit/tool_service.ts';
+import { streamAgentResponse } from './chatkit/agent_response_service.ts';
 
 /**
  * Handles all ChatKit operations

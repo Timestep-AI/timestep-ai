@@ -1,5 +1,5 @@
-import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
-import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
+import { ThreadMessageStore } from '../../stores/thread_message_store.ts';
+import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
 
 export class ToolCalledHandler {
   private itemFactory: ChatKitItemFactory;

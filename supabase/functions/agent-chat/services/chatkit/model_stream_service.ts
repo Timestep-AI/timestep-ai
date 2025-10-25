@@ -1,5 +1,5 @@
-import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
-import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../types/chatkit.ts';
+import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
 
 export class ModelStreamHandler {
   constructor(private itemFactory: ChatKitItemFactory) {}

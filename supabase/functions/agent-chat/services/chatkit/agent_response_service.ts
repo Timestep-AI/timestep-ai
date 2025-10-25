@@ -1,17 +1,17 @@
-import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
-import { ThreadRunStateService } from '../../../services/thread_run_state_service.ts';
+import { ThreadMessageStore } from '../../stores/thread_message_store.ts';
+import { ThreadRunStateService } from '../thread_run_state_service.ts';
 import type {
   ThreadStreamEvent,
   ThreadMessageAddedEvent,
   ThreadMessageDoneEvent,
-} from '../../../types/chatkit.ts';
-import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
-import { WidgetFactory } from '../factories/widget_factory.ts';
-import { ToolCallOutputHandler } from '../handlers/tool_call_output_handler.ts';
-import { ToolCalledHandler } from '../handlers/tool_called_handler.ts';
-import { HandoffCallHandler } from '../handlers/handoff_call_handler.ts';
-import { HandoffOutputHandler } from '../handlers/handoff_output_handler.ts';
-import { ModelStreamHandler } from '../handlers/model_stream_handler.ts';
+} from '../../types/chatkit.ts';
+import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
+import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
+import { ToolCallOutputHandler } from './tool_call_output_service.ts';
+import { ToolCalledHandler } from './tool_called_service.ts';
+import { HandoffCallHandler } from './handoff_call_service.ts';
+import { HandoffOutputHandler } from './handoff_output_service.ts';
+import { ModelStreamHandler } from './model_stream_service.ts';
 
 // Simplified helper to stream agent response to ChatKit events
 export async function* streamAgentResponse(

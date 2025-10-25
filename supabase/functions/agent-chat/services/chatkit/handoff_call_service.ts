@@ -1,8 +1,8 @@
-import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../../types/chatkit.ts';
-import { ThreadMessageStore } from '../../../stores/thread_message_store.ts';
-import { ChatKitItemFactory } from '../factories/chatkit_item_factory.ts';
-import { ChatKitEventFactory } from '../factories/chatkit_event_factory.ts';
-import { WidgetFactory } from '../factories/widget_factory.ts';
+import type { ThreadStreamEvent, ThreadMessageAddedEvent } from '../../types/chatkit.ts';
+import { ThreadMessageStore } from '../../stores/thread_message_store.ts';
+import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
+import { ChatKitEventFactory } from '../../utils/chatkit/factories/chatkit_event_factory.ts';
+import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
 
 export class HandoffCallHandler {
   private itemFactory: ChatKitItemFactory;
