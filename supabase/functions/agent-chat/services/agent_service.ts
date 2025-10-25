@@ -1,7 +1,7 @@
 import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../stores/agent_store.ts';
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from './thread_service.ts';
 import { AgentStore } from '../stores/agent_store.ts';
 import { McpServerService } from './mcp_server_service.ts';
 
@@ -9,9 +9,9 @@ export class AgentsService {
   private supabaseClient: SupabaseClient;
   private AgentStore: AgentStore;
   private McpServerService: McpServerService;
-  private ThreadStore: ThreadStore;
+  private ThreadService: ThreadService;
 
-  constructor(supabaseUrl: string, anonKey: string, userJwt: string, ThreadStore: ThreadStore) {
+  constructor(supabaseUrl: string, anonKey: string, userJwt: string, ThreadService: ThreadService) {
     // Create Supabase client with user's JWT for RLS
     this.supabaseClient = createClient(supabaseUrl, anonKey, {
       global: {
@@ -23,7 +23,7 @@ export class AgentsService {
 
     this.AgentStore = new AgentStore(this.supabaseClient);
     this.McpServerService = new McpServerService(supabaseUrl, anonKey, userJwt);
-    this.ThreadStore = ThreadStore;
+    this.ThreadService = ThreadService;
   }
 
   /**

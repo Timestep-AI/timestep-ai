@@ -1,4 +1,4 @@
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { Agent } from '@openai/agents-core';
 import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
@@ -20,12 +20,13 @@ export class AgentRunner {
   private itemFactory: ItemFactory;
 
   constructor(
-    private store: ThreadStore,
+    private store: ThreadService,
     private agent: Agent,
     private context: any
   ) {
-    this.itemFactory = new ItemFactory(store);
-    this.messageProcessor = new MessageProcessor(store, this.itemFactory);
+    // Use the underlying ThreadStore for utility classes
+    this.itemFactory = new ItemFactory(this.store.threadStore);
+    this.messageProcessor = new MessageProcessor(this.store.threadStore, this.itemFactory);
   }
 
   /**
@@ -56,7 +57,7 @@ export class AgentRunner {
 
       await this.store.saveRunState(thread.id, (result as any).state);
 
-      yield* streamAgentResponse(result as any, thread.id, this.store);
+      yield* streamAgentResponse(result as any, thread.id, this.store.threadStore);
     } catch (error) {
       console.error('[AgentRunner] Error:', error);
       throw error;

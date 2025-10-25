@@ -1,5 +1,5 @@
 import { AgentsService } from '../services/agent_service.ts';
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -17,7 +17,7 @@ export async function handleGetAgentsRequest(
     const userJwt = authHeader.replace('Bearer ', '');
 
     // Create a basic threads store for agent operations
-    const store = new ThreadStore(Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId);
+    const store = new ThreadService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, userId);
 
     const agentService = new AgentsService(
       Deno.env.get('SUPABASE_URL') ?? '',

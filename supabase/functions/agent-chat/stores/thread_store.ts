@@ -51,6 +51,11 @@ export interface ToolCall {
 
 export type ThreadMessage = UserMessage | AssistantMessage | ToolMessage;
 
+/**
+ * Repository layer for thread data access
+ * Handles direct database operations and data persistence
+ * Business logic should be implemented in ThreadService
+ */
 export class ThreadStore {
   private supabase: ReturnType<typeof createClient>;
   private attachments: Map<string, Attachment> = new Map();

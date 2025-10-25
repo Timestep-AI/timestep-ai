@@ -1,4 +1,4 @@
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { Agent } from '@openai/agents-core';
 import { type ThreadMetadata, type ThreadStreamEvent } from '../types/chatkit.ts';
 
@@ -14,12 +14,13 @@ export class EventRouter {
   private itemFactory: ItemFactory;
 
   constructor(
-    private store: ThreadStore,
+    private store: ThreadService,
     private agent: Agent,
     private context: any
   ) {
-    this.itemFactory = new ItemFactory(store);
-    this.toolHandler = new ToolHandler(store, agent, context);
+    // Use the underlying ThreadStore for utility classes
+    this.itemFactory = new ItemFactory(this.store.threadStore);
+    this.toolHandler = new ToolHandler(this.store.threadStore, agent, context);
   }
 
   /**

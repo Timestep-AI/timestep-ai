@@ -1,4 +1,4 @@
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { Agent } from '@openai/agents-core';
 import {
   isStreamingReq,
@@ -27,7 +27,7 @@ export class AgentOrchestrator {
   constructor(
     private agent: Agent,
     private context: any,
-    private store: ThreadStore
+    private store: ThreadService
   ) {
     this.eventRouter = new EventRouter(store, agent, context);
     this.eventPipeline = new EventPipeline(store);

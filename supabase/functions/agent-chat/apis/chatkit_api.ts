@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import { AgentsService } from '../services/agent_service.ts';
 import { AgentOrchestrator } from '../core/agent_orchestrator.ts';
 
@@ -58,7 +58,7 @@ export async function handlePostChatKitRequest(
         const authHeader = req.headers.get('Authorization') ?? '';
         const userJwt = authHeader.replace('Bearer ', '');
 
-        const store = new ThreadStore(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
+        const store = new ThreadService(Deno.env.get('SUPABASE_URL') ?? '', userJwt, currentUserId);
 
         const agentService = new AgentsService(
           Deno.env.get('SUPABASE_URL') ?? '',

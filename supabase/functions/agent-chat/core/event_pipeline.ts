@@ -1,4 +1,4 @@
-import { ThreadStore } from '../stores/thread_store.ts';
+import { ThreadService } from '../services/thread_service.ts';
 import {
   type ThreadMetadata,
   type UserMessageItem,
@@ -19,10 +19,11 @@ export class EventPipeline {
   private streamProcessor: StreamProcessor;
   private itemFactory: ItemFactory;
 
-  constructor(private store: ThreadStore) {
-    this.itemFactory = new ItemFactory(store);
-    this.messageProcessor = new MessageProcessor(store, this.itemFactory);
-    this.streamProcessor = new StreamProcessor(store);
+  constructor(private store: ThreadService) {
+    // Use the underlying ThreadStore for utility classes
+    this.itemFactory = new ItemFactory(this.store.threadStore);
+    this.messageProcessor = new MessageProcessor(this.store.threadStore, this.itemFactory);
+    this.streamProcessor = new StreamProcessor(this.store.threadStore);
   }
 
   /**
