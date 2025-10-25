@@ -1,7 +1,5 @@
 import { ThreadStore } from '../stores/thread_store.ts';
-import { Runner, RunState, Agent } from '@openai/agents-core';
-import { OpenAIProvider } from '@openai/agents-openai';
-import { RunnerFactory } from '../utils/runner_factory.ts';
+import { Agent } from '@openai/agents-core';
 import {
   isStreamingReq,
   type ChatKitRequest,
@@ -11,59 +9,34 @@ import {
   type ThreadStreamEvent,
   type ThreadCreatedEvent,
   type ThreadUpdatedEvent,
-  type ThreadItemDoneEvent,
-  type ThreadItemAddedEvent,
-  type UserMessageInput,
 } from '../types/chatkit.ts';
 
-// Import from organized modules
-import { ItemFactory } from '../utils/chatkit/factories/item_factory.ts';
-import { WidgetFactory } from '../utils/chatkit/factories/widget_factory.ts';
-import { MessageProcessor } from '../utils/chatkit/processors/message_processor.ts';
-import { StreamProcessor } from '../utils/chatkit/processors/stream_processor.ts';
-import { ToolHandler } from '../utils/chatkit/handlers/tool_handler.ts';
-import { ToolCallOutputHandler } from '../utils/chatkit/handlers/tool_call_output_handler.ts';
-import { ToolCalledHandler } from '../utils/chatkit/handlers/tool_called_handler.ts';
-import { HandoffCallHandler } from '../utils/chatkit/handlers/handoff_call_handler.ts';
-import { HandoffOutputHandler } from '../utils/chatkit/handlers/handoff_output_handler.ts';
-import { ToolApprovalHandler } from '../utils/chatkit/handlers/tool_approval_handler.ts';
-import { ModelStreamHandler } from '../utils/chatkit/handlers/model_stream_handler.ts';
-import { streamAgentResponse } from '../utils/chatkit/streaming/agent_response_streamer.ts';
+import { EventRouter } from './event_router.ts';
+import { EventPipeline } from './event_pipeline.ts';
+import { AgentRunner } from './agent_runner.ts';
 
-// Event Handlers for different streaming event types
-export class ChatKitService {
-  private messageProcessor: MessageProcessor;
-  private streamProcessor: StreamProcessor;
-  private toolHandler: ToolHandler;
-  private itemFactory: ItemFactory;
-
-  // Event handlers
-  private toolCallOutputHandler: ToolCallOutputHandler;
-  private toolCalledHandler: ToolCalledHandler;
-  private handoffCallHandler: HandoffCallHandler;
-  private handoffOutputHandler: HandoffOutputHandler;
-  private toolApprovalHandler: ToolApprovalHandler;
-  private modelStreamHandler: ModelStreamHandler;
+/**
+ * Main orchestrator that coordinates between different services
+ * Acts as the primary entry point for ChatKit requests
+ */
+export class AgentOrchestrator {
+  private eventRouter: EventRouter;
+  private eventPipeline: EventPipeline;
+  private agentRunner: AgentRunner;
 
   constructor(
     private agent: Agent,
     private context: any,
     private store: ThreadStore
   ) {
-    this.itemFactory = new ItemFactory(store);
-    this.messageProcessor = new MessageProcessor(store, this.itemFactory);
-    this.streamProcessor = new StreamProcessor(store);
-    this.toolHandler = new ToolHandler(store, agent, context);
-
-    // Initialize event handlers
-    this.toolCallOutputHandler = new ToolCallOutputHandler(store, this.itemFactory);
-    this.toolCalledHandler = new ToolCalledHandler(store, this.itemFactory);
-    this.handoffCallHandler = new HandoffCallHandler(store, this.itemFactory, new Set());
-    this.handoffOutputHandler = new HandoffOutputHandler(store, this.itemFactory, new Set());
-    this.toolApprovalHandler = new ToolApprovalHandler(store, this.itemFactory);
-    this.modelStreamHandler = new ModelStreamHandler(this.itemFactory);
+    this.eventRouter = new EventRouter(store, agent, context);
+    this.eventPipeline = new EventPipeline(store);
+    this.agentRunner = new AgentRunner(store, agent, context);
   }
 
+  /**
+   * Main entry point for processing ChatKit requests
+   */
   async processRequest(
     request: string | ArrayBuffer | Uint8Array
   ): Promise<{ streaming: boolean; result: AsyncIterable<Uint8Array> | object }> {
@@ -73,13 +46,16 @@ export class ChatKitService {
     if (isStreamingReq(parsedRequest)) {
       return {
         streaming: true,
-        result: this.streamProcessor.encodeStream(this.processStreamingRequest(parsedRequest)),
+        result: this.eventPipeline.encodeStream(this.processStreamingRequest(parsedRequest)),
       };
     } else {
       return { streaming: false, result: await this.processNonStreamingRequest(parsedRequest) };
     }
   }
 
+  /**
+   * Process streaming requests by routing to appropriate handlers
+   */
   private async *processStreamingRequest(
     request: ChatKitRequest
   ): AsyncIterable<ThreadStreamEvent> {
@@ -88,7 +64,7 @@ export class ChatKitService {
       case 'threads.custom_action': {
         const thread = await this.store.loadThread(request.params.thread_id);
         yield this.createThreadUpdatedEvent(thread);
-        yield* this.toolHandler.handleApproval(thread, request.params.action, request.params);
+        yield* this.eventRouter.handleApproval(thread, request.params.action, request.params);
         break;
       }
 
@@ -97,21 +73,19 @@ export class ChatKitService {
         yield this.createThreadCreatedEvent(thread);
 
         if (request.params!.input) {
-          const userMessage = this.messageProcessor.buildUserMessageItem(
+          const threadMetadata = this.threadToMetadata(thread);
+          const userMessage = this.eventPipeline.buildUserMessageItem(
             request.params!.input!,
-            thread
+            threadMetadata
           );
-          yield* this.processUserMessage(thread, userMessage);
+          yield* this.processUserMessage(threadMetadata, userMessage);
         }
         break;
       }
 
       case 'threads.add_user_message': {
         const thread = await this.store.loadThread(request.params!.thread_id!);
-        const userMessage = this.messageProcessor.buildUserMessageItem(
-          request.params!.input!,
-          thread
-        );
+        const userMessage = this.eventPipeline.buildUserMessageItem(request.params!.input!, thread);
         yield* this.processUserMessage(thread, userMessage);
         break;
       }
@@ -121,6 +95,9 @@ export class ChatKitService {
     }
   }
 
+  /**
+   * Process non-streaming requests
+   */
   private async processNonStreamingRequest(request: ChatKitRequest): Promise<object> {
     switch (request.type) {
       case 'threads.get_by_id':
@@ -169,6 +146,9 @@ export class ChatKitService {
     }
   }
 
+  /**
+   * Process user messages and coordinate the response
+   */
   private async *processUserMessage(
     thread: ThreadMetadata,
     userMessage: UserMessageItem
@@ -178,59 +158,57 @@ export class ChatKitService {
     yield {
       type: 'thread.item.added',
       item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    } as ThreadItemAddedEvent;
+    };
 
     yield {
       type: 'thread.item.done',
       item: { ...userMessage, created_at: Math.floor(Date.now() / 1000) },
-    } as ThreadItemDoneEvent;
+    };
 
-    yield* this.streamProcessor.processEvents(thread, () => this.respond(thread, userMessage));
+    yield* this.eventPipeline.processEvents(thread, () =>
+      this.agentRunner.respond(thread, userMessage)
+    );
   }
 
-  private async *respond(
-    thread: ThreadMetadata,
-    userMessage: UserMessageItem
-  ): AsyncIterable<ThreadStreamEvent> {
-    const messageText = await this.messageProcessor.extractMessageText(userMessage);
-    if (!messageText) return;
-
-    try {
-      const messages = await this.messageProcessor.loadConversationHistory(thread.id);
-      const agent = this.agent;
-      const inputItems = this.messageProcessor.convertToAgentFormat(messages);
-
-      const runner = await RunnerFactory.createRunner({
-        threadId: thread.id,
-        userId: this.context.userId,
-        workflowName: `Agent workflow (${Date.now()})`,
-      });
-      const result = await runner.run(agent, inputItems, {
-        context: { threadId: thread.id, userId: this.context.userId },
-        stream: true,
-      });
-
-      await this.store.saveRunState(thread.id, (result as any).state);
-
-      yield* streamAgentResponse(result as any, thread.id, this.store);
-    } catch (error) {
-      console.error('[ChatKitService] Error:', error);
-      throw error;
-    }
-  }
-
+  /**
+   * Create a new thread
+   */
   private async createThread(): Promise<Thread> {
+    const threadId = this.store.generateThreadId();
+    const threadMetadata: ThreadMetadata = {
+      id: threadId,
+      created_at: new Date(),
+      status: { type: 'active' },
+      metadata: {},
+    };
+    await this.store.saveThread(threadMetadata);
+
+    // Return as Thread type for compatibility
     const thread: Thread = {
-      id: this.store.generateThreadId(),
+      id: threadId,
       created_at: Math.floor(Date.now() / 1000),
       status: { type: 'active' },
       metadata: {},
       items: { data: [], has_more: false, after: null },
     };
-    await this.store.saveThread(thread);
     return thread;
   }
 
+  /**
+   * Convert Thread to ThreadMetadata
+   */
+  private threadToMetadata(thread: Thread): ThreadMetadata {
+    return {
+      id: thread.id,
+      created_at: new Date(thread.created_at * 1000),
+      status: thread.status,
+      metadata: thread.metadata,
+    };
+  }
+
+  /**
+   * Create thread created event
+   */
   private createThreadCreatedEvent(thread: Thread): ThreadCreatedEvent {
     return {
       type: 'thread.created',
@@ -244,15 +222,15 @@ export class ChatKitService {
     };
   }
 
+  /**
+   * Create thread updated event
+   */
   private createThreadUpdatedEvent(thread: ThreadMetadata): ThreadUpdatedEvent {
     return {
       type: 'thread.updated',
       thread: {
         id: thread.id,
-        created_at:
-          typeof thread.created_at === 'number'
-            ? thread.created_at
-            : Math.floor(new Date(thread.created_at as any).getTime() / 1000),
+        created_at: Math.floor(thread.created_at.getTime() / 1000),
         status: { type: 'active' },
         metadata: thread.metadata || {},
         items: { data: [], has_more: false, after: null },

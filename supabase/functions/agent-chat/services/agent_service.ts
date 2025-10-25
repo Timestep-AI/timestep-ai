@@ -1,7 +1,6 @@
 import { Agent } from '@openai/agents-core';
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { AgentRecord } from '../stores/agent_store.ts';
-import { ChatKitService } from './chatkit_service.ts';
 import { ThreadStore } from '../stores/thread_store.ts';
 import { AgentStore } from '../stores/agent_store.ts';
 import { McpServerService } from './mcp_server_service.ts';
@@ -66,20 +65,6 @@ export class AgentsService {
     }
 
     return this.buildAgentFromData(agentData, userId);
-  }
-
-  /**
-   * Process a ChatKit request by delegating to ChatKitService
-   */
-  async processChatKitRequest(
-    agentId: string,
-    userId: string,
-    requestBody: string,
-    context: any
-  ): Promise<{ streaming: boolean; result: any }> {
-    const agent = await this.createAgent(agentId, userId);
-    const chatKitService = new ChatKitService(agent, context, this.ThreadStore);
-    return await chatKitService.processRequest(requestBody);
   }
 
   private async buildAgentFromData(agentData: AgentRecord, userId: string): Promise<Agent> {

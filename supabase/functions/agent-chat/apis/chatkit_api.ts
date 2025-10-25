@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ThreadStore } from '../stores/thread_store.ts';
 import { AgentsService } from '../services/agent_service.ts';
+import { AgentOrchestrator } from '../services/agent_orchestrator.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -74,13 +75,10 @@ export async function handlePostChatKitRequest(
           agentId: agentId, // Use the agent ID from the URL
         };
 
-        // Process the request through AgentsService which delegates to ChatKitService
-        const result = await agentService.processChatKitRequest(
-          agentId,
-          currentUserId,
-          JSON.stringify(body),
-          context
-        );
+        // Create the agent and then use AgentOrchestrator directly
+        const agent = await agentService.createAgent(agentId, currentUserId);
+        const agentOrchestrator = new AgentOrchestrator(agent, context, store);
+        const result = await agentOrchestrator.processRequest(JSON.stringify(body));
 
         if (result.streaming) {
           // Return streaming response
