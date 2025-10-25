@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ThreadsStore } from '../stores/threads_store.ts';
-import { AgentsService } from '../services/agents_service.ts';
+import { AgentsService } from '../services/agent_service.ts';
 
 // CORS headers
 const corsHeaders = {
