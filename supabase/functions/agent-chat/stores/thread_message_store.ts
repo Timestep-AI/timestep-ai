@@ -340,8 +340,7 @@ export class ThreadMessageStore {
       try {
         content = JSON.parse(content);
       } catch (e) {
-        // If parsing fails, keep as string
-        content = content;
+        // If parsing fails, keep as string (no assignment needed)
       }
     }
 
