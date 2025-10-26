@@ -230,7 +230,7 @@ const Chat = () => {
       },
 
       // Domain key for security
-      domainKey: 'localhost-dev',
+      domainKey: 'domain_pk_68e5537e61b881908e1bbba95290d09c0e054864a95b3bbe',
     },
     composer: {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
