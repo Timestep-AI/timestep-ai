@@ -12,6 +12,111 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Handler functions for non-streaming requests
+async function handleGetThreadById(chatKitService: ChatKitService, params: any): Promise<Response> {
+  const result = await chatKitService.getThreadById(params.thread_id);
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleListThreads(chatKitService: ChatKitService, params: any): Promise<Response> {
+  const result = await chatKitService.listThreads(
+    params.limit || 20,
+    params.after || null,
+    params.order || 'desc'
+  );
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleListThreadMessages(
+  chatKitService: ChatKitService,
+  params: any
+): Promise<Response> {
+  const result = await chatKitService.listThreadMessages(
+    params.thread_id,
+    params.after || null,
+    params.limit || 20,
+    params.order || 'asc'
+  );
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleUpdateThread(chatKitService: ChatKitService, params: any): Promise<Response> {
+  const result = await chatKitService.updateThread(params.thread_id, params.title);
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleDeleteThread(chatKitService: ChatKitService, params: any): Promise<Response> {
+  const result = await chatKitService.deleteThread(params.thread_id);
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleRetryAfterItem(
+  chatKitService: ChatKitService,
+  _params: any
+): Promise<Response> {
+  const result = await chatKitService.retryAfterItem();
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// Handler functions for streaming requests
+function handleThreadAction(chatKitService: ChatKitService, params: any): Response {
+  const stream = chatKitService.encodeStream(
+    chatKitService.handleThreadAction(params.thread_id, params.action, params)
+  );
+  return new Response(stream as ReadableStream, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+function handleCreateThread(chatKitService: ChatKitService, params: any): Response {
+  const stream = chatKitService.encodeStream(chatKitService.createThreadWithInput(params.input));
+  return new Response(stream as ReadableStream, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+function handleAddUserMessage(chatKitService: ChatKitService, params: any): Response {
+  const stream = chatKitService.encodeStream(
+    chatKitService.addUserMessage(params.thread_id, params.input)
+  );
+  return new Response(stream as ReadableStream, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
 // Handle ChatKit API requests
 export async function handlePostChatKitRequest(
   req: Request,
@@ -106,25 +211,36 @@ export async function handlePostChatKitRequest(
         const parsedRequest: ChatKitRequest = body;
 
         if (isStreamingReq(parsedRequest)) {
-          // Return streaming response
-          const stream = chatKitService.encodeStream(
-            chatKitService.processStreamingRequest(parsedRequest)
-          );
-          return new Response(stream as ReadableStream, {
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              Connection: 'keep-alive',
-            },
-          });
+          // Route streaming requests
+          switch (parsedRequest.type) {
+            case 'threads.action':
+            case 'threads.custom_action':
+              return handleThreadAction(chatKitService, parsedRequest.params);
+            case 'threads.create':
+              return handleCreateThread(chatKitService, parsedRequest.params);
+            case 'threads.add_user_message':
+              return handleAddUserMessage(chatKitService, parsedRequest.params);
+            default:
+              throw new Error(`Unknown streaming request type: ${parsedRequest.type}`);
+          }
         } else {
-          // Return non-streaming response
-          const result = await chatKitService.processNonStreamingRequest(parsedRequest);
-          return new Response(JSON.stringify(result), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          // Route non-streaming requests
+          switch (parsedRequest.type) {
+            case 'threads.get_by_id':
+              return await handleGetThreadById(chatKitService, parsedRequest.params);
+            case 'threads.list':
+              return await handleListThreads(chatKitService, parsedRequest.params);
+            case 'items.list':
+              return await handleListThreadMessages(chatKitService, parsedRequest.params);
+            case 'threads.update':
+              return await handleUpdateThread(chatKitService, parsedRequest.params);
+            case 'threads.delete':
+              return await handleDeleteThread(chatKitService, parsedRequest.params);
+            case 'threads.retry_after_item':
+              return await handleRetryAfterItem(chatKitService, parsedRequest.params);
+            default:
+              throw new Error(`Unknown request type: ${parsedRequest.type}`);
+          }
         }
       }
     }

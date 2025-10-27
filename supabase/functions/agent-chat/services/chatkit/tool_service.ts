@@ -4,7 +4,11 @@ import { RunState } from '@openai/agents-core';
 import { ChatKitEventFactory } from '../../utils/chatkit/factories/chatkit_event_factory.ts';
 import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
 import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
-import type { ThreadMetadata, ThreadStreamEvent, ThreadMessageAddedEvent } from '../../types/chatkit.ts';
+import type {
+  ThreadMetadata,
+  ThreadStreamEvent,
+  ThreadMessageAddedEvent,
+} from '../../types/chatkit.ts';
 import { Agent } from '@openai/agents-core';
 
 export class ToolService {
@@ -131,7 +135,11 @@ export class ToolService {
   }
 
   // Tool Approval Handler functionality
-  async *handleToolApproval(event: any, threadId: string, runState?: any): AsyncIterable<ThreadStreamEvent> {
+  async *handleToolApproval(
+    event: any,
+    threadId: string,
+    runState?: any
+  ): AsyncIterable<ThreadStreamEvent> {
     const item = event.item;
     const tool = item?.rawItem;
     const toolCallId = tool?.callId || tool?.call_id || tool?.id || 'unknown';
@@ -197,5 +205,4 @@ export class ToolService {
 
     yield this.eventFactory.createItemAddedEvent(toolResultItem);
   }
-
 }

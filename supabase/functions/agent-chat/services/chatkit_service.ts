@@ -1,10 +1,9 @@
 import { ThreadService } from '../services/thread_service.ts';
 import { ThreadMessageService } from '../services/thread_message_service.ts';
 import { ThreadRunStateService } from '../services/thread_run_state_service.ts';
-import { Agent, RunState } from 'https://esm.sh/@openai/agents-core@0.0.1';
+import { Agent } from 'https://esm.sh/@openai/agents-core@0.0.1';
 import { RunnerFactory } from '../utils/runner_factory.ts';
 import {
-  type ChatKitRequest,
   type ThreadMetadata,
   type Thread,
   type UserMessageItem,
@@ -49,112 +48,114 @@ export class ChatKitService {
   }
 
   /**
-   * Process non-streaming requests
+   * Get thread by ID
    */
-  async processNonStreamingRequest(request: ChatKitRequest): Promise<object> {
-    switch (request.type) {
-      case 'threads.get_by_id':
-        return await this.threadService.loadThread(request.params!.thread_id!);
+  async getThreadById(threadId: string): Promise<object> {
+    return await this.threadService.loadThread(threadId);
+  }
 
-      case 'threads.list': {
-        const params = request.params || {};
-        const threads = await this.threadService.loadThreads(
-          params.limit || 20,
-          params.after || null,
-          params.order || 'desc'
-        );
-        return {
-          data: await Promise.all(threads.data.map((t) => this.threadService.loadThread(t.id))),
-          has_more: threads.has_more,
-          after: threads.after,
-        };
-      }
+  /**
+   * List threads with pagination
+   */
+  async listThreads(
+    limit: number = 20,
+    after: string | null = null,
+    order: string = 'desc'
+  ): Promise<object> {
+    const threads = await this.threadService.loadThreads(limit, after, order);
+    return {
+      data: await Promise.all(threads.data.map((t) => this.threadService.loadThread(t.id))),
+      has_more: threads.has_more,
+      after: threads.after,
+    };
+  }
 
-      case 'items.list': {
-        const params = request.params!;
-        return await this.threadMessageService.loadThreadMessages(
-          params.thread_id!,
-          params.after || null,
-          params.limit || 20,
-          params.order || 'asc'
-        );
-      }
+  /**
+   * List thread messages
+   */
+  async listThreadMessages(
+    threadId: string,
+    after: string | null = null,
+    limit: number = 20,
+    order: string = 'asc'
+  ): Promise<object> {
+    return await this.threadMessageService.loadThreadMessages(threadId, after, limit, order);
+  }
 
-      case 'threads.update': {
-        const thread = await this.threadService.loadThread(request.params!.thread_id!);
-        thread.title = request.params!.title;
-        await this.threadService.saveThread(thread);
-        return await this.threadService.loadThread(request.params!.thread_id!);
-      }
+  /**
+   * Update thread title
+   */
+  async updateThread(threadId: string, title: string): Promise<object> {
+    const thread = await this.threadService.loadThread(threadId);
+    thread.title = title;
+    await this.threadService.saveThread(thread);
+    return await this.threadService.loadThread(threadId);
+  }
 
-      case 'threads.delete':
-        await this.threadService.deleteThread(request.params!.thread_id!);
-        return {};
+  /**
+   * Delete thread
+   */
+  async deleteThread(threadId: string): Promise<object> {
+    await this.threadService.deleteThread(threadId);
+    return {};
+  }
 
-      case 'threads.retry_after_item':
-        return {};
+  /**
+   * Retry after item (placeholder implementation)
+   */
+  retryAfterItem(): object {
+    return {};
+  }
 
-      default:
-        throw new Error(`Unknown request type: ${(request as any).type}`);
+  /**
+   * Handle thread action or custom action
+   */
+  async *handleThreadAction(
+    threadId: string,
+    action: string,
+    params: any
+  ): AsyncIterable<ThreadStreamEvent> {
+    const thread = await this.threadService.loadThread(threadId);
+    yield this.eventFactory.createThreadUpdatedEvent(thread);
+    const approvalResult = await this.toolService.handleApproval(thread, action, params);
+
+    if (approvalResult.shouldExecute && approvalResult.runState) {
+      // Execute the agent with the modified run state
+      const result = await this.runAgent(approvalResult.runState, thread);
+      await this.threadRunStateService.clearRunState(thread.id);
+
+      yield* streamAgentResponse(
+        result,
+        thread.id,
+        this.threadMessageService.threadMessageStore,
+        this.threadRunStateService,
+        this.agent,
+        this.context
+      );
     }
   }
 
   /**
-   * Process streaming requests and coordinate agent execution
+   * Create a new thread with optional initial input
    */
-  async *processStreamingRequest(request: ChatKitRequest): AsyncIterable<ThreadStreamEvent> {
-    switch (request.type) {
-      case 'threads.action':
-      case 'threads.custom_action': {
-        const thread = await this.threadService.loadThread(request.params.thread_id);
-        yield this.eventFactory.createThreadUpdatedEvent(thread);
-        const approvalResult = await this.toolService.handleApproval(thread, request.params.action, request.params);
-        
-        if (approvalResult.shouldExecute && approvalResult.runState) {
-          // Execute the agent with the modified run state
-          const result = await this.runAgent(approvalResult.runState, thread);
-          await this.threadRunStateService.clearRunState(thread.id);
-          
-          yield* streamAgentResponse(
-            result,
-            thread.id,
-            this.threadMessageService.threadMessageStore,
-            this.threadRunStateService,
-            this.agent,
-            this.context
-          );
-        }
-        break;
-      }
+  async *createThreadWithInput(input?: string): AsyncIterable<ThreadStreamEvent> {
+    const thread = await this.createThread();
+    yield this.eventFactory.createThreadCreatedEvent(thread);
 
-      case 'threads.create': {
-        const thread = await this.createThread();
-        yield this.eventFactory.createThreadCreatedEvent(thread);
-
-        if (request.params!.input) {
-          const threadMetadata = this.threadToMetadata(thread);
-          const userMessage = this.messageProcessor.buildUserMessageItem(
-            request.params!.input!,
-            threadMetadata
-          );
-          yield* this.processUserMessage(threadMetadata, userMessage);
-        }
-        break;
-      }
-
-      case 'threads.add_user_message': {
-        const thread = await this.threadService.loadThread(request.params!.thread_id!);
-        const userMessage = this.messageProcessor.buildUserMessageItem(
-          request.params!.input!,
-          thread
-        );
-        yield* this.processUserMessage(thread, userMessage);
-        break;
-      }
-
-      default:
-        throw new Error(`Unknown streaming request type: ${(request as any).type}`);
+    if (input) {
+      const threadMetadata = this.threadToMetadata(thread);
+      const userMessage = this.messageProcessor.buildUserMessageItem(input, threadMetadata);
+      yield* this.processUserMessage(threadMetadata, userMessage);
     }
+  }
+
+  /**
+   * Add user message to existing thread
+   */
+  async *addUserMessage(threadId: string, input: string): AsyncIterable<ThreadStreamEvent> {
+    const thread = await this.threadService.loadThread(threadId);
+    const userMessage = this.messageProcessor.buildUserMessageItem(input, thread);
+    yield* this.processUserMessage(thread, userMessage);
   }
 
   /**
@@ -171,7 +172,6 @@ export class ChatKitService {
 
     yield* this.processEvents(thread, () => this.respond(thread, userMessage));
   }
-
 
   /**
    * Execute agent response to a user message
@@ -250,10 +250,6 @@ export class ChatKitService {
       metadata: thread.metadata,
     };
   }
-
-
-
-
 
   /**
    * Execute agent with a run state
