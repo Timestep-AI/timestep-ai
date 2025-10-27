@@ -55,13 +55,6 @@ export class ThreadService {
   }
 
   /**
-   * Delete a thread
-   */
-  async deleteThread(threadId: string): Promise<void> {
-    return await this._threadStore.deleteThread(threadId);
-  }
-
-  /**
    * Create a new thread with proper initialization
    * This is a business operation that combines multiple repository calls
    */
@@ -101,5 +94,58 @@ export class ThreadService {
    */
   async updateThreadMetadata(threadId: string, metadata: Record<string, any>): Promise<void> {
     return await this._threadStore.updateThreadMetadata(threadId, metadata);
+  }
+
+  /**
+   * Get thread by ID (moved from ChatKitService)
+   */
+  async getThreadById(threadId: string): Promise<object> {
+    return await this.loadThread(threadId);
+  }
+
+  /**
+   * List threads with pagination (moved from ChatKitService)
+   */
+  async listThreads(
+    limit: number = 20,
+    after: string | null = null,
+    order: string = 'desc'
+  ): Promise<object> {
+    const threads = await this.loadThreads(limit, after, order);
+    return {
+      data: await Promise.all(threads.data.map((t) => this.loadThread(t.id))),
+      has_more: threads.has_more,
+      after: threads.after,
+    };
+  }
+
+  /**
+   * Update thread title (moved from ChatKitService)
+   */
+  async updateThread(threadId: string, title: string): Promise<object> {
+    const thread = await this.loadThread(threadId);
+    thread.title = title;
+    await this.saveThread(thread);
+    return await this.loadThread(threadId);
+  }
+
+  /**
+   * Delete thread (moved from ChatKitService)
+   */
+  async deleteThread(threadId: string): Promise<object> {
+    await this._threadStore.deleteThread(threadId);
+    return {};
+  }
+
+  /**
+   * Convert Thread to ThreadMetadata (moved from ChatKitService)
+   */
+  threadToMetadata(thread: any): ThreadMetadata {
+    return {
+      id: thread.id,
+      created_at: new Date(thread.created_at * 1000),
+      status: thread.status,
+      metadata: thread.metadata,
+    };
   }
 }

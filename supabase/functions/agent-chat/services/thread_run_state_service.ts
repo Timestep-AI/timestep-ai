@@ -1,4 +1,7 @@
 import { ThreadRunStateStore } from '../stores/thread_run_state_store.ts';
+import { RunnerFactory } from '../utils/runner_factory.ts';
+import { Agent } from 'https://esm.sh/@openai/agents-core@0.0.1';
+import type { ThreadMetadata } from '../types/chatkit.ts';
 
 /**
  * Service for managing thread run states
@@ -11,7 +14,11 @@ import { ThreadRunStateStore } from '../stores/thread_run_state_store.ts';
 export class ThreadRunStateService {
   private store: ThreadRunStateStore;
 
-  constructor(supabaseUrl: string, userJwt: string, userId: string) {
+  constructor(
+    private supabaseUrl: string,
+    private userJwt: string,
+    private userId: string
+  ) {
     this.store = new ThreadRunStateStore(supabaseUrl, userJwt, userId);
   }
 
@@ -118,5 +125,19 @@ export class ThreadRunStateService {
     const existingState = await this.loadRunStateAsJson(threadId);
     const mergedState = { ...existingState, ...updates };
     return this.saveRunStateAsJson(threadId, mergedState);
+  }
+
+  /**
+   * Execute agent with a run state (moved from ChatKitService)
+   */
+  async runAgent(runState: any, thread: ThreadMetadata, agent: Agent, _context: any) {
+    const runner = await RunnerFactory.createRunner({
+      threadId: thread.id,
+      userId: this.userId,
+    });
+    return await runner.run(agent, runState, {
+      context: { threadId: thread.id, userId: this.userId },
+      stream: true,
+    });
   }
 }

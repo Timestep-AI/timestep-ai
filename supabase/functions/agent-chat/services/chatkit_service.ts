@@ -13,7 +13,6 @@ import {
 import { ChatKitMessageProcessor } from '../utils/chatkit/processors/chatkit_message_processor.ts';
 import { AgentMessageConverter } from '../utils/chatkit/converters/agent_message_converter.ts';
 import { ChatKitEventFactory } from '../utils/chatkit/factories/chatkit_event_factory.ts';
-import { streamAgentResponse } from './chatkit/agent_response_service.ts';
 import { ToolService } from './chatkit/tool_service.ts';
 
 /**
@@ -48,30 +47,25 @@ export class ChatKitService {
   }
 
   /**
-   * Get thread by ID
+   * Get thread by ID (delegates to ThreadService)
    */
   async getThreadById(threadId: string): Promise<object> {
-    return await this.threadService.loadThread(threadId);
+    return await this.threadService.getThreadById(threadId);
   }
 
   /**
-   * List threads with pagination
+   * List threads with pagination (delegates to ThreadService)
    */
   async listThreads(
     limit: number = 20,
     after: string | null = null,
     order: string = 'desc'
   ): Promise<object> {
-    const threads = await this.threadService.loadThreads(limit, after, order);
-    return {
-      data: await Promise.all(threads.data.map((t) => this.threadService.loadThread(t.id))),
-      has_more: threads.has_more,
-      after: threads.after,
-    };
+    return await this.threadService.listThreads(limit, after, order);
   }
 
   /**
-   * List thread messages
+   * List thread messages (delegates to ThreadMessageService)
    */
   async listThreadMessages(
     threadId: string,
@@ -79,31 +73,21 @@ export class ChatKitService {
     limit: number = 20,
     order: string = 'asc'
   ): Promise<object> {
-    return await this.threadMessageService.loadThreadMessages(threadId, after, limit, order);
+    return await this.threadMessageService.listThreadMessages(threadId, after, limit, order);
   }
 
   /**
-   * Update thread title
+   * Update thread title (delegates to ThreadService)
    */
   async updateThread(threadId: string, title: string): Promise<object> {
-    const thread = await this.threadService.loadThread(threadId);
-    thread.title = title;
-    await this.threadService.saveThread(thread);
-    return await this.threadService.loadThread(threadId);
+    return await this.threadService.updateThread(threadId, title);
   }
 
   /**
-   * Delete thread
+   * Delete thread (delegates to ThreadService)
    */
   async deleteThread(threadId: string): Promise<object> {
     await this.threadService.deleteThread(threadId);
-    return {};
-  }
-
-  /**
-   * Retry after item (placeholder implementation)
-   */
-  retryAfterItem(): object {
     return {};
   }
 
@@ -113,7 +97,8 @@ export class ChatKitService {
   async *handleThreadAction(
     threadId: string,
     action: string,
-    params: any
+    params: any,
+    streamAgentResponse: any
   ): AsyncIterable<ThreadStreamEvent> {
     const thread = await this.threadService.loadThread(threadId);
     yield this.eventFactory.createThreadUpdatedEvent(thread);
@@ -121,7 +106,12 @@ export class ChatKitService {
 
     if (approvalResult.shouldExecute && approvalResult.runState) {
       // Execute the agent with the modified run state
-      const result = await this.runAgent(approvalResult.runState, thread);
+      const result = await this.threadRunStateService.runAgent(
+        approvalResult.runState,
+        thread,
+        this.agent,
+        this.context
+      );
       await this.threadRunStateService.clearRunState(thread.id);
 
       yield* streamAgentResponse(
@@ -138,24 +128,31 @@ export class ChatKitService {
   /**
    * Create a new thread with optional initial input
    */
-  async *createThreadWithInput(input?: string): AsyncIterable<ThreadStreamEvent> {
+  async *createThreadWithInput(
+    streamAgentResponse: any,
+    input?: string
+  ): AsyncIterable<ThreadStreamEvent> {
     const thread = await this.createThread();
     yield this.eventFactory.createThreadCreatedEvent(thread);
 
     if (input) {
-      const threadMetadata = this.threadToMetadata(thread);
+      const threadMetadata = this.threadService.threadToMetadata(thread);
       const userMessage = this.messageProcessor.buildUserMessageItem(input, threadMetadata);
-      yield* this.processUserMessage(threadMetadata, userMessage);
+      yield* this.processUserMessage(threadMetadata, userMessage, streamAgentResponse);
     }
   }
 
   /**
    * Add user message to existing thread
    */
-  async *addUserMessage(threadId: string, input: string): AsyncIterable<ThreadStreamEvent> {
+  async *addUserMessage(
+    threadId: string,
+    input: string,
+    streamAgentResponse: any
+  ): AsyncIterable<ThreadStreamEvent> {
     const thread = await this.threadService.loadThread(threadId);
     const userMessage = this.messageProcessor.buildUserMessageItem(input, thread);
-    yield* this.processUserMessage(thread, userMessage);
+    yield* this.processUserMessage(thread, userMessage, streamAgentResponse);
   }
 
   /**
@@ -163,14 +160,15 @@ export class ChatKitService {
    */
   private async *processUserMessage(
     thread: ThreadMetadata,
-    userMessage: UserMessageItem
+    userMessage: UserMessageItem,
+    streamAgentResponse: any
   ): AsyncIterable<ThreadStreamEvent> {
     await this.threadMessageService.addThreadMessage(thread.id, userMessage);
 
     yield this.eventFactory.createItemAddedEvent(userMessage);
     yield this.eventFactory.createItemDoneEvent(userMessage);
 
-    yield* this.processEvents(thread, () => this.respond(thread, userMessage));
+    yield* this.processEvents(thread, () => this.respond(thread, userMessage, streamAgentResponse));
   }
 
   /**
@@ -178,7 +176,8 @@ export class ChatKitService {
    */
   async *respond(
     thread: ThreadMetadata,
-    userMessage: UserMessageItem
+    userMessage: UserMessageItem,
+    streamAgentResponse: any
   ): AsyncIterable<ThreadStreamEvent> {
     const messageText = await this.messageProcessor.extractMessageText(userMessage);
     if (!messageText) return;
@@ -216,53 +215,20 @@ export class ChatKitService {
   }
 
   /**
-   * Create a new thread
+   * Create a new thread (delegates to ThreadService)
    */
   private async createThread(): Promise<Thread> {
-    const threadId = this.threadService.generateThreadId();
-    const threadMetadata: ThreadMetadata = {
-      id: threadId,
-      created_at: new Date(),
-      status: { type: 'active' },
-      metadata: {},
-    };
-    await this.threadService.saveThread(threadMetadata);
+    const threadMetadata = await this.threadService.createThread();
 
     // Return as Thread type for compatibility
     const thread: Thread = {
-      id: threadId,
-      created_at: Math.floor(Date.now() / 1000),
-      status: { type: 'active' },
-      metadata: {},
+      id: threadMetadata.id,
+      created_at: Math.floor(threadMetadata.created_at.getTime() / 1000),
+      status: threadMetadata.status || { type: 'active' },
+      metadata: threadMetadata.metadata,
       items: { data: [], has_more: false, after: null },
     };
     return thread;
-  }
-
-  /**
-   * Convert Thread to ThreadMetadata
-   */
-  private threadToMetadata(thread: Thread): ThreadMetadata {
-    return {
-      id: thread.id,
-      created_at: new Date(thread.created_at * 1000),
-      status: thread.status,
-      metadata: thread.metadata,
-    };
-  }
-
-  /**
-   * Execute agent with a run state
-   */
-  private async runAgent(runState: any, thread: ThreadMetadata) {
-    const runner = await RunnerFactory.createRunner({
-      threadId: thread.id,
-      userId: this.context.userId,
-    });
-    return await runner.run(this.agent, runState, {
-      context: { threadId: thread.id, userId: this.context.userId },
-      stream: true,
-    });
   }
 
   /**

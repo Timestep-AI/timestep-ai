@@ -1,6 +1,6 @@
 import { ThreadMessageStore } from '../stores/thread_message_store.ts';
 import type { ThreadMessage } from '../types/chatkit.ts';
-import type { Page, ThreadMessage } from '../stores/thread_message_store.ts';
+import type { Page } from '../stores/thread_message_store.ts';
 
 /**
  * Service layer for thread message operations
@@ -148,5 +148,17 @@ export class ThreadMessageService {
   async getLastActivity(threadId: string): Promise<Date | null> {
     const stats = await this.getThreadStats(threadId);
     return stats.lastActivity;
+  }
+
+  /**
+   * List thread messages (moved from ChatKitService)
+   */
+  async listThreadMessages(
+    threadId: string,
+    after: string | null = null,
+    limit: number = 20,
+    order: string = 'asc'
+  ): Promise<object> {
+    return await this.loadThreadMessages(threadId, after, limit, order);
   }
 }
