@@ -6,7 +6,6 @@ import type {
   ThreadMessageDoneEvent,
 } from '../../types/chatkit.ts';
 import { ChatKitItemFactory } from '../../utils/chatkit/factories/chatkit_item_factory.ts';
-import { WidgetFactory } from '../../utils/chatkit/factories/widget_factory.ts';
 import { ToolService } from './tool_service.ts';
 import { HandoffService } from './handoff_service.ts';
 import { ModelStreamHandler } from './model_stream_service.ts';

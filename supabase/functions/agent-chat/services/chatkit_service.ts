@@ -47,51 +47,6 @@ export class ChatKitService {
   }
 
   /**
-   * Get thread by ID (delegates to ThreadService)
-   */
-  async getThreadById(threadId: string): Promise<object> {
-    return await this.threadService.getThreadById(threadId);
-  }
-
-  /**
-   * List threads with pagination (delegates to ThreadService)
-   */
-  async listThreads(
-    limit: number = 20,
-    after: string | null = null,
-    order: string = 'desc'
-  ): Promise<object> {
-    return await this.threadService.listThreads(limit, after, order);
-  }
-
-  /**
-   * List thread messages (delegates to ThreadMessageService)
-   */
-  async listThreadMessages(
-    threadId: string,
-    after: string | null = null,
-    limit: number = 20,
-    order: string = 'asc'
-  ): Promise<object> {
-    return await this.threadMessageService.listThreadMessages(threadId, after, limit, order);
-  }
-
-  /**
-   * Update thread title (delegates to ThreadService)
-   */
-  async updateThread(threadId: string, title: string): Promise<object> {
-    return await this.threadService.updateThread(threadId, title);
-  }
-
-  /**
-   * Delete thread (delegates to ThreadService)
-   */
-  async deleteThread(threadId: string): Promise<object> {
-    await this.threadService.deleteThread(threadId);
-    return {};
-  }
-
-  /**
    * Handle thread action or custom action
    */
   async *handleThreadAction(

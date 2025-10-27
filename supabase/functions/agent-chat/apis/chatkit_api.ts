@@ -14,16 +14,16 @@ const corsHeaders = {
 };
 
 // Handler functions for non-streaming requests
-async function handleGetThreadById(chatKitService: ChatKitService, params: any): Promise<Response> {
-  const result = await chatKitService.getThreadById(params.thread_id);
+async function handleGetThreadById(threadService: ThreadService, params: any): Promise<Response> {
+  const result = await threadService.getThreadById(params.thread_id);
   return new Response(JSON.stringify(result), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-async function handleListThreads(chatKitService: ChatKitService, params: any): Promise<Response> {
-  const result = await chatKitService.listThreads(
+async function handleListThreads(threadService: ThreadService, params: any): Promise<Response> {
+  const result = await threadService.listThreads(
     params.limit || 20,
     params.after || null,
     params.order || 'desc'
@@ -35,10 +35,10 @@ async function handleListThreads(chatKitService: ChatKitService, params: any): P
 }
 
 async function handleListThreadMessages(
-  chatKitService: ChatKitService,
+  threadMessageService: ThreadMessageService,
   params: any
 ): Promise<Response> {
-  const result = await chatKitService.listThreadMessages(
+  const result = await threadMessageService.listThreadMessages(
     params.thread_id,
     params.after || null,
     params.limit || 20,
@@ -50,26 +50,23 @@ async function handleListThreadMessages(
   });
 }
 
-async function handleUpdateThread(chatKitService: ChatKitService, params: any): Promise<Response> {
-  const result = await chatKitService.updateThread(params.thread_id, params.title);
+async function handleUpdateThread(threadService: ThreadService, params: any): Promise<Response> {
+  const result = await threadService.updateThread(params.thread_id, params.title);
   return new Response(JSON.stringify(result), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-async function handleDeleteThread(chatKitService: ChatKitService, params: any): Promise<Response> {
-  const result = await chatKitService.deleteThread(params.thread_id);
-  return new Response(JSON.stringify(result), {
+async function handleDeleteThread(threadService: ThreadService, params: any): Promise<Response> {
+  await threadService.deleteThread(params.thread_id);
+  return new Response(JSON.stringify({}), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-async function handleRetryAfterItem(
-  _chatKitService: ChatKitService,
-  _params: any
-): Promise<Response> {
+function handleRetryAfterItem(_chatKitService: ChatKitService, _params: any): Response {
   // Placeholder implementation
   return new Response(JSON.stringify({}), {
     status: 200,
@@ -310,17 +307,17 @@ export async function handlePostChatKitRequest(
           // Route non-streaming requests
           switch (parsedRequest.type) {
             case 'threads.get_by_id':
-              return await handleGetThreadById(chatKitService, parsedRequest.params);
+              return await handleGetThreadById(threadService, parsedRequest.params);
             case 'threads.list':
-              return await handleListThreads(chatKitService, parsedRequest.params);
+              return await handleListThreads(threadService, parsedRequest.params);
             case 'items.list':
-              return await handleListThreadMessages(chatKitService, parsedRequest.params);
+              return await handleListThreadMessages(threadMessageService, parsedRequest.params);
             case 'threads.update':
-              return await handleUpdateThread(chatKitService, parsedRequest.params);
+              return await handleUpdateThread(threadService, parsedRequest.params);
             case 'threads.delete':
-              return await handleDeleteThread(chatKitService, parsedRequest.params);
+              return await handleDeleteThread(threadService, parsedRequest.params);
             case 'threads.retry_after_item':
-              return await handleRetryAfterItem(chatKitService, parsedRequest.params);
+              return handleRetryAfterItem(chatKitService, parsedRequest.params);
             default:
               throw new Error(`Unknown request type: ${parsedRequest.type}`);
           }
