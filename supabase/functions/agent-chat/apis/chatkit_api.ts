@@ -4,7 +4,6 @@ import { ThreadMessageService } from '../services/thread_message_service.ts';
 import { ThreadRunStateService } from '../services/thread_run_state_service.ts';
 import { AgentsService } from '../services/agent_service.ts';
 import { ChatKitService } from '../services/chatkit_service.ts';
-import { streamAgentResponse } from '../services/chatkit/agent_response_service.ts';
 import { isStreamingReq, type ChatKitRequest } from '../types/chatkit.ts';
 
 // CORS headers
@@ -77,29 +76,13 @@ function handleRetryAfterItem(_chatKitService: ChatKitService, _params: any): Re
 // Handler functions for streaming requests
 function handleThreadAction(
   chatKitService: ChatKitService,
-  params: any,
-  agent: any,
-  threadMessageService: ThreadMessageService,
-  threadRunStateService: ThreadRunStateService,
-  context: any
+  params: any
 ): Response {
-  const streamAgentResponseWrapper = async function* (result: any, threadId: string) {
-    yield* streamAgentResponse(
-      result,
-      threadId,
-      threadMessageService.threadMessageStore,
-      threadRunStateService,
-      agent,
-      context
-    );
-  };
-
   const stream = chatKitService.encodeStream(
     chatKitService.handleThreadAction(
       params.thread_id,
       params.action,
-      params,
-      streamAgentResponseWrapper
+      params
     )
   );
   return new Response(stream as ReadableStream, {
@@ -114,25 +97,10 @@ function handleThreadAction(
 
 function handleCreateThread(
   chatKitService: ChatKitService,
-  params: any,
-  agent: any,
-  threadMessageService: ThreadMessageService,
-  threadRunStateService: ThreadRunStateService,
-  context: any
+  params: any
 ): Response {
-  const streamAgentResponseWrapper = async function* (result: any, threadId: string) {
-    yield* streamAgentResponse(
-      result,
-      threadId,
-      threadMessageService.threadMessageStore,
-      threadRunStateService,
-      agent,
-      context
-    );
-  };
-
   const stream = chatKitService.encodeStream(
-    chatKitService.createThreadWithInput(streamAgentResponseWrapper, params.input)
+    chatKitService.createThreadWithInput(params.input)
   );
   return new Response(stream as ReadableStream, {
     headers: {
@@ -146,25 +114,10 @@ function handleCreateThread(
 
 function handleAddUserMessage(
   chatKitService: ChatKitService,
-  params: any,
-  agent: any,
-  threadMessageService: ThreadMessageService,
-  threadRunStateService: ThreadRunStateService,
-  context: any
+  params: any
 ): Response {
-  const streamAgentResponseWrapper = async function* (result: any, threadId: string) {
-    yield* streamAgentResponse(
-      result,
-      threadId,
-      threadMessageService.threadMessageStore,
-      threadRunStateService,
-      agent,
-      context
-    );
-  };
-
   const stream = chatKitService.encodeStream(
-    chatKitService.addUserMessage(params.thread_id, params.input, streamAgentResponseWrapper)
+    chatKitService.addUserMessage(params.thread_id, params.input)
   );
   return new Response(stream as ReadableStream, {
     headers: {
@@ -276,29 +229,17 @@ export async function handlePostChatKitRequest(
             case 'threads.custom_action':
               return handleThreadAction(
                 chatKitService,
-                parsedRequest.params,
-                agent,
-                threadMessageService,
-                threadRunStateService,
-                context
+                parsedRequest.params
               );
             case 'threads.create':
               return handleCreateThread(
                 chatKitService,
-                parsedRequest.params,
-                agent,
-                threadMessageService,
-                threadRunStateService,
-                context
+                parsedRequest.params
               );
             case 'threads.add_user_message':
               return handleAddUserMessage(
                 chatKitService,
-                parsedRequest.params,
-                agent,
-                threadMessageService,
-                threadRunStateService,
-                context
+                parsedRequest.params
               );
             default:
               throw new Error(`Unknown streaming request type: ${parsedRequest.type}`);
@@ -306,18 +247,44 @@ export async function handlePostChatKitRequest(
         } else {
           // Route non-streaming requests
           switch (parsedRequest.type) {
+            // items.* represent thread messages in ChatKit
+            case 'items.create':
+              return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            case 'items.delete':
+              return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            case 'items.get':
+              return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            case 'items.list':
+              return await handleListThreadMessages(threadMessageService, parsedRequest.params);
+            case 'items.update':
+              return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            case 'threads.delete':
+              return await handleDeleteThread(threadService, parsedRequest.params);
+            case 'threads.get':
+              return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
             case 'threads.get_by_id':
               return await handleGetThreadById(threadService, parsedRequest.params);
             case 'threads.list':
               return await handleListThreads(threadService, parsedRequest.params);
-            case 'items.list':
-              return await handleListThreadMessages(threadMessageService, parsedRequest.params);
-            case 'threads.update':
-              return await handleUpdateThread(threadService, parsedRequest.params);
-            case 'threads.delete':
-              return await handleDeleteThread(threadService, parsedRequest.params);
             case 'threads.retry_after_item':
               return handleRetryAfterItem(chatKitService, parsedRequest.params);
+            case 'threads.update':
+              return await handleUpdateThread(threadService, parsedRequest.params);
             default:
               throw new Error(`Unknown request type: ${parsedRequest.type}`);
           }
