@@ -664,22 +664,27 @@ export class ChatKitService {
 
     if (delta) {
       console.log('📝 ModelStreamHandler processing delta:', delta);
-      // First delta: emit thread.item.added
+
+      // Accumulate delta
+      state.fullText += delta;
+
+      // First delta: emit thread.item.added, content_part.added, AND first text_delta together
       if (!state.itemAdded) {
         const assistantMessage = itemFactory.createAssistantMessageItem(
           threadId,
           state.itemId,
           state.createdAt
         );
+
+        // Emit thread.item.added (ChatKit ignores content here, but include it anyway)
+        assistantMessage.content[0].text = state.fullText;
         yield {
           type: 'thread.item.added',
           item: assistantMessage,
         } as any;
         state.itemAdded = true;
-      }
 
-      // Second: emit content_part.added
-      if (!state.contentPartAdded) {
+        // Immediately emit content_part.added
         yield {
           type: 'thread.item.updated',
           item_id: state.itemId,
@@ -694,19 +699,29 @@ export class ChatKitService {
           },
         };
         state.contentPartAdded = true;
-      }
 
-      // Emit delta
-      state.fullText += delta;
-      yield {
-        type: 'thread.item.updated',
-        item_id: state.itemId,
-        update: {
-          type: 'assistant_message.content_part.text_delta',
-          content_index: 0,
-          delta: delta,
-        },
-      };
+        // Emit the first text delta - this is what ChatKit actually uses for content!
+        yield {
+          type: 'thread.item.updated',
+          item_id: state.itemId,
+          update: {
+            type: 'assistant_message.content_part.text_delta',
+            content_index: 0,
+            delta: delta,
+          },
+        };
+      } else {
+        // Subsequent deltas: emit delta normally
+        yield {
+          type: 'thread.item.updated',
+          item_id: state.itemId,
+          update: {
+            type: 'assistant_message.content_part.text_delta',
+            content_index: 0,
+            delta: delta,
+          },
+        };
+      }
     } else {
       console.log('⚠️ ModelStreamHandler: No delta found in event');
       console.log('Event data:', eventData);
@@ -731,22 +746,26 @@ export class ChatKitService {
   ): AsyncIterable<ThreadStreamEvent> {
     const delta = event.data?.delta || event?.delta;
 
-    // First delta: emit thread.item.added
+    // Accumulate delta
+    state.fullText += delta;
+
+    // First delta: emit thread.item.added, content_part.added, AND first text_delta together
     if (!state.itemAdded) {
       const assistantMessage = itemFactory.createAssistantMessageItem(
         threadId,
         state.itemId,
         state.createdAt
       );
+
+      // Emit thread.item.added (ChatKit ignores content here, but include it anyway)
+      assistantMessage.content[0].text = state.fullText;
       yield {
         type: 'thread.item.added',
         item: assistantMessage,
       } as any;
       state.itemAdded = true;
-    }
 
-    // Second: emit content_part.added
-    if (!state.contentPartAdded) {
+      // Immediately emit content_part.added
       yield {
         type: 'thread.item.updated',
         item_id: state.itemId,
@@ -761,19 +780,29 @@ export class ChatKitService {
         },
       };
       state.contentPartAdded = true;
-    }
 
-    // Emit delta
-    state.fullText += delta;
-    yield {
-      type: 'thread.item.updated',
-      item_id: state.itemId,
-      update: {
-        type: 'assistant_message.content_part.text_delta',
-        content_index: 0,
-        delta: delta,
-      },
-    };
+      // Emit the first text delta - this is what ChatKit actually uses for content!
+      yield {
+        type: 'thread.item.updated',
+        item_id: state.itemId,
+        update: {
+          type: 'assistant_message.content_part.text_delta',
+          content_index: 0,
+          delta: delta,
+        },
+      };
+    } else {
+      // Subsequent deltas: emit delta normally
+      yield {
+        type: 'thread.item.updated',
+        item_id: state.itemId,
+        update: {
+          type: 'assistant_message.content_part.text_delta',
+          content_index: 0,
+          delta: delta,
+        },
+      };
+    }
   }
 
   /**
