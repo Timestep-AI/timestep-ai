@@ -126,7 +126,6 @@ export class McpServerService {
         if (shouldAddAuth) {
           const headers = new Headers(init?.headers);
           if (!headers.has('Authorization') && this.userJwt) {
-            console.log(`[McpServerService] Adding auth header to request: ${url}`);
             headers.set('Authorization', `Bearer ${this.userJwt}`);
           }
 
@@ -193,9 +192,6 @@ export class McpServerService {
                 if (shouldAddAuth) {
                   const headers = new Headers(init?.headers);
                   if (!headers.has('Authorization') && userJwt) {
-                    console.log(
-                      `[McpServerService] Adding auth header to tool execution request: ${url}`
-                    );
                     headers.set('Authorization', `Bearer ${userJwt}`);
                   }
 

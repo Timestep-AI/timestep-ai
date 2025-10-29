@@ -60,7 +60,6 @@ export class ThreadStore {
 
     // Ensure thread has a vector store
     if (!data.vector_store_id) {
-      console.log(`[ThreadStore] Thread ${threadId} missing vector store, creating one`);
       try {
         const vectorStore = await this.openai.vectorStores.create({
           name: `Thread ${threadId}`,
@@ -81,10 +80,6 @@ export class ThreadStore {
           console.error('[ThreadStore] Error updating thread with vector store:', updateError);
           throw updateError;
         }
-
-        console.log(
-          `[ThreadStore] Created vector store ${vectorStore.id} for existing thread ${threadId}`
-        );
       } catch (error) {
         console.error(`[ThreadStore] Failed to create vector store for thread ${threadId}:`, error);
         throw error;
@@ -203,9 +198,6 @@ export class ThreadStore {
     if (thread.metadata?.vector_store_id) {
       try {
         await this.openai.vectorStores.del(thread.metadata.vector_store_id);
-        console.log(
-          `[ThreadStore] Deleted vector store ${thread.metadata.vector_store_id} for thread ${threadId}`
-        );
       } catch (error) {
         console.warn(`[ThreadStore] Failed to delete vector store for thread ${threadId}:`, error);
       }

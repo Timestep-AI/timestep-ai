@@ -284,6 +284,50 @@ export class OllamaModel implements Model {
       stream: stream as any,
     };
 
+    // Set temperature directly on the request (not in options)
+    if (request.modelSettings?.temperature !== undefined) {
+      chatOptions.temperature = request.modelSettings.temperature;
+    }
+
+    // Add model settings if provided
+    if (request.modelSettings) {
+      // Handle reasoning settings - map reasoning.effort to think
+      // OpenAI Agents SDK: reasoning: { effort: 'minimal' | 'low' | 'medium' | 'high' }
+      // Ollama: think: boolean | 'low' | 'medium' | 'high'
+      if (request.modelSettings.reasoning !== undefined) {
+        if (typeof request.modelSettings.reasoning === 'object' && request.modelSettings.reasoning !== null) {
+          const effort = request.modelSettings.reasoning.effort;
+          if (effort === 'minimal') {
+            chatOptions.think = 'low'; // Map minimal to low
+          } else if (effort === 'low' || effort === 'medium' || effort === 'high') {
+            chatOptions.think = effort;
+          } else if (effort === null) {
+            chatOptions.think = false; // Disable thinking
+          }
+        } else if (request.modelSettings.reasoning === false) {
+          chatOptions.think = false; // Disable thinking mode for consistent responses
+        }
+      }
+
+      // Map standard model settings to Ollama options
+      if (request.modelSettings.temperature !== undefined) {
+        chatOptions.options = chatOptions.options || {};
+        chatOptions.options.temperature = request.modelSettings.temperature;
+      }
+      if (request.modelSettings.topP !== undefined) {
+        chatOptions.options = chatOptions.options || {};
+        chatOptions.options.top_p = request.modelSettings.topP;
+      }
+      if (request.modelSettings.frequencyPenalty !== undefined) {
+        chatOptions.options = chatOptions.options || {};
+        chatOptions.options.frequency_penalty = request.modelSettings.frequencyPenalty;
+      }
+      if (request.modelSettings.presencePenalty !== undefined) {
+        chatOptions.options = chatOptions.options || {};
+        chatOptions.options.presence_penalty = request.modelSettings.presencePenalty;
+      }
+    }
+
     if (ollamaTools.length > 0) {
       chatOptions.tools = ollamaTools;
     }
