@@ -39,8 +39,9 @@ const Chat = () => {
 
   // Get server base URL
   const getServerBaseUrl = () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-    return `${supabaseUrl}/functions/v1/agent-chat`;
+    // const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
+    // return `${supabaseUrl}/functions/v1/agent-chat`;
+    return 'http://127.0.0.1:8000';
   };
 
   // Load agents
@@ -183,18 +184,15 @@ const Chat = () => {
     const agentId = e.detail.value;
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
-      console.log('Switching to agent:', agent.name, 'ID:', agent.id);
       setSelectedAgent(agent);
     }
   };
 
   // ChatKit configuration - use a generic agents endpoint and route dynamically
   const chatKitUrl = `${getServerBaseUrl()}/agents`;
-  console.log('ChatKit URL:', chatKitUrl, 'Selected Agent:', selectedAgent?.name);
 
   const { control } = useChatKit({
     onThreadChange: ({ threadId }) => {
-      console.log('Thread changed:', threadId);
       setCurrentThreadId(threadId);
     },
     api: {
@@ -207,18 +205,25 @@ const Chat = () => {
         // Route requests to the currently selected agent
         let targetUrl = url;
         if (selectedAgent && url.includes('/agents')) {
-          // Replace the generic /agents endpoint with the specific agent endpoint
           targetUrl = url.replace('/agents', `/agents/${selectedAgent.id}/chatkit`);
-          console.log('Routing request to agent:', selectedAgent.name, 'URL:', targetUrl);
         }
 
-        return fetch(targetUrl, {
+        const response = await fetch(targetUrl, {
           ...options,
           headers: {
             ...options.headers,
             ...auth,
           },
         });
+
+        // Error handling (don't consume body for SSE streams)
+        if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+          const errorText = await response.text();
+          console.error('Fetch error:', errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        return response;
       },
 
       // Upload strategy for attachments - also route dynamically
@@ -275,8 +280,6 @@ const Chat = () => {
       typography: { fontFamily: 'Open Sans, sans-serif' },
     },
   });
-
-  console.log('ChatKit: Control object:', control);
 
   if (!isAuthenticated || loadingAgents) {
     return (
