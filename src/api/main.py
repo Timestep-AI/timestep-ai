@@ -7,8 +7,10 @@ from fastapi.responses import Response, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import logging
+import httpx
 from agents import Agent, Runner, RunConfig
-from agents.extensions.memory import SQLAlchemySession
+from agents.memory import OpenAIConversationsSession
+from openai import AsyncOpenAI
 from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext
 from chatkit.server import StreamingResult, ChatKitServer
 from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, UserMessageTextContent
@@ -132,19 +134,26 @@ def _construct_supabase_db_url() -> str:
                    "Either provide SUPABASE_DB_URL or SUPABASE_DB_PASSWORD"
         )
 
-def _get_session_for_thread(thread_id: str) -> SQLAlchemySession:
-    """Create or get a SQLAlchemySession for a given thread.
-    
-    Uses thread-based session ID naming: "thread_{thread_id}"
-    This works with Supabase RLS since sessions are implicitly user-scoped.
+def _get_session_for_thread(thread_id: str, ctx: TContext) -> OpenAIConversationsSession:
+    """Create or get an OpenAIConversationsSession for a given thread.
+
+    Points to the openai-polyfill Conversations API using the request's JWT.
     """
-    session_id = f"thread_{thread_id}"
-    db_url = _construct_supabase_db_url()
-    return SQLAlchemySession.from_url(
-        session_id=session_id,
-        url=db_url,
-        create_tables=True
-    )
+    supabase_url = os.environ.get("SUPABASE_URL")
+    if not supabase_url:
+        raise HTTPException(status_code=500, detail="SUPABASE_URL is required")
+    base_url = f"{supabase_url.rstrip('/')}/functions/v1/openai-polyfill"
+    api_key = ctx.user_jwt or "anonymous"
+    client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+    # Use a stable conversation_id per thread to retain history
+    return OpenAIConversationsSession(conversation_id=thread_id, openai_client=client)
+
+
+def _functions_base_url() -> str:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    if not supabase_url:
+        raise HTTPException(status_code=500, detail="SUPABASE_URL is required")
+    return f"{supabase_url.rstrip('/')}/functions/v1"
 
 class MyChatKitServer(ChatKitServer):
     def __init__(
@@ -169,20 +178,73 @@ class MyChatKitServer(ChatKitServer):
             store=self.store,
             request_context=context,
         )
-        # Create SQLAlchemySession with thread-based session ID
-        session = _get_session_for_thread(thread.id)
+        # Create Conversations session bound to polyfill with per-request JWT
+        session = _get_session_for_thread(thread.id, context)
         
         # Convert input to agent format
         agent_input = await simple_to_agent_input(input) if input else []
         
-        # Define session_input_callback to merge list input with conversation history
-        # Signature: (history_items: list, new_items: list) -> list
-        # history_items: items from session history
-        # new_items: new input items for current turn
+        # When using session memory with list inputs, we need to provide a callback
+        # that defines how to merge history items with new items.
+        # The session automatically saves items after the run completes.
         def session_input_callback(history_items, new_items):
-            """Merge session history with new input items."""
-            # Combine history + new input items
-            return history_items + new_items
+            """Merge conversation history with new input items.
+            
+            The session automatically:
+            - Retrieves history_items from the conversation API before each run
+            - Saves all items (user input + assistant responses) after each run
+            This callback defines how to merge them and sanitizes items to remove
+            fields that OpenAI doesn't accept (like created_at, id, type).
+            """
+            def sanitize_item(item):
+                """Remove fields that OpenAI Responses API doesn't accept."""
+                if isinstance(item, dict):
+                    # Only keep role and content - OpenAI doesn't accept id, type, created_at, etc.
+                    sanitized = {}
+                    if "role" in item:
+                        sanitized["role"] = item["role"]
+                    if "content" in item:
+                        content = item["content"]
+                        # Normalize content: if it's an array of parts, ensure text is extracted
+                        if isinstance(content, list):
+                            # Content is already in parts format
+                            sanitized["content"] = content
+                        elif isinstance(content, str):
+                            # Simple string content
+                            sanitized["content"] = content
+                        else:
+                            # Fallback
+                            sanitized["content"] = content
+                    return sanitized if sanitized else item
+                return item
+            
+            def has_valid_content(item):
+                """Check if item has valid non-empty content."""
+                if not isinstance(item, dict) or "content" not in item:
+                    return False
+                content = item["content"]
+                if isinstance(content, str):
+                    return bool(content.strip())
+                if isinstance(content, list):
+                    # Check if any part has non-empty text
+                    for part in content:
+                        if isinstance(part, dict):
+                            text = part.get("text") or part.get("content")
+                            if isinstance(text, str) and text.strip():
+                                return True
+                        elif isinstance(part, str) and part.strip():
+                            return True
+                    return False
+                return False
+            
+            # Sanitize history items (they come from the conversation API with extra fields)
+            # Filter out items with empty content
+            sanitized_history = [sanitize_item(item) for item in history_items if has_valid_content(item)]
+            # New items should already be clean, but sanitize them too just in case
+            sanitized_new = [sanitize_item(item) for item in new_items]
+            
+            merged = sanitized_history + sanitized_new
+            return merged
         
         # Create RunConfig with session_input_callback
         run_config = RunConfig(session_input_callback=session_input_callback)
@@ -194,6 +256,7 @@ class MyChatKitServer(ChatKitServer):
             session=session,
             run_config=run_config,
         )
+        
         async for event in stream_agent_response(agent_context, result):
             yield event
 
@@ -243,6 +306,7 @@ def _build_request_context(request: Request) -> TContext:
     return TContext({
         "supabase": client,
         "user_id": user_id,
+        "user_jwt": token,
     })
 
 # @app.post("/chatkit")
@@ -342,3 +406,111 @@ async def list_threads(request: Request, limit: int = 20, after: str | None = No
                 "Access-Control-Allow-Headers": "*",
             }
         )
+
+@app.post("/agents")
+@app.get("/agents")
+async def proxy_agents(request: Request):
+    try:
+        ctx = _build_request_context(request)
+        supabase: Client = ctx["supabase"]
+        
+        # Forward relevant headers for anonymous auth support
+        headers_to_forward = {}
+        
+        # Use JWT from context if available, otherwise try request headers
+        auth_header = ctx.get("user_jwt")
+        if auth_header:
+            # Ensure it has Bearer prefix if not already present
+            if not auth_header.startswith("Bearer "):
+                headers_to_forward["Authorization"] = f"Bearer {auth_header}"
+            else:
+                headers_to_forward["Authorization"] = auth_header
+        else:
+            # Fallback to request headers
+            auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+            if auth_header:
+                headers_to_forward["Authorization"] = auth_header
+        
+        # Include apikey header (required for Supabase functions)
+        supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY")
+        if supabase_anon_key:
+            headers_to_forward["apikey"] = supabase_anon_key
+        
+        # Forward other headers that might be needed for Supabase functions
+        for header_name in ["x-client-info", "content-type"]:
+            header_value = request.headers.get(header_name) or request.headers.get(header_name.replace("-", "_"))
+            if header_value:
+                headers_to_forward[header_name] = header_value
+        
+        # Get request body if present (for POST requests)
+        body = None
+        if request.method == "POST":
+            try:
+                body_bytes = await request.body()
+                if body_bytes:
+                    body = json.loads(body_bytes)
+            except json.JSONDecodeError:
+                # If body is not JSON, pass as string or skip
+                pass
+        
+        # The edge function only handles GET requests for /agents
+        # Convert POST to GET if needed
+        method_to_use = request.method
+        if method_to_use == "POST":
+            method_to_use = "GET"
+        
+        # Use direct HTTP call to the edge function with proper headers
+        # This ensures all headers are forwarded correctly
+        supabase_url = os.environ.get("SUPABASE_URL")
+        if not supabase_url:
+            raise HTTPException(status_code=500, detail="SUPABASE_URL is required")
+        
+        function_url = f"{supabase_url.rstrip('/')}/functions/v1/agent-chat/agents"
+        
+        # Make direct HTTP request to edge function
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                method=method_to_use,
+                url=function_url,
+                headers=headers_to_forward,
+                json=body if body is not None and method_to_use != "GET" else None,
+                timeout=30.0,
+            )
+            
+            # Get response content
+            response_content = response.content
+            media_type = response.headers.get("content-type", "application/json")
+            
+            # Log error responses for debugging
+            if response.status_code >= 400:
+                try:
+                    error_body = response_content.decode("utf-8") if isinstance(response_content, bytes) else str(response_content)
+                    logger.error(f"Edge function returned {response.status_code}: {error_body}")
+                except Exception:
+                    pass
+            
+            # Return response with proper headers
+            return Response(
+                content=response_content,
+                status_code=response.status_code,
+                media_type=media_type,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                },
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error proxying /agents: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+    

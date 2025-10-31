@@ -35,6 +35,10 @@ class TContext(dict):
     def user_id(self) -> str | None:
         return self.get("user_id")
 
+    @property
+    def user_jwt(self) -> str | None:
+        return self.get("user_jwt")
+
 class StoreItemType:
     pass
 

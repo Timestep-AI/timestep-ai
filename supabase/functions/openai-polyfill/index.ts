@@ -5,6 +5,7 @@ import { handleEmbeddingsRequest } from './apis/embeddings_api.ts';
 import { handleVectorStoresRequest } from './apis/vector_stores_api.ts';
 import { handleFilesRequest } from './apis/files_api.ts';
 import { handleUploadsRequest } from './apis/uploads_api.ts';
+import { handleConversationsRequest } from './apis/conversations_api.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,19 +61,29 @@ serve(async (req) => {
 
     // Route requests based on endpoint
     const url = new URL(req.url);
+    const fullPath = url.pathname;
+    // Support requests that include the function name in the path
+    const fnMarker = '/openai-polyfill';
+    const idx = fullPath.indexOf(fnMarker);
+    const afterFn = idx >= 0 ? fullPath.slice(idx + fnMarker.length) || '/' : fullPath;
+    // Normalize optional /v1 prefix
+    const pathname = afterFn.replace(/^\/v1\//, '/');
 
-    if (url.pathname.endsWith('/embeddings')) {
+    if (pathname.endsWith('/embeddings')) {
       // Handle OpenAI Embeddings API endpoint
       return await handleEmbeddingsRequest(req, supabaseClient, user.id, userJwt);
-    } else if (url.pathname.includes('/vector_stores')) {
+    } else if (pathname.includes('/vector_stores')) {
       // Handle OpenAI Vector Stores API endpoints
       return await handleVectorStoresRequest(req, supabaseClient, user.id, url.pathname, userJwt);
-    } else if (url.pathname.includes('/uploads')) {
+    } else if (pathname.includes('/uploads')) {
       // Handle OpenAI Uploads API endpoints (multipart uploads)
       return await handleUploadsRequest(req, supabaseClient, user.id, url.pathname);
-    } else if (url.pathname.includes('/files')) {
+    } else if (pathname.includes('/files')) {
       // Handle OpenAI Files API endpoints
       return await handleFilesRequest(req, supabaseClient, user.id, url.pathname, userJwt);
+    } else if (pathname.startsWith('/conversations')) {
+      // Handle OpenAI Conversations API endpoints
+      return await handleConversationsRequest(req, user.id, pathname, supabaseClient);
     } else {
       // Return 404 for unknown endpoints
       return new Response(

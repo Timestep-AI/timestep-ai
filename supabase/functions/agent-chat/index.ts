@@ -15,7 +15,7 @@ setDefaultOpenAITracingExporter();
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-function-path',
 };
 
 serve(async (req) => {
@@ -36,25 +36,54 @@ serve(async (req) => {
     );
 
     // Get the session or user object
+    let userId: string | null = null;
     const {
       data: { user },
+      error: userError,
     } = await supabaseClient.auth.getUser();
 
+    if (user?.id) {
+      userId = user.id;
+    } else if (authHeader) {
+      // If getUser() fails but we have an auth header, try to extract user ID from JWT
+      // This handles cases where the user might not exist in the database yet (e.g., anonymous users)
+      try {
+        const token = authHeader.replace(/^Bearer\s+/i, '');
+        const parts = token.split('.');
+        if (parts.length >= 2) {
+          // Decode JWT payload (base64url)
+          let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          // Add padding if needed
+          while (base64.length % 4) {
+            base64 += '=';
+          }
+          const payload = JSON.parse(atob(base64));
+          userId = payload.sub || payload.user_id || null;
+        }
+      } catch (e) {
+        console.error('Error decoding JWT:', e);
+      }
+    }
+
     // Require authentication (including anonymous users)
-    if (!user?.id) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+    if (!userId) {
+      const errorMessage = userError ? `Authentication failed: ${userError.message}` : 'Authentication required';
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const userId = user.id;
-
     const url = new URL(req.url);
     const path = url.pathname;
+    
+    // Check for custom header indicating the path when called via SDK invoke
+    const functionPath = req.headers.get('x-function-path');
+    const effectivePath = functionPath || path;
 
     // Handle different path patterns (Supabase strips /functions/v1 prefix)
-    if (path === '/agent-chat' || path === '/') {
+    // When called via SDK invoke, path might be /agent-chat or /, so check x-function-path header
+    if ((path === '/agent-chat' || path === '/') && !functionPath) {
       return new Response(
         JSON.stringify({ message: 'Welcome to the Timestep AI ChatKit Server!' }),
         {
@@ -64,8 +93,8 @@ serve(async (req) => {
       );
     }
 
-    // Agents API endpoints
-    if (path === '/agent-chat/agents' && req.method === 'GET') {
+    // Agents API endpoints - handle both direct HTTP calls and SDK invoke calls
+    if ((effectivePath === '/agent-chat/agents' || effectivePath === '/agents') && req.method === 'GET') {
       return await handleGetAgentsRequest(userId, req.headers.get('Authorization') ?? '');
     }
 
