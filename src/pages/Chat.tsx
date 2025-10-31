@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
+import { getBackendType, setBackendType, getBackendBaseUrl, getChatKitUrl, type BackendType } from '@/services/backendConfig';
 import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 import {
   IonPage,
@@ -10,14 +11,13 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
-  IonSelect,
-  IonSelectOption,
   IonIcon,
   IonSpinner,
   IonButtons,
 } from '@ionic/react';
 import { personCircleOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
+import CombinedAgentSelector from '@/components/CombinedAgentSelector';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,6 +28,7 @@ const Chat = () => {
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
+  const [backendType, setBackendTypeState] = useState<BackendType>(getBackendType());
 
   // Agent details state
   const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
@@ -37,12 +38,8 @@ const Chat = () => {
   const leftMenuRef = useRef<HTMLIonMenuElement>(null);
   const rightMenuRef = useRef<HTMLIonMenuElement>(null);
 
-  // Get server base URL
-  const getServerBaseUrl = () => {
-    // const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-    // return `${supabaseUrl}/functions/v1/agent-chat`;
-    return 'http://127.0.0.1:8000';
-  };
+  // Get server base URL based on selected backend
+  const getServerBaseUrl = () => getBackendBaseUrl(backendType);
 
   // Load agents
   const loadAgents = useCallback(async () => {
@@ -61,7 +58,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  }, [selectedAgent]);
+  }, [selectedAgent, backendType]);
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {
@@ -99,7 +96,7 @@ const Chat = () => {
       console.error('Error loading most recent thread:', error);
     }
     return null;
-  }, []);
+  }, [backendType]);
 
   // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
@@ -163,6 +160,20 @@ const Chat = () => {
     }
   }, [selectedAgent?.id]);
 
+  // Handle backend type change
+  const handleBackendChange = (newBackendType: BackendType) => {
+    setBackendTypeState(newBackendType);
+    setBackendType(newBackendType);
+  };
+
+  // Reload agents when backend changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadAgents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendType, isAuthenticated]);
+
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
     const {
@@ -180,8 +191,7 @@ const Chat = () => {
   };
 
   // Handle agent switching
-  const handleAgentChange = (e: CustomEvent) => {
-    const agentId = e.detail.value;
+  const handleAgentChange = (agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       setSelectedAgent(agent);
@@ -189,7 +199,7 @@ const Chat = () => {
   };
 
   // ChatKit configuration - use a generic agents endpoint and route dynamically
-  const chatKitUrl = `${getServerBaseUrl()}/agents`;
+  const chatKitUrl = getChatKitUrl(backendType);
 
   const { control } = useChatKit({
     onThreadChange: ({ threadId }) => {
@@ -337,18 +347,13 @@ const Chat = () => {
               <span style={{ marginRight: '8px', marginLeft: '16px', fontSize: '16px' }}>
                 Agent:
               </span>
-              <IonSelect
-                value={selectedAgent?.id || ''}
-                placeholder="Select Agent"
-                onIonChange={handleAgentChange}
-                interface="popover"
-              >
-                {agents.map((agent) => (
-                  <IonSelectOption key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
+              <CombinedAgentSelector
+                backendType={backendType}
+                selectedAgent={selectedAgent}
+                agents={agents}
+                onBackendChange={handleBackendChange}
+                onAgentChange={handleAgentChange}
+              />
             </IonButtons>
             <IonTitle>Timestep AI</IonTitle>
           </IonToolbar>

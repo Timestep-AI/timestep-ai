@@ -1,12 +1,10 @@
 import { CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
 import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
 import { supabase } from '@/integrations/supabase/client';
+import { getBackendBaseUrl } from './backendConfig';
 
-// Use environment-based URL for server functions
-const getServerBaseUrl = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-  return `${supabaseUrl}/functions/v1/agent-chat`;
-};
+// Use backend configuration service to get server base URL
+const getServerBaseUrl = () => getBackendBaseUrl();
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {

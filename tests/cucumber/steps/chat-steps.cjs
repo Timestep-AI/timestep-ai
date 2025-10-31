@@ -61,17 +61,26 @@ Given('I open the chat for agent {string}', async (agentName) => {
   // Wait for the page to be fully loaded
   await page.waitForTimeout(2000);
 
-  await page.locator('ion-select').click();
-  await page.waitForSelector('ion-popover', { state: 'visible', timeout: 15000 });
+  // Click on the agent selector button (the second button after the backend selector)
+  await page.locator('ion-button#agent-selector-button').click();
+  
+  // Wait for the agent popover to be visible - use a more specific selector
+  const agentPopover = page.locator('ion-popover[trigger="agent-selector-button"]');
+  await agentPopover.waitFor({ state: 'visible', timeout: 15000 });
+  
+  // Wait for the agent name to appear in the popover content
+  await agentPopover.locator(`ion-item:has-text("${agentName}")`).waitFor({ state: 'visible', timeout: 5000 });
   await page.waitForTimeout(1000);
-  await page.locator('ion-popover').getByText(agentName, { exact: true }).click();
+  
+  // Click on the agent name in the popover
+  await agentPopover.getByText(agentName, { exact: true }).click();
 
   // 🔸 CRITICAL: Verify agent context switch completed
   await page.waitForTimeout(500); // Allow context remount
-  const selectedAgent = await page.locator('ion-select').textContent();
-  if (!selectedAgent?.includes(agentName)) {
+  const agentButtonText = await page.locator('ion-button#agent-selector-button').textContent();
+  if (!agentButtonText?.includes(agentName)) {
     throw new Error(
-      `Agent context verification failed: expected "${agentName}" but got "${selectedAgent}"`
+      `Agent context verification failed: expected "${agentName}" but got "${agentButtonText}"`
     );
   }
   console.log(`✓ Verified active agent: ${agentName}`);
@@ -209,8 +218,8 @@ Given('I open the chat for agent {string}', async (agentName) => {
 
 When('I run the math-weather conversation flow', async () => {
   // Determine which flow to use based on the current agent
-  const currentAgent = await page.locator('ion-select').textContent();
-  const flow = currentAgent?.includes('Personal') ? personalAssistantFlow : weatherAssistantFlow;
+  const agentButtonText = await page.locator('ion-button#agent-selector-button').textContent();
+  const flow = agentButtonText?.includes('Personal') ? personalAssistantFlow : weatherAssistantFlow;
   await runConversationFlow(page, flow);
 });
 
