@@ -1,3 +1,8 @@
 {
-  "imports": {}
+  "imports": {
+    "@openai/agents-core": "npm:@openai/agents-core",
+    "@openai/agents-openai": "npm:@openai/agents-openai",
+    "openai": "npm:openai",
+    "zod": "npm:zod"
+  }
 }

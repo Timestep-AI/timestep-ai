@@ -5,6 +5,7 @@ import type { Store, AttachmentStore } from './chatkit/store.ts';
 export type TContext = {
   supabase: SupabaseClient;
   user_id: string | null;
+  user_jwt: string | null;
 };
 
 function randomId(len = 6): string {
