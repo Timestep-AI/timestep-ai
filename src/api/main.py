@@ -199,52 +199,18 @@ class MyChatKitServer(ChatKitServer):
             def sanitize_item(item):
                 """Remove fields that OpenAI Responses API doesn't accept."""
                 if isinstance(item, dict):
-                    # Only keep role and content - OpenAI doesn't accept id, type, created_at, etc.
-                    sanitized = {}
-                    if "role" in item:
-                        sanitized["role"] = item["role"]
-                    if "content" in item:
-                        content = item["content"]
-                        # Normalize content: if it's an array of parts, ensure text is extracted
-                        if isinstance(content, list):
-                            # Content is already in parts format
-                            sanitized["content"] = content
-                        elif isinstance(content, str):
-                            # Simple string content
-                            sanitized["content"] = content
-                        else:
-                            # Fallback
-                            sanitized["content"] = content
-                    return sanitized if sanitized else item
+                    return {
+                        "role": item.get("role"),
+                        "content": item.get("content"),
+                    }
                 return item
             
-            def has_valid_content(item):
-                """Check if item has valid non-empty content."""
-                if not isinstance(item, dict) or "content" not in item:
-                    return False
-                content = item["content"]
-                if isinstance(content, str):
-                    return bool(content.strip())
-                if isinstance(content, list):
-                    # Check if any part has non-empty text
-                    for part in content:
-                        if isinstance(part, dict):
-                            text = part.get("text") or part.get("content")
-                            if isinstance(text, str) and text.strip():
-                                return True
-                        elif isinstance(part, str) and part.strip():
-                            return True
-                    return False
-                return False
-            
             # Sanitize history items (they come from the conversation API with extra fields)
-            # Filter out items with empty content
-            sanitized_history = [sanitize_item(item) for item in history_items if has_valid_content(item)]
+            sanitized_history = [sanitize_item(item) for item in history_items]
             # New items should already be clean, but sanitize them too just in case
             sanitized_new = [sanitize_item(item) for item in new_items]
             
-            merged = sanitized_history + sanitized_new
-            return merged
+            return sanitized_history + sanitized_new
         
         # Create RunConfig with session_input_callback
         run_config = RunConfig(session_input_callback=session_input_callback)
