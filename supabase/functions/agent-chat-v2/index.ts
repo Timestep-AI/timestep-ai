@@ -194,9 +194,9 @@ class MyChatKitServer extends ChatKitServer {
     try {
       // Dynamically import multi-provider components only when needed
       const { OllamaModelProvider } = await import('./utils/ollama_model_provider.ts');
-      const { MultiProvider, MultiProviderMap } = await import('./utils/multi_provider.ts');
+      const { MultiModelProvider, MultiModelProviderMap } = await import('./utils/multi_model_provider.ts');
 
-      const modelProviderMap = new MultiProviderMap();
+      const modelProviderMap = new MultiModelProviderMap();
 
       // Add Anthropic provider using OpenAI interface
       if (Deno.env.get('ANTHROPIC_API_KEY')) {
@@ -239,8 +239,8 @@ class MyChatKitServer extends ChatKitServer {
         );
       }
 
-      // Use MultiProvider for model selection - it will delegate to OpenAIProvider by default
-      const modelProvider = new MultiProvider({
+      // Use MultiModelProvider for model selection - it will delegate to OpenAIProvider by default
+      const modelProvider = new MultiModelProvider({
         provider_map: modelProviderMap,
         openai_api_key: DEFAULT_OPENAI_API_KEY || '',
         openai_use_responses: false,

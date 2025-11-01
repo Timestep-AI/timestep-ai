@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from agents import Model, ModelProvider, OpenAIProvider
 
 
-class MultiProviderMap:
+class MultiModelProviderMap:
     """A map of model name prefixes to ModelProviders."""
 
     def __init__(self):
@@ -47,7 +47,7 @@ class MultiProviderMap:
             del self._mapping[prefix]
 
 
-class MultiProvider(ModelProvider):
+class MultiModelProvider(ModelProvider):
     """This ModelProvider maps to a Model based on the prefix of the model name. By default, the
     mapping is:
     - "openai/" prefix or no prefix -> OpenAIProvider. e.g. "openai/gpt-4.1", "gpt-4.1"
@@ -58,7 +58,7 @@ class MultiProvider(ModelProvider):
 
     def __init__(
         self,
-        provider_map: Optional[MultiProviderMap] = None,
+        provider_map: Optional[MultiModelProviderMap] = None,
         openai_api_key: Optional[str] = None,
         openai_base_url: Optional[str] = None,
         openai_client: Optional[Any] = None,  # AsyncOpenAI type
@@ -66,10 +66,10 @@ class MultiProvider(ModelProvider):
         openai_project: Optional[str] = None,
         openai_use_responses: Optional[bool] = None,
     ):
-        """Create a new MultiProvider.
+        """Create a new MultiModelProvider.
 
         Args:
-            provider_map: A MultiProviderMap that maps prefixes to ModelProviders. If not provided,
+            provider_map: A MultiModelProviderMap that maps prefixes to ModelProviders. If not provided,
                 we will use a default mapping. See the documentation for this class to see the
                 default mapping.
             openai_api_key: The API key to use for the OpenAI provider. If not provided, we will use

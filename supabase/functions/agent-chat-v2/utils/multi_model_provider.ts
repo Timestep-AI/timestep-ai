@@ -1,7 +1,7 @@
 import { Model, ModelProvider } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 
-export class MultiProviderMap {
+export class MultiModelProviderMap {
   /** A map of model name prefixes to ModelProviders. */
   private _mapping: Map<string, ModelProvider> = new Map();
 
@@ -49,7 +49,7 @@ export class MultiProviderMap {
   }
 }
 
-export class MultiProvider implements ModelProvider {
+export class MultiModelProvider implements ModelProvider {
   /** This ModelProvider maps to a Model based on the prefix of the model name. By default, the
     mapping is:
     - "openai/" prefix or no prefix -> OpenAIProvider. e.g. "openai/gpt-4.1", "gpt-4.1"
@@ -58,13 +58,13 @@ export class MultiProvider implements ModelProvider {
     You can override or customize this mapping.
     */
 
-  private provider_map: MultiProviderMap | undefined;
+  private provider_map: MultiModelProviderMap | undefined;
   private openai_provider: OpenAIProvider;
   private _fallback_providers: Map<string, ModelProvider> = new Map();
 
   constructor(
     options: {
-      provider_map?: MultiProviderMap;
+      provider_map?: MultiModelProviderMap;
       openai_api_key?: string;
       openai_base_url?: string;
       openai_client?: any; // AsyncOpenAI type
@@ -76,7 +76,7 @@ export class MultiProvider implements ModelProvider {
     /** Create a new OpenAI provider.
 
         Args:
-            provider_map: A MultiProviderMap that maps prefixes to ModelProviders. If not provided,
+            provider_map: A MultiModelProviderMap that maps prefixes to ModelProviders. If not provided,
                 we will use a default mapping. See the documentation for this class to see the
                 default mapping.
             openai_api_key: The API key to use for the OpenAI provider. If not provided, we will use
@@ -159,3 +159,4 @@ export class MultiProvider implements ModelProvider {
     return fallbackProvider.getModel(actualModelName);
   }
 }
+

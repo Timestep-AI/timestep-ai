@@ -264,10 +264,10 @@ class MyChatKitServer(ChatKitServer):
         
         # Create RunConfig with session_input_callback
         # Set up multi-provider support - match TypeScript implementation
-        from .utils.multi_provider import MultiProvider, MultiProviderMap
+        from .utils.multi_model_provider import MultiModelProvider, MultiModelProviderMap
         from .utils.ollama_model_provider import OllamaModelProvider
         
-        model_provider_map = MultiProviderMap()
+        model_provider_map = MultiModelProviderMap()
         
         # Add Anthropic provider using OpenAI interface
         if os.environ.get("ANTHROPIC_API_KEY"):
@@ -305,8 +305,8 @@ class MyChatKitServer(ChatKitServer):
                 OllamaModelProvider(api_key=os.environ.get("OLLAMA_API_KEY"))
             )
         
-        # Use MultiProvider for model selection - it will delegate to OpenAIProvider by default
-        model_provider = MultiProvider(
+        # Use MultiModelProvider for model selection - it will delegate to OpenAIProvider by default
+        model_provider = MultiModelProvider(
             provider_map=model_provider_map,
             openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
             openai_use_responses=False,
