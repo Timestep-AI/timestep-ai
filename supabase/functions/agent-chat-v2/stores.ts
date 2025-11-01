@@ -6,6 +6,7 @@ export type TContext = {
   supabase: SupabaseClient;
   user_id: string | null;
   user_jwt: string | null;
+  agent_id?: string | null;
 };
 
 function randomId(len = 6): string {

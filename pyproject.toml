@@ -10,4 +10,5 @@ dependencies = [
     "openai-chatkit>=1.0.2",
     "supabase>=2.22.4",
     "asyncpg>=0.29.0",
+    "ollama>=0.6.0",
 ]

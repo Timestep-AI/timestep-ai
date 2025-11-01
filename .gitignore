@@ -39,3 +39,6 @@ reports/
 # Supabase
 supabase/.temp
 supabase/config.toml
+
+# Python
+__pycache__

@@ -25,6 +25,7 @@ class TContext(dict):
     Expected keys:
       - supabase: Client (RLS-aware; auth set with the user's JWT if provided)
       - user_id: str | None (UUID string; for anonymous usage provide a stable client UUID)
+      - agent_id: str | None (optional agent ID from URL)
     """
     @property
     def supabase(self):
@@ -38,6 +39,10 @@ class TContext(dict):
     @property
     def user_jwt(self) -> str | None:
         return self.get("user_jwt")
+    
+    @property
+    def agent_id(self) -> str | None:
+        return self.get("agent_id")
 
 class StoreItemType:
     pass

@@ -3,6 +3,7 @@
     "@openai/agents-core": "npm:@openai/agents-core",
     "@openai/agents-openai": "npm:@openai/agents-openai",
     "openai": "npm:openai",
+    "ollama": "npm:ollama",
     "zod": "npm:zod"
   }
 }

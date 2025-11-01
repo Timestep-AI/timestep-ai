@@ -29,6 +29,62 @@ import { OpenAIProvider } from '@openai/agents-openai';
 import OpenAI from 'openai';
 import type { RunConfig } from '@openai/agents-core';
 
+// Interface for agent record from database
+interface AgentRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  instructions: string;
+  tool_ids: string[];
+  handoff_ids: string[];
+  model: string | null;
+  model_settings: any;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/**
+ * Load an agent from the database by ID
+ * Matches Python implementation: queries agents table with RLS
+ */
+async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
+  if (!ctx.user_id) {
+    throw new Error('user_id is required to load agents');
+  }
+  
+  const { data: agentData, error } = await ctx.supabase
+    .from('agents')
+    .select('*')
+    .eq('id', agentId)
+    .eq('user_id', ctx.user_id)
+    .single();
+  
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Not found
+      throw new Error(`Agent not found: ${agentId}`);
+    }
+    console.error('[agent-chat-v2] Error fetching agent:', error);
+    throw new Error(`Failed to load agent: ${error.message}`);
+  }
+  
+  if (!agentData) {
+    throw new Error(`Agent not found: ${agentId}`);
+  }
+  
+  const agentRecord = agentData as AgentRecord;
+  
+  // Create Agent from database record
+  // Use model from database, fallback to 'gpt-4o' if not set
+  const model = agentRecord.model || 'gpt-4o';
+  
+  return new Agent({
+    model: model,
+    name: agentRecord.name,
+    instructions: agentRecord.instructions,
+  });
+}
+
 function getSessionForThread(threadId: string, ctx: TContext): OpenAIConversationsSession {
   /**Create or get an OpenAIConversationsSession for a given thread.
   
@@ -58,12 +114,6 @@ class MyChatKitServer extends ChatKitServer {
     super(dataStore, attachmentStore ?? null);
   }
 
-  // Parity with Python: assistant_agent defined on the class
-  readonly assistantAgent = new Agent({
-    model: 'gpt-4.1',
-    name: 'Assistant',
-    instructions: 'You are a helpful assistant',
-  });
 
   async *respond(
     thread: ThreadMetadata,
@@ -71,6 +121,14 @@ class MyChatKitServer extends ChatKitServer {
     context: TContext
   ): AsyncIterable<ThreadStreamEvent> {
     const agentContext = new AgentContext(thread, this.store, context);
+    
+    // Load agent from database using agent_id from context
+    // agent_id is required - no fallbacks
+    if (!context.agent_id) {
+      throw new Error('agent_id is required in context');
+    }
+    
+    const agent = await loadAgentFromDatabase(context.agent_id, context);
     
     // Create Conversations session bound to polyfill with per-request JWT
     const session = getSessionForThread(thread.id, context);
@@ -120,9 +178,9 @@ class MyChatKitServer extends ChatKitServer {
       return [...sanitizedHistory, ...sanitizedNew];
     }
     
-    // Match Python: Runner.run_streamed(self.assistant_agent, agent_input, context=agent_context, session=session, run_config=run_config)
+    // Match Python: Runner.run_streamed(agent, agent_input, context=agent_context, session=session, run_config=run_config)
     // The session contains the OpenAI client configured to use the polyfill for conversation history
-    // The Runner uses the default model provider for actual model calls
+    // The Runner uses the multi-provider for actual model calls
     // Create RunConfig with session_input_callback
     const runConfig: RunConfig = {
       sessionInputCallback: sessionInputCallback as any,
@@ -130,18 +188,66 @@ class MyChatKitServer extends ChatKitServer {
       tracingDisabled: false, // Enable tracing with setDefaultOpenAITracingExporter()
     } as RunConfig;
     
-    // Match Python: Runner is created without explicit modelProvider in runConfig
-    // But Runner constructor needs a modelProvider - create one from setDefaultOpenAIKey
+    // Create Runner with multi-provider support
+    // Match agent-chat implementation - wire up multi-provider directly
     let runner: Runner;
     try {
-      // Create a modelProvider from the default OpenAI key (same as what setDefaultOpenAIKey uses)
-      const defaultModelProvider = new OpenAIProvider({
-        apiKey: DEFAULT_OPENAI_API_KEY || '',
-        useResponses: false,
+      // Dynamically import multi-provider components only when needed
+      const { OllamaModelProvider } = await import('./utils/ollama_model_provider.ts');
+      const { MultiProvider, MultiProviderMap } = await import('./utils/multi_provider.ts');
+
+      const modelProviderMap = new MultiProviderMap();
+
+      // Add Anthropic provider using OpenAI interface
+      if (Deno.env.get('ANTHROPIC_API_KEY')) {
+        modelProviderMap.addProvider(
+          'anthropic',
+          new OpenAIProvider({
+            apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
+            baseURL: 'https://api.anthropic.com/v1/',
+            useResponses: false,
+          })
+        );
+      }
+
+      if (Deno.env.get('HF_TOKEN')) {
+        modelProviderMap.addProvider(
+          'hf_inference_endpoints',
+          new OpenAIProvider({
+            apiKey: Deno.env.get('HF_TOKEN'),
+            baseURL: 'https://bb8igs5dnyzb8gu1.us-east-1.aws.endpoints.huggingface.cloud/v1/',
+            useResponses: false,
+          })
+        );
+
+        modelProviderMap.addProvider(
+          'hf_inference_providers',
+          new OpenAIProvider({
+            apiKey: Deno.env.get('HF_TOKEN'),
+            baseURL: 'https://router.huggingface.co/v1',
+            useResponses: false,
+          })
+        );
+      }
+
+      if (Deno.env.get('OLLAMA_API_KEY')) {
+        modelProviderMap.addProvider(
+          'ollama',
+          new OllamaModelProvider({
+            apiKey: Deno.env.get('OLLAMA_API_KEY'),
+          })
+        );
+      }
+
+      // Use MultiProvider for model selection - it will delegate to OpenAIProvider by default
+      const modelProvider = new MultiProvider({
+        provider_map: modelProviderMap,
+        openai_api_key: DEFAULT_OPENAI_API_KEY || '',
+        openai_use_responses: false,
       });
       
       runner = new Runner({
-        modelProvider: defaultModelProvider,
+        modelProvider: modelProvider,
         traceIncludeSensitiveData: true,
         tracingDisabled: false, // Enable tracing with setDefaultOpenAITracingExporter()
         groupId: thread.id,
@@ -154,8 +260,9 @@ class MyChatKitServer extends ChatKitServer {
     
     // Match Python: Runner.run_streamed returns an AsyncIterator directly
     // In JavaScript, runner.run() with stream: true returns the stream directly
+    // Use the dynamically loaded agent instead of hardcoded this.assistantAgent
     try {
-      const result = await runner.run(this.assistantAgent, agentInput, {
+      const result = await runner.run(agent, agentInput, {
         context: agentContext,
         stream: true,
         session: session,
@@ -192,8 +299,8 @@ class MyChatKitServer extends ChatKitServer {
   }
 }
 
-function extractBearer(req: Request): string | null {
-  const auth = req.headers.get('authorization') || req.headers.get('Authorization');
+function extractBearerToken(request: Request): string | null {
+  const auth = request.headers.get('authorization') || request.headers.get('Authorization');
   if (!auth) return null;
   const parts = auth.split(' ');
   if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') return parts[1];
@@ -215,13 +322,13 @@ function decodeJwtSub(jwtToken: string): string | null {
   }
 }
 
-function buildContext(req: Request): TContext {
+function buildRequestContext(request: Request, agentId?: string | null): TContext {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY are required');
   }
-  const token = extractBearer(req);
+  const token = extractBearerToken(request);
   const client = createClient(supabaseUrl, supabaseKey, { 
     global: { headers: token ? { Authorization: `Bearer ${token}` } : {} } 
   });
@@ -230,12 +337,12 @@ function buildContext(req: Request): TContext {
     (client.postgrest as any).auth(token);
   }
   
-  let user_id = req.headers.get('x-user-id') || req.headers.get('X-User-Id') || null;
+  let user_id = request.headers.get('x-user-id') || request.headers.get('X-User-Id') || null;
   if (!user_id && token) {
     user_id = decodeJwtSub(token);
   }
   
-  return { supabase: client, user_id, user_jwt: token };
+  return { supabase: client, user_id, user_jwt: token, agent_id: agentId || null };
 }
 
 const corsHeaders = {
@@ -249,22 +356,24 @@ const data_store = new PostgresStore();
 const attachment_store = new BlobStorageStore(data_store);
 const server = new MyChatKitServer(data_store, attachment_store);
 
-Deno.serve(async (req: Request) => {
+Deno.serve(async (request: Request) => {
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const url = new URL(req.url);
+    const url = new URL(request.url);
     const path = url.pathname;
-    const context = buildContext(req);
 
     // Handle /agents/{agent_id}/chatkit endpoint
     const chatkitMatch = path.match(/\/agents\/([^\/]+)\/chatkit/);
     if (chatkitMatch) {
-      const body = new Uint8Array(await req.arrayBuffer());
-      const result = await server.process(body, context);
+      const agentId = chatkitMatch[1];
+      // Build context with agent_id included
+      const ctx = buildRequestContext(request, agentId);
+      const body = new Uint8Array(await request.arrayBuffer());
+      const result = await server.process(body, ctx);
       if (result instanceof StreamingResult) {
         return new Response(result.json_events as ReadableStream, {
           headers: {
@@ -290,7 +399,8 @@ Deno.serve(async (req: Request) => {
       const after = url.searchParams.get('after') || null;
       const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
 
-      const page = await data_store.load_threads(limit, after, order, context);
+      const ctx = buildRequestContext(request);
+      const page = await data_store.load_threads(limit, after, order, ctx);
 
       // Convert ThreadMetadata to JSON-friendly dicts (matching Python implementation)
       const jsonData = page.data.map((t: ThreadMetadata) => {
@@ -338,16 +448,17 @@ Deno.serve(async (req: Request) => {
       // Forward relevant headers for anonymous auth support
       const headersToForward: Record<string, string> = {};
 
+      const ctx = buildRequestContext(request);
       // Use JWT from context if available
-      if (context.user_jwt) {
-        if (!context.user_jwt.startsWith('Bearer ')) {
-          headersToForward['Authorization'] = `Bearer ${context.user_jwt}`;
+      if (ctx.user_jwt) {
+        if (!ctx.user_jwt.startsWith('Bearer ')) {
+          headersToForward['Authorization'] = `Bearer ${ctx.user_jwt}`;
         } else {
-          headersToForward['Authorization'] = context.user_jwt;
+          headersToForward['Authorization'] = ctx.user_jwt;
         }
       } else {
         // Fallback to request headers
-        const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+        const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
         if (authHeader) {
           headersToForward['Authorization'] = authHeader;
         }
@@ -361,7 +472,7 @@ Deno.serve(async (req: Request) => {
 
       // Forward other headers that might be needed
       for (const headerName of ['x-client-info', 'content-type']) {
-        const headerValue = req.headers.get(headerName) || req.headers.get(headerName.replace('-', '_'));
+        const headerValue = request.headers.get(headerName) || request.headers.get(headerName.replace('-', '_'));
         if (headerValue) {
           headersToForward[headerName] = headerValue;
         }
@@ -369,9 +480,9 @@ Deno.serve(async (req: Request) => {
 
       // Get request body if present (for POST requests)
       let body: any = null;
-      if (req.method === 'POST') {
+      if (request.method === 'POST') {
         try {
-          const bodyBytes = await req.arrayBuffer();
+          const bodyBytes = await request.arrayBuffer();
           if (bodyBytes.byteLength > 0) {
             const text = new TextDecoder().decode(bodyBytes);
             body = JSON.parse(text);
@@ -383,7 +494,7 @@ Deno.serve(async (req: Request) => {
 
       // The edge function only handles GET requests for /agents
       // Convert POST to GET if needed
-      const methodToUse = req.method === 'POST' ? 'GET' : req.method;
+      const methodToUse = request.method === 'POST' ? 'GET' : request.method;
 
       const functionUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/agent-chat/agents`;
 

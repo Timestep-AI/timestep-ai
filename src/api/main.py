@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, TypedDict
 import os
 import json
 import base64
@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import logging
 import httpx
-from agents import Agent, Runner, RunConfig
+from agents import Agent, Runner, RunConfig, OpenAIProvider
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
 from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext
@@ -17,6 +17,20 @@ from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, Us
 from chatkit.store import Store, AttachmentStore
 from supabase import create_client, Client
 from .stores import PostgresStore, BlobStorageStore, TContext
+
+# Interface for agent record from database
+# Matches TypeScript AgentRecord interface
+class AgentRecord(TypedDict, total=False):
+    id: str
+    user_id: str
+    name: str
+    instructions: str
+    tool_ids: list[str]
+    handoff_ids: list[str]
+    model: str | None
+    model_settings: dict[str, Any]
+    created_at: str | None
+    updated_at: str | None
 
 app = FastAPI()
 
@@ -134,7 +148,40 @@ def _construct_supabase_db_url() -> str:
                    "Either provide SUPABASE_DB_URL or SUPABASE_DB_PASSWORD"
         )
 
-def _get_session_for_thread(thread_id: str, ctx: TContext) -> OpenAIConversationsSession:
+def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
+    """Load an agent from the database by ID.
+    
+    Matches TypeScript implementation: queries agents table with RLS.
+    Returns an Agent configured with the database record's settings.
+    """
+    if not ctx.user_id:
+        raise HTTPException(status_code=400, detail="user_id is required to load agents")
+    
+    supabase = ctx.supabase
+    response = (
+        supabase.table("agents")
+        .select("*")
+        .eq("id", agent_id)
+        .eq("user_id", ctx.user_id)
+        .execute()
+    )
+    
+    if not response.data or len(response.data) == 0:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+    
+    agent_record: AgentRecord = response.data[0]
+    
+    # Create Agent from database record
+    # Use model from database, fallback to 'gpt-4o' if not set
+    model = agent_record.get("model") or "gpt-4o"
+    
+    return Agent[AgentContext](
+        model=model,
+        name=agent_record.get("name", "Assistant"),
+        instructions=agent_record.get("instructions", "You are a helpful assistant"),
+    )
+
+def get_session_for_thread(thread_id: str, ctx: TContext) -> OpenAIConversationsSession:
     """Create or get an OpenAIConversationsSession for a given thread.
 
     Points to the openai-polyfill Conversations API using the request's JWT.
@@ -161,12 +208,6 @@ class MyChatKitServer(ChatKitServer):
     ):
         super().__init__(data_store, attachment_store)
 
-    assistant_agent = Agent[AgentContext](
-        model="gpt-4.1",
-        name="Assistant",
-        instructions="You are a helpful assistant"
-    )
-
     async def respond(
         self,
         thread: ThreadMetadata,
@@ -178,8 +219,17 @@ class MyChatKitServer(ChatKitServer):
             store=self.store,
             request_context=context,
         )
+        
+        # Load agent from database using agent_id from context
+        # agent_id is required - no fallbacks
+        agent_id = context.get("agent_id")
+        if not agent_id:
+            raise HTTPException(status_code=400, detail="agent_id is required in context")
+        
+        agent = load_agent_from_database(agent_id, context)
+        
         # Create Conversations session bound to polyfill with per-request JWT
-        session = _get_session_for_thread(thread.id, context)
+        session = get_session_for_thread(thread.id, context)
         
         # Convert input to agent format
         agent_input = await simple_to_agent_input(input) if input else []
@@ -213,10 +263,64 @@ class MyChatKitServer(ChatKitServer):
             return sanitized_history + sanitized_new
         
         # Create RunConfig with session_input_callback
-        run_config = RunConfig(session_input_callback=session_input_callback)
+        # Set up multi-provider support - match TypeScript implementation
+        from .utils.multi_provider import MultiProvider, MultiProviderMap
+        from .utils.ollama_model_provider import OllamaModelProvider
         
+        model_provider_map = MultiProviderMap()
+        
+        # Add Anthropic provider using OpenAI interface
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            model_provider_map.add_provider(
+                "anthropic",
+                OpenAIProvider(
+                    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+                    base_url="https://api.anthropic.com/v1/",
+                    use_responses=False,
+                )
+            )
+        
+        if os.environ.get("HF_TOKEN"):
+            model_provider_map.add_provider(
+                "hf_inference_endpoints",
+                OpenAIProvider(
+                    api_key=os.environ.get("HF_TOKEN"),
+                    base_url="https://bb8igs5dnyzb8gu1.us-east-1.aws.endpoints.huggingface.cloud/v1/",
+                    use_responses=False,
+                )
+            )
+            
+            model_provider_map.add_provider(
+                "hf_inference_providers",
+                OpenAIProvider(
+                    api_key=os.environ.get("HF_TOKEN"),
+                    base_url="https://router.huggingface.co/v1",
+                    use_responses=False,
+                )
+            )
+        
+        if os.environ.get("OLLAMA_API_KEY"):
+            model_provider_map.add_provider(
+                "ollama",
+                OllamaModelProvider(api_key=os.environ.get("OLLAMA_API_KEY"))
+            )
+        
+        # Use MultiProvider for model selection - it will delegate to OpenAIProvider by default
+        model_provider = MultiProvider(
+            provider_map=model_provider_map,
+            openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
+            openai_use_responses=False,
+        )
+        
+        # Create RunConfig with session_input_callback and model_provider
+        run_config = RunConfig(
+            session_input_callback=session_input_callback,
+            model_provider=model_provider,
+        )
+        
+        # Use the dynamically loaded agent instead of hardcoded self.assistant_agent
         result = Runner.run_streamed(
-            self.assistant_agent,
+            agent,
             agent_input,
             context=agent_context,
             session=session,
@@ -228,7 +332,7 @@ class MyChatKitServer(ChatKitServer):
 
 server = MyChatKitServer(data_store, attachment_store)
 
-def _extract_bearer_token(request: Request) -> str | None:
+def extract_bearer_token(request: Request) -> str | None:
     auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
     if not auth_header:
         return None
@@ -237,7 +341,7 @@ def _extract_bearer_token(request: Request) -> str | None:
         return parts[1]
     return None
 
-def _decode_jwt_sub(jwt_token: str) -> str | None:
+def decode_jwt_sub(jwt_token: str) -> str | None:
     try:
         # Decode JWT without verification to extract 'sub'
         parts = jwt_token.split(".")
@@ -253,13 +357,13 @@ def _decode_jwt_sub(jwt_token: str) -> str | None:
     except Exception:
         return None
 
-def _build_request_context(request: Request) -> TContext:
+def build_request_context(request: Request, agent_id: str | None = None) -> TContext:
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_ANON_KEY")
     if not supabase_url or not supabase_key:
         raise HTTPException(status_code=500, detail="Supabase env vars SUPABASE_URL and SUPABASE_ANON_KEY are required")
 
-    token = _extract_bearer_token(request)
+    token = extract_bearer_token(request)
     client: Client = create_client(supabase_url, supabase_key)
     # Apply per-request RLS via JWT if present
     if token:
@@ -267,12 +371,13 @@ def _build_request_context(request: Request) -> TContext:
 
     user_id = request.headers.get("x-user-id") or request.headers.get("X-User-Id")
     if not user_id and token:
-        user_id = _decode_jwt_sub(token)
+        user_id = decode_jwt_sub(token)
 
     return TContext({
         "supabase": client,
         "user_id": user_id,
         "user_jwt": token,
+        "agent_id": agent_id,
     })
 
 # @app.post("/chatkit")
@@ -280,7 +385,8 @@ def _build_request_context(request: Request) -> TContext:
 async def chatkit_endpoint(request: Request, agent_id: str):
     try:
         body = await request.body()
-        ctx = _build_request_context(request)
+        # Build context with agent_id included
+        ctx = build_request_context(request, agent_id=agent_id)
         result = await server.process(body, ctx)
         if isinstance(result, StreamingResult):
             return StreamingResponse(
@@ -319,7 +425,7 @@ async def chatkit_endpoint(request: Request, agent_id: str):
 @app.get("/threads/list")
 async def list_threads(request: Request, limit: int = 20, after: str | None = None, order: str = "desc"):
     try:
-        ctx = _build_request_context(request)
+        ctx = build_request_context(request)
         page = await data_store.load_threads(limit=limit, after=after, order=order, context=ctx)
         # page.data contains ThreadMetadata instances – convert to JSON-friendly dicts
         def _thread_to_dict(t: ThreadMetadata) -> dict[str, Any]:
@@ -377,7 +483,7 @@ async def list_threads(request: Request, limit: int = 20, after: str | None = No
 @app.get("/agents")
 async def proxy_agents(request: Request):
     try:
-        ctx = _build_request_context(request)
+        ctx = build_request_context(request)
         supabase: Client = ctx["supabase"]
         
         # Forward relevant headers for anonymous auth support
