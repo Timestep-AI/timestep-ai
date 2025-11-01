@@ -44,12 +44,12 @@ interface AgentRecord {
 }
 
 /**
- * Load an agent from the database by ID
- * Matches Python implementation: queries agents table with RLS
+ * Get an agent record from the database by ID
+ * Returns null if not found
  */
-async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
+async function getAgentById(agentId: string, ctx: TContext): Promise<AgentRecord | null> {
   if (!ctx.user_id) {
-    throw new Error('user_id is required to load agents');
+    return null;
   }
   
   const { data: agentData, error } = await ctx.supabase
@@ -62,17 +62,132 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
   if (error) {
     if (error.code === 'PGRST116') {
       // Not found
-      throw new Error(`Agent not found: ${agentId}`);
+      return null;
     }
     console.error('[agent-chat-v2] Error fetching agent:', error);
-    throw new Error(`Failed to load agent: ${error.message}`);
+    return null;
   }
   
-  if (!agentData) {
+  return agentData as AgentRecord | null;
+}
+
+/**
+ * Ensure the default MCP server exists for the user
+ * Matches Python ensure_default_mcp_server implementation
+ */
+async function ensureDefaultMcpServer(ctx: TContext): Promise<void> {
+  if (!ctx.user_id) {
+    return;
+  }
+  
+  const defaultServerId = '00000000-0000-0000-0000-000000000000';
+  
+  // Check if it exists
+  const { data: existing } = await ctx.supabase
+    .from('mcp_servers')
+    .select('*')
+    .eq('id', defaultServerId)
+    .eq('user_id', ctx.user_id)
+    .single();
+  
+  if (existing) {
+    return; // Already exists
+  }
+  
+  // Create it
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) {
+    return; // Skip if URL not available
+  }
+  
+  const { error } = await ctx.supabase.from('mcp_servers').insert({
+    id: defaultServerId,
+    user_id: ctx.user_id,
+    name: 'MCP Environment Server',
+    url: `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mcp-env/mcp`,
+  });
+  
+  // Ignore duplicate key errors (23505) - means another process created it
+  if (error && error.code !== '23505') {
+    console.warn('[agent-chat-v2] Error creating default MCP server:', error);
+  }
+}
+
+/**
+ * Ensure default agents exist for the user
+ * Matches Python ensure_default_agents_exist implementation
+ */
+async function ensureDefaultAgentsExist(ctx: TContext): Promise<void> {
+  if (!ctx.user_id) {
+    return;
+  }
+  
+  const defaultModel = Deno.env.get('DEFAULT_AGENT_MODEL') || 'gpt-4o';
+  const defaultModelSettings = {
+    temperature: 0.0,
+    toolChoice: 'auto',
+    reasoning: { effort: null }
+  };
+  
+  // Default Personal Assistant
+  const personalAssistantId = '00000000-0000-0000-0000-000000000000';
+  if (!(await getAgentById(personalAssistantId, ctx))) {
+    const { error } = await ctx.supabase.from('agents').insert({
+      id: personalAssistantId,
+      user_id: ctx.user_id,
+      name: 'Personal Assistant',
+      instructions: `# System context
+You are part of a multi-agent system called the Agents SDK, designed to make agent coordination and execution easy. Agents uses two primary abstraction: **Agents** and **Handoffs**. An agent encompasses instructions and tools and can hand off a conversation to another agent when appropriate. Handoffs are achieved by calling a handoff function, generally named \`transfer_to_<agent_name>\`. Transfers between agents are handled seamlessly in the background; do not mention or draw attention to these transfers in your conversation with the user.
+You are an AI agent acting as a personal assistant.`,
+      tool_ids: ['00000000-0000-0000-0000-000000000000.think'],
+      handoff_ids: ['ffffffff-ffff-ffff-ffff-ffffffffffff'],
+      model: defaultModel,
+      model_settings: defaultModelSettings,
+    });
+    
+    // Ignore duplicate key errors
+    if (error && error.code !== '23505') {
+      console.warn('[agent-chat-v2] Error creating default Personal Assistant:', error);
+    }
+  }
+  
+  // Default Weather Assistant
+  const weatherAssistantId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  if (!(await getAgentById(weatherAssistantId, ctx))) {
+    const { error } = await ctx.supabase.from('agents').insert({
+      id: weatherAssistantId,
+      user_id: ctx.user_id,
+      name: 'Weather Assistant',
+      instructions: 'You are a helpful AI assistant that can answer questions about weather. When asked about weather, you MUST use the get_weather tool to get accurate, real-time weather information.',
+      tool_ids: [
+        '00000000-0000-0000-0000-000000000000.get_weather',
+        '00000000-0000-0000-0000-000000000000.think',
+      ],
+      handoff_ids: [],
+      model: defaultModel,
+      model_settings: defaultModelSettings,
+    });
+    
+    // Ignore duplicate key errors
+    if (error && error.code !== '23505') {
+      console.warn('[agent-chat-v2] Error creating default Weather Assistant:', error);
+    }
+  }
+}
+
+/**
+ * Load an agent from the database by ID
+ * Matches Python implementation: queries agents table with RLS
+ */
+async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
+  if (!ctx.user_id) {
+    throw new Error('user_id is required to load agents');
+  }
+  
+  const agentRecord = await getAgentById(agentId, ctx);
+  if (!agentRecord) {
     throw new Error(`Agent not found: ${agentId}`);
   }
-  
-  const agentRecord = agentData as AgentRecord;
   
   // Create Agent from database record
   // Use model from database, fallback to 'gpt-4o' if not set
@@ -438,94 +553,66 @@ Deno.serve(async (request: Request) => {
       );
     }
 
-    // Handle /agents proxy endpoint (GET and POST)
+    // Handle /agents endpoint (GET and POST)
     if (path === '/agents' || path.endsWith('/agents')) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      if (!supabaseUrl) {
-        throw new Error('SUPABASE_URL is required');
-      }
-
-      // Forward relevant headers for anonymous auth support
-      const headersToForward: Record<string, string> = {};
-
       const ctx = buildRequestContext(request);
-      // Use JWT from context if available
-      if (ctx.user_jwt) {
-        if (!ctx.user_jwt.startsWith('Bearer ')) {
-          headersToForward['Authorization'] = `Bearer ${ctx.user_jwt}`;
-        } else {
-          headersToForward['Authorization'] = ctx.user_jwt;
-        }
-      } else {
-        // Fallback to request headers
-        const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
-        if (authHeader) {
-          headersToForward['Authorization'] = authHeader;
-        }
-      }
-
-      // Include apikey header (required for Supabase functions)
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-      if (supabaseAnonKey) {
-        headersToForward['apikey'] = supabaseAnonKey;
-      }
-
-      // Forward other headers that might be needed
-      for (const headerName of ['x-client-info', 'content-type']) {
-        const headerValue = request.headers.get(headerName) || request.headers.get(headerName.replace('-', '_'));
-        if (headerValue) {
-          headersToForward[headerName] = headerValue;
-        }
-      }
-
-      // Get request body if present (for POST requests)
-      let body: any = null;
-      if (request.method === 'POST') {
-        try {
-          const bodyBytes = await request.arrayBuffer();
-          if (bodyBytes.byteLength > 0) {
-            const text = new TextDecoder().decode(bodyBytes);
-            body = JSON.parse(text);
+      
+      if (!ctx.user_id) {
+        return new Response(
+          JSON.stringify({ error: 'Authentication required' }),
+          {
+            status: 401,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
           }
-        } catch {
-          // If body is not JSON, skip
-        }
+        );
       }
 
-      // The edge function only handles GET requests for /agents
-      // Convert POST to GET if needed
-      const methodToUse = request.method === 'POST' ? 'GET' : request.method;
+      try {
+        // Ensure default agents exist first
+        await ensureDefaultAgentsExist(ctx);
+        await ensureDefaultMcpServer(ctx);
 
-      const functionUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/agent-chat/agents`;
+        // Fetch all agents for the user
+        const { data: agents, error } = await ctx.supabase
+          .from('agents')
+          .select('*')
+          .eq('user_id', ctx.user_id)
+          .order('created_at', { ascending: true });
 
-      // Make direct HTTP request to edge function
-      const response = await fetch(functionUrl, {
-        method: methodToUse,
-        headers: headersToForward,
-        body: body && methodToUse !== 'GET' ? JSON.stringify(body) : undefined,
-      });
-
-      const responseContent = await response.arrayBuffer();
-      const mediaType = response.headers.get('content-type') || 'application/json';
-
-      // Log error responses for debugging
-      if (response.status >= 400) {
-        try {
-          const errorBody = new TextDecoder().decode(responseContent);
-          console.error(`Edge function returned ${response.status}: ${errorBody}`);
-        } catch {
-          // Ignore decode errors
+        if (error) {
+          console.error('[agent-chat-v2] Error fetching agents:', error);
+          throw new Error(`Failed to fetch agents: ${error.message}`);
         }
-      }
 
-      // Return response with proper headers
-      return new Response(responseContent, {
-        status: response.status,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': mediaType,
-        },
-      });
+        return new Response(
+          JSON.stringify(agents || []),
+          {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      } catch (error) {
+        console.error('[agent-chat-v2] Error in /agents endpoint:', error);
+        return new Response(
+          JSON.stringify({
+            error: 'Failed to fetch agents',
+            detail: error && typeof error === 'object' && 'message' in error ? String((error as any).message) : String(error),
+          }),
+          {
+            status: 500,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
     }
 
     // Default response for root path

@@ -7,7 +7,6 @@ from fastapi.responses import Response, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import logging
-import httpx
 from agents import Agent, Runner, RunConfig, OpenAIProvider
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
@@ -148,14 +147,13 @@ def _construct_supabase_db_url() -> str:
                    "Either provide SUPABASE_DB_URL or SUPABASE_DB_PASSWORD"
         )
 
-def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
-    """Load an agent from the database by ID.
+def get_agent_by_id(agent_id: str, ctx: TContext) -> AgentRecord | None:
+    """Get an agent record from the database by ID.
     
-    Matches TypeScript implementation: queries agents table with RLS.
-    Returns an Agent configured with the database record's settings.
+    Returns None if not found.
     """
     if not ctx.user_id:
-        raise HTTPException(status_code=400, detail="user_id is required to load agents")
+        return None
     
     supabase = ctx.supabase
     response = (
@@ -167,9 +165,135 @@ def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext
     )
     
     if not response.data or len(response.data) == 0:
-        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return None
     
-    agent_record: AgentRecord = response.data[0]
+    return response.data[0]
+
+def ensure_default_mcp_server(ctx: TContext) -> None:
+    """Ensure the default MCP server exists for the user.
+    
+    Matches TypeScript McpServerStore.createDefaultMcpServer implementation.
+    """
+    if not ctx.user_id:
+        return
+    
+    default_server_id = "00000000-0000-0000-0000-000000000000"
+    supabase = ctx.supabase
+    
+    # Check if it exists
+    response = (
+        supabase.table("mcp_servers")
+        .select("*")
+        .eq("id", default_server_id)
+        .eq("user_id", ctx.user_id)
+        .execute()
+    )
+    
+    if response.data and len(response.data) > 0:
+        return  # Already exists
+    
+    # Create it
+    supabase_url = os.environ.get("SUPABASE_URL")
+    if not supabase_url:
+        return  # Skip if URL not available
+    
+    insert_response = (
+        supabase.table("mcp_servers")
+        .insert({
+            "id": default_server_id,
+            "user_id": ctx.user_id,
+            "name": "MCP Environment Server",
+            "url": f"{supabase_url.rstrip('/')}/functions/v1/mcp-env/mcp",
+        })
+        .execute()
+    )
+    
+    # Ignore duplicate key errors (23505) - means another process created it
+    if insert_response.data is None and hasattr(insert_response, "error"):
+        error_code = getattr(insert_response.error, "code", None)
+        if error_code != "23505":
+            logger.warning(f"Error creating default MCP server: {insert_response.error}")
+
+def ensure_default_agents_exist(ctx: TContext) -> None:
+    """Ensure default agents exist for the user.
+    
+    Matches TypeScript AgentStore.ensureDefaultAgentsExist implementation.
+    """
+    if not ctx.user_id:
+        return
+    
+    default_model = os.environ.get("DEFAULT_AGENT_MODEL", "gpt-4o")
+    default_model_settings = {
+        "temperature": 0.0,
+        "toolChoice": "auto",
+        "reasoning": {"effort": None}
+    }
+    
+    # Default Personal Assistant
+    personal_assistant_id = "00000000-0000-0000-0000-000000000000"
+    if not get_agent_by_id(personal_assistant_id, ctx):
+        supabase = ctx.supabase
+        insert_response = (
+            supabase.table("agents")
+            .insert({
+                "id": personal_assistant_id,
+                "user_id": ctx.user_id,
+                "name": "Personal Assistant",
+                "instructions": """# System context
+You are part of a multi-agent system called the Agents SDK, designed to make agent coordination and execution easy. Agents uses two primary abstraction: **Agents** and **Handoffs**. An agent encompasses instructions and tools and can hand off a conversation to another agent when appropriate. Handoffs are achieved by calling a handoff function, generally named `transfer_to_<agent_name>`. Transfers between agents are handled seamlessly in the background; do not mention or draw attention to these transfers in your conversation with the user.
+You are an AI agent acting as a personal assistant.""",
+                "tool_ids": ["00000000-0000-0000-0000-000000000000.think"],
+                "handoff_ids": ["ffffffff-ffff-ffff-ffff-ffffffffffff"],
+                "model": default_model,
+                "model_settings": default_model_settings,
+            })
+            .execute()
+        )
+        # Ignore duplicate key errors
+        if insert_response.data is None and hasattr(insert_response, "error"):
+            error_code = getattr(insert_response.error, "code", None)
+            if error_code != "23505":
+                logger.warning(f"Error creating default Personal Assistant: {insert_response.error}")
+    
+    # Default Weather Assistant
+    weather_assistant_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    if not get_agent_by_id(weather_assistant_id, ctx):
+        supabase = ctx.supabase
+        insert_response = (
+            supabase.table("agents")
+            .insert({
+                "id": weather_assistant_id,
+                "user_id": ctx.user_id,
+                "name": "Weather Assistant",
+                "instructions": "You are a helpful AI assistant that can answer questions about weather. When asked about weather, you MUST use the get_weather tool to get accurate, real-time weather information.",
+                "tool_ids": [
+                    "00000000-0000-0000-0000-000000000000.get_weather",
+                    "00000000-0000-0000-0000-000000000000.think",
+                ],
+                "handoff_ids": [],
+                "model": default_model,
+                "model_settings": default_model_settings,
+            })
+            .execute()
+        )
+        # Ignore duplicate key errors
+        if insert_response.data is None and hasattr(insert_response, "error"):
+            error_code = getattr(insert_response.error, "code", None)
+            if error_code != "23505":
+                logger.warning(f"Error creating default Weather Assistant: {insert_response.error}")
+
+def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
+    """Load an agent from the database by ID.
+    
+    Matches TypeScript implementation: queries agents table with RLS.
+    Returns an Agent configured with the database record's settings.
+    """
+    if not ctx.user_id:
+        raise HTTPException(status_code=400, detail="user_id is required to load agents")
+    
+    agent_record = get_agent_by_id(agent_id, ctx)
+    if not agent_record:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
     # Create Agent from database record
     # Use model from database, fallback to 'gpt-4o' if not set
@@ -481,104 +605,53 @@ async def list_threads(request: Request, limit: int = 20, after: str | None = No
 
 @app.post("/agents")
 @app.get("/agents")
-async def proxy_agents(request: Request):
+async def get_agents(request: Request):
+    """Get all agents for the current user.
+    
+    Ensures default agents and MCP server exist before returning.
+    Matches TypeScript AgentsService.getAllAgents implementation.
+    """
     try:
         ctx = build_request_context(request)
+        
+        if not ctx.user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Ensure default agents exist first
+        ensure_default_agents_exist(ctx)
+        ensure_default_mcp_server(ctx)
+        
+        # Fetch all agents for the user
         supabase: Client = ctx["supabase"]
+        response = (
+            supabase.table("agents")
+            .select("*")
+            .eq("user_id", ctx.user_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
         
-        # Forward relevant headers for anonymous auth support
-        headers_to_forward = {}
-        
-        # Use JWT from context if available, otherwise try request headers
-        auth_header = ctx.get("user_jwt")
-        if auth_header:
-            # Ensure it has Bearer prefix if not already present
-            if not auth_header.startswith("Bearer "):
-                headers_to_forward["Authorization"] = f"Bearer {auth_header}"
-            else:
-                headers_to_forward["Authorization"] = auth_header
+        if not response.data:
+            agents = []
         else:
-            # Fallback to request headers
-            auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
-            if auth_header:
-                headers_to_forward["Authorization"] = auth_header
+            agents = response.data
         
-        # Include apikey header (required for Supabase functions)
-        supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY")
-        if supabase_anon_key:
-            headers_to_forward["apikey"] = supabase_anon_key
-        
-        # Forward other headers that might be needed for Supabase functions
-        for header_name in ["x-client-info", "content-type"]:
-            header_value = request.headers.get(header_name) or request.headers.get(header_name.replace("-", "_"))
-            if header_value:
-                headers_to_forward[header_name] = header_value
-        
-        # Get request body if present (for POST requests)
-        body = None
-        if request.method == "POST":
-            try:
-                body_bytes = await request.body()
-                if body_bytes:
-                    body = json.loads(body_bytes)
-            except json.JSONDecodeError:
-                # If body is not JSON, pass as string or skip
-                pass
-        
-        # The edge function only handles GET requests for /agents
-        # Convert POST to GET if needed
-        method_to_use = request.method
-        if method_to_use == "POST":
-            method_to_use = "GET"
-        
-        # Use direct HTTP call to the edge function with proper headers
-        # This ensures all headers are forwarded correctly
-        supabase_url = os.environ.get("SUPABASE_URL")
-        if not supabase_url:
-            raise HTTPException(status_code=500, detail="SUPABASE_URL is required")
-        
-        function_url = f"{supabase_url.rstrip('/')}/functions/v1/agent-chat/agents"
-        
-        # Make direct HTTP request to edge function
-        async with httpx.AsyncClient() as client:
-            response = await client.request(
-                method=method_to_use,
-                url=function_url,
-                headers=headers_to_forward,
-                json=body if body is not None and method_to_use != "GET" else None,
-                timeout=30.0,
-            )
-            
-            # Get response content
-            response_content = response.content
-            media_type = response.headers.get("content-type", "application/json")
-            
-            # Log error responses for debugging
-            if response.status_code >= 400:
-                try:
-                    error_body = response_content.decode("utf-8") if isinstance(response_content, bytes) else str(response_content)
-                    logger.error(f"Edge function returned {response.status_code}: {error_body}")
-                except Exception:
-                    pass
-            
-            # Return response with proper headers
-            return Response(
-                content=response_content,
-                status_code=response.status_code,
-                media_type=media_type,
-                headers={
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Headers": "*",
-                },
-            )
+        return JSONResponse(
+            status_code=200,
+            content=agents,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error proxying /agents: {e}", exc_info=True)
+        logger.error(f"Error fetching agents: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)},
+            content={"error": "Failed to fetch agents", "detail": str(e)},
             headers={
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "*",
