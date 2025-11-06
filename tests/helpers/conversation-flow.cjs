@@ -18,13 +18,8 @@ const { expect } = require('@playwright/test');
 // ============================================================================
 
 const TIMEOUTS = {
-  TOOL_RENDER: process.env.CI ? 60000 : 30000, // Longer timeout in CI
-  TOOL_RESULT: process.env.CI ? 60000 : 30000, // Longer timeout in CI
-  UI_SETTLE: 1000,
   ASSISTANT_TURN: process.env.CI ? 60000 : 30000, // Longer timeout in CI
-  SUMMARY: process.env.CI ? 40000 : 20000, // Longer timeout in CI
   SEND_BUTTON: 10000,
-  CONTEXT_REMOUNT: 500,
 };
 
 async function runConversationFlow(page, steps) {
@@ -41,17 +36,6 @@ async function runConversationFlow(page, steps) {
   for (const [i, step] of steps.entries()) {
     console.log(`\n========== STEP ${i + 1}: "${step.user}" ==========`);
 
-    // --- Optional agent switch ---
-    if (step.switchAgentTo) {
-      console.log(`→ Switching to agent: ${step.switchAgentTo}`);
-      const agentButton = page.getByRole('button', { name: new RegExp(step.switchAgentTo, 'i') });
-      await agentButton.click();
-      const header = page.locator('header, [data-active-agent]');
-      await expect(header).toContainText(new RegExp(step.switchAgentTo, 'i'), { timeout: 5000 });
-      await page.waitForTimeout(TIMEOUTS.CONTEXT_REMOUNT);
-      console.log(`✓ Verified active agent: ${step.switchAgentTo}`);
-    }
-
     await input.fill(step.user);
     await sendButton.click();
 
@@ -60,21 +44,25 @@ async function runConversationFlow(page, steps) {
     prevCount = newIndex + 1;
     const currentTurn = assistantTurns.nth(newIndex);
 
-    // --- Behavioral check: no unexpected handoffs when Weather Assistant active ---
-    if (step.switchAgentTo?.match(/Weather/i)) {
-      await expect(currentTurn).not.toContainText(/Transferring to/i);
-      console.log('✓ Verified no unexpected handoff from Weather Assistant');
-    }
-
+    // --- Wait for assistant response text (if expected) ---
+    // This ensures the assistant turn is complete before verifying tool calls
     if (step.expectAssistant) {
       await expect
-        .poll(async () => (await currentTurn.textContent()) || '')
+        .poll(async () => {
+          return (await currentTurn.textContent()) || '';
+        }, {
+          message: 'Waiting for assistant response',
+          timeout: TIMEOUTS.ASSISTANT_TURN,
+        })
         .toMatch(step.expectAssistant);
       console.log(`✓ Assistant matched: ${step.expectAssistant}`);
     }
 
-    if (step.approvals?.length) {
-      await handleToolApprovals(root, page, assistantTurns, currentTurn, step.approvals);
+    // --- Verify tool call occurred (if expected) ---
+    // This checks the actual thread items from the API, not just the assistant's response text
+    // This is the primary verification - the tool call must actually exist in the thread items
+    if (step.expectToolCall) {
+      await verifyToolCall(root, page, step.expectToolCall);
     }
 
     // --- Before next user turn ---
@@ -95,54 +83,92 @@ async function waitForNextAssistantTurn(assistantTurns, prevCount) {
   return count - 1;
 }
 
-async function handleToolApprovals(root, page, assistantTurns, currentTurn, approvals) {
-  console.log(`→ Expecting ${approvals.length} tool approvals...`);
-
-  const anyApproval = assistantTurns.filter({ hasText: /Tool approval required/i });
-  await expect(anyApproval.first(), 'Waiting for at least one tool approval to render').toBeVisible(
-    { timeout: TIMEOUTS.TOOL_RENDER }
-  );
-  console.log('✓ At least one tool approval prompt has appeared');
-
-  (await root.waitForTimeout?.(TIMEOUTS.UI_SETTLE)) ||
-    (await page.waitForTimeout(TIMEOUTS.UI_SETTLE));
-
-  for (const [index, city] of approvals.entries()) {
-    const approvalPrompt = new RegExp(`Tool approval required.*get_weather.*${city}`, 'i');
-    const approvalNode = assistantTurns.filter({ hasText: approvalPrompt });
-    await expect(approvalNode, `Missing approval prompt for ${city}`).toBeVisible({
-      timeout: TIMEOUTS.SUMMARY,
-    });
-    console.log(`✓ Approval prompt visible for ${city}`);
-
-    const before = (await approvalNode.first().textContent()) || '';
-
-    const approveButton = approvalNode.locator('button:has-text("Approve")').nth(index);
-    await expect(approveButton, `Approve button for ${city} not found`).toBeVisible({
-      timeout: TIMEOUTS.SUMMARY,
-    });
-    await approveButton.click();
-    console.log(`  Clicked Approve for ${city}`);
-
-    const resultPattern = new RegExp(`Tool Result.*get_weather.*${city}`, 'i');
-    await expect
-      .poll(async () => (await approvalNode.first().textContent()) || '', {
-        message: `Waiting for Tool Result for ${city}`,
-        timeout: TIMEOUTS.TOOL_RESULT,
-      })
-      .not.toBe(before);
-    await expect(approvalNode.first()).toContainText(resultPattern);
-    console.log(`✓ Tool result streamed in for ${city}`);
+async function verifyToolCall(root, page, expectedToolCall) {
+  console.log(`→ Verifying tool call: ${expectedToolCall.name} with params:`, expectedToolCall);
+  
+  // Wait for the tool call to be saved
+  await page.waitForTimeout(2000);
+  
+  // Get auth token from Supabase session in localStorage
+  const authToken = await page.evaluate(() => {
+    // Supabase stores session in localStorage with key like "sb-<project-ref>-auth-token"
+    // Find the Supabase auth token key
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes('auth-token')) {
+        try {
+          const sessionData = JSON.parse(localStorage.getItem(key));
+          if (sessionData?.access_token) {
+            return sessionData.access_token;
+          }
+        } catch (e) {
+          // Not JSON or invalid
+        }
+      }
+    }
+    return null;
+  });
+  
+  // Get Supabase URL from environment or default
+  const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
+  
+  // Get thread ID from the most recent thread via API
+  const threadsResponse = await page.request.get(`${supabaseUrl}/functions/v1/openai-polyfill/chatkit/threads?limit=1&order=desc`, {
+    headers: {
+      'Authorization': `Bearer ${authToken || 'anonymous'}`,
+      'OpenAI-Beta': 'chatkit_beta=v1',
+    },
+  });
+  
+  if (!threadsResponse.ok()) {
+    throw new Error(`Failed to fetch threads: ${threadsResponse.status()} ${threadsResponse.statusText()}`);
   }
-
-  const finalSummary = assistantTurns.last();
-  await expect
-    .poll(async () => (await finalSummary.textContent()) || '', {
-      message: 'Waiting for final assistant summary',
-      timeout: TIMEOUTS.SUMMARY,
-    })
-    .toMatch(new RegExp(approvals.join('.*'), 'i'));
-  console.log(`✓ Final summary confirmed for ${approvals.join(', ')}`);
+  
+  const threadsData = await threadsResponse.json();
+  if (!threadsData.data || threadsData.data.length === 0) {
+    throw new Error('No threads found');
+  }
+  
+  const threadId = threadsData.data[0].id;
+  console.log(`Got thread ID from API: ${threadId}`);
+  
+  const apiUrl = `${supabaseUrl}/functions/v1/openai-polyfill/chatkit/threads/${threadId}/items?limit=50&order=desc`;
+  
+  // Fetch thread items from ChatKit API
+  const response = await page.request.get(apiUrl, {
+    headers: {
+      'Authorization': `Bearer ${authToken || 'anonymous'}`,
+      'OpenAI-Beta': 'chatkit_beta=v1',
+    },
+  });
+  
+  if (!response.ok()) {
+    throw new Error(`Failed to fetch thread items: ${response.status()} ${response.statusText()}`);
+  }
+  
+  const data = await response.json();
+  const items = data.data || [];
+  
+  // Find the client_tool_call item with matching name and arguments
+  const toolCallItem = items.find((item) => {
+    if (item.type !== 'chatkit.client_tool_call') return false;
+    if (item.name !== expectedToolCall.name) return false;
+    
+    // Check arguments match
+    const args = typeof item.arguments === 'string' ? JSON.parse(item.arguments) : item.arguments;
+    return Object.keys(expectedToolCall).every(key => {
+      if (key === 'name') return true; // Already checked
+      return args[key] === expectedToolCall[key];
+    });
+  });
+  
+  if (!toolCallItem) {
+    throw new Error(
+      `Tool call ${expectedToolCall.name} with params ${JSON.stringify(expectedToolCall)} not found in thread items`
+    );
+  }
+  
+  console.log(`✓ Tool call ${expectedToolCall.name} verified in thread items`);
 }
 
 module.exports = {

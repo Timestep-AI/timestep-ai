@@ -23,6 +23,7 @@ import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from './chatk
 import { ChatKitServer, StreamingResult } from './chatkit/server.ts';
 import { AgentContext, simple_to_agent_input as simpleToAgentInput, stream_agent_response as streamAgentResponse, type ClientToolCall } from './chatkit/agents.ts';
 import { Agent, Runner, tool } from '@openai/agents-core';
+import type { ModelSettings } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import OpenAI from 'openai';
 import type { RunConfig } from '@openai/agents-core';
@@ -265,25 +266,17 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
     throw new Error(`Agent not found: ${agentId}`);
   }
 
-  // Create Agent from database record
-  // Use model from database, fallback to 'gpt-4o' if not set
-  const model = agentRecord.model || 'gpt-4o';
-  console.log('[agent-chat-v2] loadAgentFromDatabase creating agent with model:', model);
-
-  // Add client tools (like switch_theme) to all agents
   const tools = [switchTheme];
-  console.log('[agent-chat-v2] Agent tools:', tools.map((t: any) => t.name || 'unknown'));
 
-  // Create agent with toolUseBehavior to stop at client tools (matches ChatKit documentation)
-  // Per ChatKit docs: "The agent behavior must be set to tool_use_behavior=StopAtTools with all
-  // client-side tools included in stop_at_tool_names. This causes the agent to stop generating
-  // new messages until the client tool call is acknowledged by the ChatKit UI."
+  console.log(`[agent-chat-v2] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
+
   const agent = new Agent({
-    model: model,
+    model: agentRecord.model,
     name: agentRecord.name,
     instructions: agentRecord.instructions,
     tools: tools,
     toolUseBehavior: { stopAtToolNames: [CLIENT_THEME_TOOL_NAME] },
+    modelSettings: agentRecord.model_settings as ModelSettings,
   });
   console.log('[agent-chat-v2] Agent created:', agentRecord.name);
 

@@ -1,10 +1,7 @@
 const { Given, When, Then, Before, After, setDefaultTimeout } = require('@cucumber/cucumber');
 const { chromium, expect } = require('@playwright/test');
 const { runConversationFlow } = require('../../helpers/conversation-flow.cjs');
-const {
-  personalAssistantFlow,
-  weatherAssistantFlow,
-} = require('../../helpers/math-weather-flow.cjs');
+const { themeSwitchingFlow } = require('../../helpers/theme-switching-flow.cjs');
 
 // Set default timeout to 60 seconds for all steps
 setDefaultTimeout(60000);
@@ -51,6 +48,38 @@ Given('I am a new anonymous user', async () => {
 });
 
 // -----------------------------------------------------------------------------
+// Backend Selection
+// -----------------------------------------------------------------------------
+
+Given('I select the {string} backend', async (backendName) => {
+  console.log(`\n========== BACKEND SELECTION ==========`);
+  await page.waitForLoadState('networkidle');
+
+  // Click on the backend selector button
+  await page.locator('ion-button#backend-selector-button').click();
+
+  // Wait for the backend popover to be visible
+  const backendPopover = page.locator('ion-popover[trigger="backend-selector-button"]');
+  await backendPopover.waitFor({ state: 'visible', timeout: 15000 });
+
+  // Wait for the backend name to appear in the popover content
+  await backendPopover.locator(`ion-item:has-text("${backendName}")`).waitFor({ state: 'visible', timeout: 5000 });
+
+  // Click on the backend name in the popover
+  await backendPopover.getByText(backendName, { exact: true }).click();
+
+  // Verify backend switch completed
+  await expect(page.locator('ion-button#backend-selector-button')).toContainText(backendName, { timeout: 5000 });
+  console.log(`✓ Verified active backend: ${backendName}`);
+
+  // Wait for agents to load after backend switch
+  await page.waitForResponse(
+    (response) => response.url().includes('/agents') && response.status() === 200,
+    { timeout: 10000 }
+  ).catch(() => null);
+});
+
+// -----------------------------------------------------------------------------
 // Agent Selection
 // -----------------------------------------------------------------------------
 
@@ -58,157 +87,38 @@ Given('I open the chat for agent {string}', async (agentName) => {
   console.log(`\n========== SETUP ==========`);
   await page.waitForLoadState('networkidle');
 
-  // Wait for the page to be fully loaded
-  await page.waitForTimeout(2000);
-
-  // Click on the agent selector button (the second button after the backend selector)
+  // Click on the agent selector button
   await page.locator('ion-button#agent-selector-button').click();
   
-  // Wait for the agent popover to be visible - use a more specific selector
+  // Wait for the agent popover to be visible
   const agentPopover = page.locator('ion-popover[trigger="agent-selector-button"]');
   await agentPopover.waitFor({ state: 'visible', timeout: 15000 });
   
   // Wait for the agent name to appear in the popover content
-  await agentPopover.locator(`ion-item:has-text("${agentName}")`).waitFor({ state: 'visible', timeout: 5000 });
-  await page.waitForTimeout(1000);
+  await agentPopover.locator(`ion-item:has-text("${agentName}")`).waitFor({ state: 'visible', timeout: 10000 });
   
   // Click on the agent name in the popover
   await agentPopover.getByText(agentName, { exact: true }).click();
 
-  // 🔸 CRITICAL: Verify agent context switch completed
-  await page.waitForTimeout(500); // Allow context remount
-  const agentButtonText = await page.locator('ion-button#agent-selector-button').textContent();
-  if (!agentButtonText?.includes(agentName)) {
-    throw new Error(
-      `Agent context verification failed: expected "${agentName}" but got "${agentButtonText}"`
-    );
-  }
+  // Verify agent context switch completed
+  await expect(page.locator('ion-button#agent-selector-button')).toContainText(agentName, { timeout: 5000 });
   console.log(`✓ Verified active agent: ${agentName}`);
 
-  // 🔸 CRITICAL: Wait for ChatKit to fully initialize after agent switch
-  console.log('⏳ Waiting for ChatKit to initialize with new agent...');
-  await page.waitForTimeout(3000); // Give ChatKit time to initialize
-
-  // Check if page is blank/white
-  const bodyText = await page.locator('body').textContent();
-  if (!bodyText || bodyText.trim().length < 10) {
-    console.log('⚠️  Page appears to be blank, waiting longer for ChatKit...');
-    await page.waitForTimeout(5000);
-  }
-
-  // 🔸 CRITICAL: Verify ChatKit iframe is loaded (URL routing is handled in fetch interceptor)
+  // Wait for ChatKit iframe to load
   const iframe = page.locator('iframe[name="chatkit"]');
-  if ((await iframe.count()) > 0) {
-    const iframeSrc = await iframe.getAttribute('src');
-    console.log(`Debug: ChatKit iframe src: ${iframeSrc}`);
-    console.log('✓ ChatKit iframe loaded (requests will be routed dynamically)');
-  } else {
-    console.log('⚠️  No ChatKit iframe found after agent switch');
-  }
+  await iframe.waitFor({ state: 'attached', timeout: 10000 });
+  console.log('✓ ChatKit iframe loaded');
 
-  await page.waitForTimeout(5000);
+  // Wait for chat input to be ready
+  const chatFrame = page.frameLocator('iframe[name="chatkit"]');
+  const chatInput = chatFrame.locator('input[type="text"], textarea');
+  await chatInput.waitFor({ state: 'visible', timeout: 10000 });
+  console.log('✓ Chat input ready');
 
-  // Wait for chat interface to be ready (ChatKit renders in main DOM)
-  // Debug: Check what elements are available
-  const inputElements = await page.locator('input').count();
-  const textareaElements = await page.locator('textarea').count();
-  const allInputs = await page.locator('input, textarea').count();
-  console.log(
-    `Debug: Found ${inputElements} inputs, ${textareaElements} textareas, ${allInputs} total input elements`
-  );
-
-  // Check input types
-  for (let i = 0; i < inputElements; i++) {
-    const input = page.locator('input').nth(i);
-    const type = await input.getAttribute('type');
-    const placeholder = await input.getAttribute('placeholder');
-    console.log(`Input ${i}: type="${type}", placeholder="${placeholder}"`);
-  }
-
-  // Check for contenteditable elements or other input-like elements
-  const contentEditableElements = await page.locator('[contenteditable]').count();
-  const divInputs = await page.locator('div[role="textbox"]').count();
-  console.log(
-    `Debug: Found ${contentEditableElements} contenteditable elements, ${divInputs} div textboxes`
-  );
-
-  // Check for iframes to understand the current DOM structure
-  const iframes = await page.locator('iframe').count();
-  console.log(`Debug: Found ${iframes} iframes`);
-
-  if (iframes > 0) {
-    for (let i = 0; i < iframes; i++) {
-      const iframe = page.locator('iframe').nth(i);
-      const name = await iframe.getAttribute('name');
-      const src = await iframe.getAttribute('src');
-      console.log(`Iframe ${i}: name="${name}", src="${src}"`);
-    }
-  }
-
-  // Since ChatKit is currently in iframe, we need to wait for iframe to load
-  // This is a test-level synchronization issue, not an app issue
-  if (iframes > 0) {
-    await expect(page.locator('iframe[name="chatkit"]')).toBeVisible({ timeout: 30000 });
-    console.log('✓ ChatKit iframe loaded');
-
-    // Wait for iframe content to be ready (longer timeout for agent switching)
-    const chatFrame = page.frameLocator('iframe[name="chatkit"]');
-    await expect(chatFrame.locator('input[type="text"], textarea')).toBeVisible({ timeout: 60000 });
-    console.log('✓ Chat input ready in iframe');
-  } else {
-    // This is the expected behavior per directive
-    const chatInputSelectors = [
-      'input[type="text"]',
-      'textarea',
-      '[contenteditable]',
-      'div[role="textbox"]',
-      'input:not([type="hidden"]):not([type="checkbox"])',
-    ];
-
-    let chatInputFound = false;
-    for (const selector of chatInputSelectors) {
-      const count = await page.locator(selector).count();
-      if (count > 0) {
-        console.log(`✓ Found chat input with selector: ${selector} (${count} elements)`);
-        await expect(page.locator(selector).first()).toBeVisible({ timeout: 10000 });
-        chatInputFound = true;
-        break;
-      }
-    }
-
-    if (!chatInputFound) {
-      throw new Error('No chat input element found with any selector');
-    }
-
-    console.log('✓ Chat interface ready in main DOM');
-  }
-
+  // Check for Personal Assistant greeting
   if (agentName.includes('Personal')) {
-    // Check for Personal Assistant greeting
-    if (iframes > 0) {
-      const chatFrame = page.frameLocator('iframe[name="chatkit"]');
-      await expect(chatFrame.locator('h2')).toContainText('What can I help with today?');
-    } else {
-      await expect(page.locator('h2')).toContainText('What can I help with today?');
-    }
+    await expect(chatFrame.locator('h2')).toContainText('What can I help with today?', { timeout: 5000 });
     console.log('✓ Personal Assistant greeting visible');
-  } else if (agentName.includes('Weather')) {
-    // 🔸 CRITICAL: Weather Assistant should never show handoffs
-    // Check that no handoff messages are present in the initial state
-    const root = iframes > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
-    const existingMessages = root.locator('article[data-thread-turn="assistant"]');
-    const messageCount = await existingMessages.count();
-
-    if (messageCount > 0) {
-      for (let i = 0; i < messageCount; i++) {
-        const message = existingMessages.nth(i);
-        const text = await message.textContent();
-        if (text?.includes('Transferring to') || text?.includes('handoff')) {
-          throw new Error(`Weather Assistant incorrectly showing handoff: "${text}"`);
-        }
-      }
-    }
-    console.log('✓ Verified Weather Assistant has no handoff messages');
   }
 });
 
@@ -216,11 +126,10 @@ Given('I open the chat for agent {string}', async (agentName) => {
 // Conversation Flow
 // -----------------------------------------------------------------------------
 
-When('I run the math-weather conversation flow', async () => {
-  // Determine which flow to use based on the current agent
-  const agentButtonText = await page.locator('ion-button#agent-selector-button').textContent();
-  const flow = agentButtonText?.includes('Personal') ? personalAssistantFlow : weatherAssistantFlow;
-  await runConversationFlow(page, flow);
+When('I run the theme switching conversation flow', async () => {
+  // Tool call verification is done by checking thread items from the API
+  // This ensures the tool call actually occurred, not just that the assistant said it did
+  await runConversationFlow(page, themeSwitchingFlow);
 });
 
 Then('the conversation should complete successfully', async () => {

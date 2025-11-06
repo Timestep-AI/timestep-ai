@@ -7,7 +7,7 @@ from fastapi.responses import Response, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import logging
-from agents import Agent, Runner, RunConfig, OpenAIProvider, function_tool, RunContextWrapper, StopAtTools
+from agents import Agent, Runner, RunConfig, OpenAIProvider, function_tool, RunContextWrapper, StopAtTools, ModelSettings
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
 from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext, ClientToolCall
@@ -338,21 +338,17 @@ def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext
     if not agent_record:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
-    # Create Agent from database record
-    # Use model from database, fallback to 'gpt-4o' if not set
-    model = agent_record.get("model") or "gpt-4o" # TODO: No fallbacks!
-
-    # Add client tools (like switch_theme) to all agents
     tools = [switch_theme]
 
-    logger.info(f"Loading agent {agent_id} with model {model} and tools: {[t.__name__ if hasattr(t, '__name__') else str(t) for t in tools]}")
+    logger.info(f"Loading agent {agent_id} with model {agent_record['model']}, model_settings {agent_record['model_settings']}, and tools: {[t.__name__ if hasattr(t, '__name__') else str(t) for t in tools]}")
 
     agent = Agent[AgentContext](
-        model=model,
-        name=agent_record.get("name", "Assistant"),
-        instructions=agent_record.get("instructions", "You are a helpful assistant"),
+        model=agent_record["model"],
+        name=agent_record["name"],
+        instructions=agent_record["instructions"],
         tools=tools,  # type: ignore[arg-type]
         tool_use_behavior=StopAtTools(stop_at_tool_names=[CLIENT_THEME_TOOL_NAME]),
+        model_settings=ModelSettings(**agent_record["model_settings"]),
     )
 
     logger.info(f"Agent created with tools: {agent.tools}")
