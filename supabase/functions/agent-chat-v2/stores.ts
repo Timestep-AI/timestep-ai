@@ -110,13 +110,26 @@ export class ChatKitDataStore implements Store<TContext> {
           : [],
       };
     } else if (item.type === 'client_tool_call') {
+      // Match Python: json.dumps(item.arguments) if isinstance(item.arguments, dict) else item.arguments
+      // isinstance(item.arguments, dict) is True only for dicts, not for arrays, None, etc.
+      const arguments_value = (item as any).arguments;
+      const serialized_arguments = (arguments_value && typeof arguments_value === 'object' && !Array.isArray(arguments_value) && arguments_value !== null)
+        ? JSON.stringify(arguments_value)
+        : arguments_value;
+      
+      // Match Python: json.dumps(item.output) if item.output and isinstance(item.output, dict) else item.output
+      const output_value = (item as any).output;
+      const serialized_output = (output_value && typeof output_value === 'object' && !Array.isArray(output_value) && output_value !== null)
+        ? JSON.stringify(output_value)
+        : output_value;
+      
       return {
         type: 'chatkit.client_tool_call',
         status: (item as any).status,
         call_id: (item as any).call_id,
         name: (item as any).name,
-        arguments: typeof (item as any).arguments === 'object' ? JSON.stringify((item as any).arguments) : (item as any).arguments,
-        output: (item as any).output && typeof (item as any).output === 'object' ? JSON.stringify((item as any).output) : (item as any).output,
+        arguments: serialized_arguments,
+        output: serialized_output,
       };
     } else {
       throw new Error(`Unsupported item type: ${item.type}`);
@@ -127,15 +140,25 @@ export class ChatKitDataStore implements Store<TContext> {
     const item_type = item_data.type;
     const item_id = item_data.id;
     const thread_id = item_data.thread_id;
-    const created_at = new Date(item_data.created_at * 1000);
+    // Match Python: datetime.fromtimestamp(item_data.get("created_at", time.time()))
+    const created_at = new Date((item_data.created_at || Date.now() / 1000) * 1000);
 
     if (item_type === 'chatkit.user_message') {
       const content = (item_data.content || [])
         .filter((p: any) => p?.type === 'input_text')
         .map((p: any) => ({ type: 'input_text', text: p.text }));
 
+      // Match Python: Reconstruct InferenceOptions from dict if present
       const inference_options_data = item_data.inference_options;
-      const inference_options = inference_options_data || {};
+      let inference_options: any = null;
+      if (inference_options_data) {
+        if (typeof inference_options_data === 'object' && !Array.isArray(inference_options_data)) {
+          // Match Python: InferenceOptions(**inference_options_data) - construct from dict
+          inference_options = inference_options_data;
+        } else {
+          inference_options = inference_options_data;
+        }
+      }
 
       return {
         type: 'user_message',
@@ -200,13 +223,14 @@ export class ChatKitDataStore implements Store<TContext> {
     const client = this._get_client(context);
 
     try {
+      // Match Python: Use OpenAI client to retrieve thread
       const thread = await client.beta.chatkit.threads.retrieve(thread_id);
+      // Match Python: return ThreadMetadata(id=thread.id, created_at=datetime.fromtimestamp(thread.created_at))
       return {
         id: thread.id,
-        title: 'New Chat',
         created_at: new Date(thread.created_at * 1000),
-        status: { type: 'active' },
-        metadata: {},
+        status: { type: 'active' } as const, // Match Python: ThreadMetadata defaults
+        metadata: {}, // Match Python: ThreadMetadata defaults
       };
     } catch (e: any) {
       if (e?.status === 404 || e?.message?.includes('404')) {
@@ -263,12 +287,12 @@ export class ChatKitDataStore implements Store<TContext> {
 
       const response = await client.beta.chatkit.threads.list(params);
 
+      // Match Python: ThreadMetadata(id=t.id, created_at=datetime.fromtimestamp(t.created_at))
       const threads = response.data.map((t: any) => ({
         id: t.id,
-        title: 'New Chat',
         created_at: new Date(t.created_at * 1000),
-        status: { type: 'active' },
-        metadata: {},
+        status: { type: 'active' } as const, // Match Python: ThreadMetadata defaults
+        metadata: {}, // Match Python: ThreadMetadata defaults
       }));
 
       return {
@@ -314,43 +338,29 @@ export class ChatKitDataStore implements Store<TContext> {
     }
   }
 
-  // Match Python: load_item is required
-  async load_item(thread_id: string, item_id: string, context?: TContext | null): Promise<ThreadItem> {
-    if (!context) throw new Error('Missing request context');
-
-    const client = this._get_client(context);
-
-    try {
-      // Load all items and find the one we need
-      // TODO: Implement a direct API call if available
-      const items = await this.load_thread_items(thread_id, null, 100, 'asc', context);
-      const item = items.data.find(i => i.id === item_id);
-      if (!item) {
-        throw new Error(`Item ${item_id} not found in thread ${thread_id}`);
-      }
-      return item;
-    } catch (e) {
-      throw new Error(`Failed to load item: ${e}`);
-    }
+  // Match Python: Stub methods required by Store interface (in same order as Python)
+  // Match Python: delete_attachment(self, attachment_id: str, context: TContext | None = None) -> None
+  async delete_attachment(_attachment_id: string, _context?: TContext | null): Promise<void> {
+    throw new Error('Attachments not yet supported');
   }
 
-  // Match Python: delete_thread is required
+  // Match Python: delete_thread(self, thread_id: str, context: TContext | None = None) -> None
   async delete_thread(_thread_id: string, _context?: TContext | null): Promise<void> {
     throw new Error('delete_thread not yet implemented');
   }
 
-  // Match Python: save_attachment is required
-  async save_attachment(_attachment: any, _context?: TContext | null): Promise<void> {
-    throw new Error('Attachments not yet supported');
-  }
-
-  // Match Python: load_attachment is required
+  // Match Python: load_attachment(self, attachment_id: str, context: TContext | None = None) -> bytes
   async load_attachment(_attachment_id: string, _context?: TContext | null): Promise<any> {
     throw new Error('Attachments not yet supported');
   }
 
-  // Match Python: delete_attachment is required in Store
-  async delete_attachment(_attachment_id: string, _context?: TContext | null): Promise<void> {
+  // Match Python: load_item raises NotImplementedError
+  async load_item(_thread_id: string, _item_id: string, _context?: TContext | null): Promise<ThreadItem> {
+    throw new Error('load_item not yet implemented');
+  }
+
+  // Match Python: save_attachment signature is (attachment_id: str, data: bytes, context: TContext | None = None)
+  async save_attachment(_attachment_id: string, _data: any, _context?: TContext | null): Promise<void> {
     throw new Error('Attachments not yet supported');
   }
 }
@@ -362,7 +372,18 @@ export class ChatKitAttachmentStore implements AttachmentStore<TContext> {
     throw new Error('Attachments not yet supported');
   }
 
-  generate_attachment_id(_mime_type: string, _context: TContext): string {
+  // Match Python: generate_attachment_id(context: Any = None) -> str
+  generate_attachment_id(_context?: TContext | null): string {
     return `attach_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+  }
+
+  // Match Python: load_attachment and save_attachment methods (even though not in AttachmentStore interface)
+  async load_attachment(_attachment_id: string, _context?: TContext | null): Promise<any> {
+    throw new Error('Attachments not yet supported');
+  }
+
+  // Match Python: save_attachment(attachment_id: str, data: bytes, context: Any = None) -> None
+  async save_attachment(_attachment_id: string, _data: any, _context?: TContext | null): Promise<void> {
+    throw new Error('Attachments not yet supported');
   }
 }
