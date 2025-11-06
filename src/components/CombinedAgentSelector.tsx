@@ -7,7 +7,7 @@ import {
   IonLabel,
 } from '@ionic/react';
 import type { BackendType } from '@/services/backendConfig';
-import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
+import type { AgentRecord } from '@/types/agent';
 
 interface CombinedAgentSelectorProps {
   backendType: BackendType;

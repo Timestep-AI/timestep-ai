@@ -159,7 +159,7 @@ timestep-ai/
 │
 ├── supabase/                     # Backend infrastructure
 │   ├── functions/               # Edge Functions (Deno runtime)
-│   │   ├── agent-chat/         # Main agent orchestration
+│   │   ├── agents/         # Main agent orchestration
 │   │   │   ├── index.ts        # Request router & handler
 │   │   │   ├── apis/           # HTTP API handlers
 │   │   │   ├── services/       # Business logic layer
@@ -431,9 +431,9 @@ All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 
 ## API Endpoints
 
-### Edge Function: agent-chat
+### Edge Function: agents
 
-**Base URL**: `{SUPABASE_URL}/functions/v1/agent-chat`
+**Base URL**: `{SUPABASE_URL}/functions/v1/agents`
 
 | Method | Path                               | Description                                   |
 | ------ | ---------------------------------- | --------------------------------------------- |
@@ -488,7 +488,7 @@ All tables enforce RLS policies:
 **Agent not responding**
 
 - Verify `OPENAI_API_KEY` is set in `supabase/config.toml`
-- Check edge function logs: `npx supabase functions logs agent-chat`
+- Check edge function logs: `npx supabase functions logs agents`
 
 **Database migration errors**
 

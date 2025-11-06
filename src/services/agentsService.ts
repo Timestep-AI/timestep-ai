@@ -1,5 +1,4 @@
-import { CreateAgentRequest, UpdateAgentRequest } from '@/types/agent';
-import type { AgentRecord } from '../../supabase/functions/agent-chat/stores/agents_store';
+import { CreateAgentRequest, UpdateAgentRequest, type AgentRecord } from '@/types/agent';
 import { supabase } from '@/integrations/supabase/client';
 import { getBackendBaseUrl } from './backendConfig';
 

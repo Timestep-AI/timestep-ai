@@ -89,11 +89,11 @@ jobs:
           enable_signup = true
           enable_anonymous_sign_ins = true
 
-          [functions.agent-chat]
+          [functions.agents]
           enabled = true
           verify_jwt = true
-          import_map = "./functions/agent-chat/deno.json"
-          entrypoint = "./functions/agent-chat/index.ts"
+          import_map = "./functions/agents/deno.json"
+          entrypoint = "./functions/agents/index.ts"
 
           [functions.mcp-env]
           enabled = true
@@ -274,11 +274,11 @@ jobs:
           enable_signup = true
           enable_anonymous_sign_ins = true
 
-          [functions.agent-chat]
+          [functions.agents]
           enabled = true
           verify_jwt = true
-          import_map = "./functions/agent-chat/deno.json"
-          entrypoint = "./functions/agent-chat/index.ts"
+          import_map = "./functions/agents/deno.json"
+          entrypoint = "./functions/agents/index.ts"
 
           [functions.mcp-env]
           enabled = true

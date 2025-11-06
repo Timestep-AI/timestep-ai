@@ -84,7 +84,7 @@ async function getAgentById(agentId: string, ctx: TContext): Promise<AgentRecord
       // Not found
       return null;
     }
-    console.error('[agent-chat-v2] Error fetching agent:', error);
+    console.error('[agents] Error fetching agent:', error);
     return null;
   }
   
@@ -129,7 +129,7 @@ async function ensureDefaultMcpServer(ctx: TContext): Promise<void> {
   
   // Ignore duplicate key errors (23505) - means another process created it
   if (error && error.code !== '23505') {
-    console.warn('[agent-chat-v2] Error creating default MCP server:', error);
+    console.warn('[agents] Error creating default MCP server:', error);
   }
 }
 
@@ -161,16 +161,16 @@ const switchTheme = tool({
   },
   strict: false, // Using JSON Schema directly, not Zod
   execute: ({ theme }: { theme: string }, ctx: { context?: AgentContext }) => {
-    console.log('[agent-chat-v2] switch_theme tool called with theme:', theme);
-    console.log('[agent-chat-v2] Context type:', typeof ctx, 'ctx:', ctx);
+    console.log('[agents] switch_theme tool called with theme:', theme);
+    console.log('[agents] Context type:', typeof ctx, 'ctx:', ctx);
     try {
       const requested = normalizeColorScheme(theme);
-      console.log('[agent-chat-v2] Normalized theme to:', requested);
+      console.log('[agents] Normalized theme to:', requested);
 
       // The tool receives a RunContext that wraps our AgentContext in the 'context' property
       const agentContext = ctx.context as AgentContext;
       if (!agentContext) {
-        console.error('[agent-chat-v2] No AgentContext found in RunContext');
+        console.error('[agents] No AgentContext found in RunContext');
         return null;
       }
 
@@ -178,10 +178,10 @@ const switchTheme = tool({
         name: CLIENT_THEME_TOOL_NAME,
         arguments: { theme: requested },
       };
-      console.log('[agent-chat-v2] Set client_tool_call:', agentContext.client_tool_call);
+      console.log('[agents] Set client_tool_call:', agentContext.client_tool_call);
       return { theme: requested };
     } catch (error) {
-      console.error('[agent-chat-v2] Failed to switch theme:', error);
+      console.error('[agents] Failed to switch theme:', error);
       return null;
     }
   },
@@ -221,7 +221,7 @@ You are an AI agent acting as a personal assistant.`,
     
     // Ignore duplicate key errors
     if (error && error.code !== '23505') {
-      console.warn('[agent-chat-v2] Error creating default Personal Assistant:', error);
+      console.warn('[agents] Error creating default Personal Assistant:', error);
     }
   }
   
@@ -244,7 +244,7 @@ You are an AI agent acting as a personal assistant.`,
     
     // Ignore duplicate key errors
     if (error && error.code !== '23505') {
-      console.warn('[agent-chat-v2] Error creating default Weather Assistant:', error);
+      console.warn('[agents] Error creating default Weather Assistant:', error);
     }
   }
 }
@@ -254,21 +254,21 @@ You are an AI agent acting as a personal assistant.`,
  * Matches Python implementation: queries agents table with RLS
  */
 async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
-  console.log('[agent-chat-v2] loadAgentFromDatabase called for agent:', agentId);
+  console.log('[agents] loadAgentFromDatabase called for agent:', agentId);
   if (!ctx.user_id) {
     throw new Error('user_id is required to load agents');
   }
 
-  console.log('[agent-chat-v2] Getting agent from database...');
+  console.log('[agents] Getting agent from database...');
   const agentRecord = await getAgentById(agentId, ctx);
-  console.log('[agent-chat-v2] Got agent record:', agentRecord ? 'found' : 'NOT FOUND');
+  console.log('[agents] Got agent record:', agentRecord ? 'found' : 'NOT FOUND');
   if (!agentRecord) {
     throw new Error(`Agent not found: ${agentId}`);
   }
 
   const tools = [switchTheme];
 
-  console.log(`[agent-chat-v2] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
+  console.log(`[agents] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
 
   const agent = new Agent({
     model: agentRecord.model,
@@ -278,7 +278,7 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
     toolUseBehavior: { stopAtToolNames: [CLIENT_THEME_TOOL_NAME] },
     modelSettings: agentRecord.model_settings as ModelSettings,
   });
-  console.log('[agent-chat-v2] Agent created:', agentRecord.name);
+  console.log('[agents] Agent created:', agentRecord.name);
 
   return agent;
 }
@@ -318,7 +318,7 @@ class MyChatKitServer extends ChatKitServer {
     input: UserMessageItem | null,
     context: TContext
   ): AsyncIterable<ThreadStreamEvent> {
-    console.log('[agent-chat-v2] respond() called for thread:', thread.id, 'agent:', context.agent_id);
+    console.log('[agents] respond() called for thread:', thread.id, 'agent:', context.agent_id);
     const agentContext = new AgentContext(thread, this.store, context);
 
     // NOTE: Removed early return for ClientToolCallItem
@@ -333,16 +333,16 @@ class MyChatKitServer extends ChatKitServer {
       throw new Error('agent_id is required in context');
     }
 
-    console.log('[agent-chat-v2] About to call loadAgentFromDatabase');
+    console.log('[agents] About to call loadAgentFromDatabase');
     const agent = await loadAgentFromDatabase(agent_id, context);
-    console.log('[agent-chat-v2] loadAgentFromDatabase returned successfully');
+    console.log('[agents] loadAgentFromDatabase returned successfully');
     
     // Create Conversations session bound to polyfill with per-request JWT
     const session = getSessionForThread(thread.id, context);
     
     // Convert input to agent format
     const agentInput = input ? await simpleToAgentInput(input) : [];
-    console.log(`[agent-chat-v2] agentInput:`, JSON.stringify(agentInput, null, 2));
+    console.log(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
     
     // When using session memory with list inputs, we need to provide a callback
     // that defines how to merge history items with new items.
@@ -534,13 +534,12 @@ class MyChatKitServer extends ChatKitServer {
       }
     };
     
-    console.log(`[agent-chat-v2] sessionInputCallback defined, type:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
+    console.log(`[agents] sessionInputCallback defined, type:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
     
     // Match Python: Runner.run_streamed(agent, agent_input, context=agent_context, session=session, run_config=run_config)
     // The session contains the OpenAI client configured to use the polyfill for conversation history
     // The Runner uses the multi-provider for actual model calls
     // Create Runner with multi-provider support
-    // Match agent-chat implementation - wire up multi-provider directly
     let runner: Runner;
     try {
       // Dynamically import multi-provider components only when needed
@@ -601,13 +600,13 @@ class MyChatKitServer extends ChatKitServer {
       // sessionInputCallback goes in run() options when using array input
       // Match Python: RunConfig(session_input_callback=session_input_callback, model_provider=model_provider)
       // Note: Only modelProvider goes in Runner constructor; sessionInputCallback goes in run() options
-      console.log(`[agent-chat-v2] Creating Runner with modelProvider in constructor RunConfig`);
+      console.log(`[agents] Creating Runner with modelProvider in constructor RunConfig`);
       runner = new Runner({
         modelProvider: modelProvider,
       } as any);
-      console.log(`[agent-chat-v2] Runner created`);
+      console.log(`[agents] Runner created`);
     } catch (error) {
-      console.error('[agent-chat-v2] Error creating Runner:', error);
+      console.error('[agents] Error creating Runner:', error);
       throw error;
     }
     
@@ -622,22 +621,22 @@ class MyChatKitServer extends ChatKitServer {
       // Match Python: Runner.run_streamed takes session separately and RunConfig
       // TypeScript library: sessionInputCallback goes in run() options (not RunConfig per docs)
       // Required when passing array input per docs: "provide a sessionInputCallback to merge them with stored history"
-      console.log(`[agent-chat-v2] About to call runner.run() with session:`, !!session, `agentInput length:`, agentInput.length);
-      console.log(`[agent-chat-v2] agentInput:`, JSON.stringify(agentInput, null, 2));
-      console.log(`[agent-chat-v2] sessionInputCallback defined:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
+      console.log(`[agents] About to call runner.run() with session:`, !!session, `agentInput length:`, agentInput.length);
+      console.log(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
+      console.log(`[agents] sessionInputCallback defined:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
       const result = await runner.run(agent, agentInput, {
         context: agentContext,
         stream: true,
         session: session,
         sessionInputCallback: sessionInputCallback as any, // Required for array input, not in RunConfig per TypeScript library
       } as any);
-      console.log(`[agent-chat-v2] runner.run() returned, result type:`, typeof result);
-      console.log(`[agent-chat-v2] result is AsyncIterable:`, result && typeof result[Symbol.asyncIterator] === 'function');
+      console.log(`[agents] runner.run() returned, result type:`, typeof result);
+      console.log(`[agents] result is AsyncIterable:`, result && typeof result[Symbol.asyncIterator] === 'function');
       
       // Log the input property of the result to see what the Runner actually received after preparation
       if (result && typeof result === 'object' && 'input' in result) {
         const resultInput = (result as any).input;
-        console.log(`[agent-chat-v2] result.input after Runner preparation:`, {
+        console.log(`[agents] result.input after Runner preparation:`, {
           length: Array.isArray(resultInput) ? resultInput.length : 'not array',
           type: typeof resultInput,
           isArray: Array.isArray(resultInput),
@@ -650,14 +649,14 @@ class MyChatKitServer extends ChatKitServer {
       // Python's stream_events() waits for _run_impl_task in finally block, ensuring background task completes
       // TypeScript's StreamedRunResult implements AsyncIterable directly, so we iterate it directly
       if (!result || typeof result !== 'object' || !(Symbol.asyncIterator in result)) {
-        throw new Error(`[agent-chat-v2] Result is not an AsyncIterable`);
+        throw new Error(`[agents] Result is not an AsyncIterable`);
       }
       const streamToIterate = result as AsyncIterable<any>;
       
       // Match Python: The session automatically saves items after the run completes
       // No need to manually save items - the Runner handles it
       let eventCount = 0;
-      console.log(`[agent-chat-v2] Starting to iterate streamAgentResponse...`);
+      console.log(`[agents] Starting to iterate streamAgentResponse...`);
       // Python's stream_events() actively pulls from _event_queue and waits for _run_impl_task in finally block
       // TypeScript's StreamedRunResult implements AsyncIterable directly - ReadableStream starts when we iterate
       // CRITICAL: When agentInput is empty but result.input has merged history, we MUST iterate
@@ -684,15 +683,15 @@ class MyChatKitServer extends ChatKitServer {
             const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
               ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
               : '';
-            console.log(`[agent-chat-v2] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            console.log(`[agents] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from a previous event)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                console.log(`[agent-chat-v2] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
+                console.log(`[agents] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
               } else {
-                console.error(`[agent-chat-v2] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
+                console.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
                 let itemTypeForId: string;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
@@ -703,10 +702,10 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = data_store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                console.log(`[agent-chat-v2] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
+                console.log(`[agents] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
               }
             } else {
-              console.log(`[agent-chat-v2] Item ${itemType} already has valid ID: ${originalId}`);
+              console.log(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
             }
           }
           
@@ -721,15 +720,15 @@ class MyChatKitServer extends ChatKitServer {
             const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
               ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
               : '';
-            console.log(`[agent-chat-v2] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            console.log(`[agents] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from thread.item.added)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                console.log(`[agent-chat-v2] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
+                console.log(`[agents] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
               } else {
-                console.error(`[agent-chat-v2] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
+                console.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
                 let itemTypeForId: string;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
@@ -740,10 +739,10 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = data_store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                console.log(`[agent-chat-v2] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
+                console.log(`[agents] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
               }
             } else {
-              console.log(`[agent-chat-v2] Item ${itemType} already has valid ID: ${originalId}`);
+              console.log(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
             }
           }
           
@@ -753,16 +752,16 @@ class MyChatKitServer extends ChatKitServer {
       
       for await (const event of fixChatKitEventIds(streamAgentResponse(agentContext, streamToIterate))) {
         eventCount++;
-        console.log(`[agent-chat-v2] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
+        console.log(`[agents] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
         yield event;
       }
-      console.log(`[agent-chat-v2] Stream ended after ${eventCount} events`);
+      console.log(`[agents] Stream ended after ${eventCount} events`);
       const isEmptyInput = Array.isArray(agentInput) ? agentInput.length === 0 : agentInput === "";
       if (eventCount === 0 && isEmptyInput) {
-        console.log(`[agent-chat-v2] WARNING: Empty stream with empty agentInput - Runner may not be generating response from history`);
+        console.log(`[agents] WARNING: Empty stream with empty agentInput - Runner may not be generating response from history`);
       }
     } catch (error) {
-      console.error('[agent-chat-v2] Error in runner.run():', error);
+      console.error('[agents] Error in runner.run():', error);
       throw error;
     }
   }
@@ -839,35 +838,35 @@ Deno.serve(async (request: Request) => {
     const chatkitMatch = path.match(/\/agents\/([^\/]+)\/chatkit/);
     if (chatkitMatch) {
       const agentId = chatkitMatch[1];
-      console.log('[agent-chat-v2] Processing chatkit request for agent:', agentId);
+      console.log('[agents] Processing chatkit request for agent:', agentId);
       // Build context with agent_id included
       const ctx = buildRequestContext(request, agentId);
-      console.log('[agent-chat-v2] Context built:', { user_id: ctx.user_id, agent_id: ctx.agent_id });
+      console.log('[agents] Context built:', { user_id: ctx.user_id, agent_id: ctx.agent_id });
       const body = new Uint8Array(await request.arrayBuffer());
-      console.log('[agent-chat-v2] Body received, calling server.process');
+      console.log('[agents] Body received, calling server.process');
       const result = await server.process(body, ctx);
-      console.log('[agent-chat-v2] server.process completed, result type:', result instanceof StreamingResult ? 'StreamingResult' : 'other');
+      console.log('[agents] server.process completed, result type:', result instanceof StreamingResult ? 'StreamingResult' : 'other');
       if (result instanceof StreamingResult) {
-        console.log('[agent-chat-v2] Creating ReadableStream from result.json_events');
+        console.log('[agents] Creating ReadableStream from result.json_events');
         // Convert AsyncIterable<Uint8Array> to ReadableStream
         const stream = new ReadableStream({
           async start(controller) {
-            console.log('[agent-chat-v2] ReadableStream start() called');
+            console.log('[agents] ReadableStream start() called');
             try {
-              console.log('[agent-chat-v2] Beginning to iterate through json_events');
+              console.log('[agents] Beginning to iterate through json_events');
               for await (const chunk of result.json_events) {
-                console.log('[agent-chat-v2] Got chunk from json_events, length:', chunk.length);
+                console.log('[agents] Got chunk from json_events, length:', chunk.length);
                 controller.enqueue(chunk);
               }
-              console.log('[agent-chat-v2] Finished iterating through json_events, closing stream');
+              console.log('[agents] Finished iterating through json_events, closing stream');
               controller.close();
             } catch (error) {
-              console.error('[agent-chat-v2] Error in ReadableStream:', error);
+              console.error('[agents] Error in ReadableStream:', error);
               controller.error(error);
             }
           },
         });
-        console.log('[agent-chat-v2] Returning Response with stream');
+        console.log('[agents] Returning Response with stream');
         return new Response(stream, {
           headers: {
             ...corsHeaders,
@@ -961,7 +960,7 @@ Deno.serve(async (request: Request) => {
           .order('created_at', { ascending: true });
 
         if (error) {
-          console.error('[agent-chat-v2] Error fetching agents:', error);
+          console.error('[agents] Error fetching agents:', error);
           throw new Error(`Failed to fetch agents: ${error.message}`);
         }
 
@@ -976,7 +975,7 @@ Deno.serve(async (request: Request) => {
           }
         );
       } catch (error) {
-        console.error('[agent-chat-v2] Error in /agents endpoint:', error);
+        console.error('[agents] Error in /agents endpoint:', error);
         return new Response(
           JSON.stringify({
             error: 'Failed to fetch agents',
@@ -995,7 +994,7 @@ Deno.serve(async (request: Request) => {
 
     // Default response for root path
     return new Response(
-      JSON.stringify({ message: 'agent-chat-v2 ChatKit Server' }),
+      JSON.stringify({ message: 'agents ChatKit Server' }),
       {
         status: 200,
         headers: {
@@ -1007,7 +1006,7 @@ Deno.serve(async (request: Request) => {
   } catch (e: unknown) {
     const msg = e && typeof e === 'object' && 'message' in e ? String((e as any).message) : String(e);
     const detail = e && typeof e === 'object' && 'stack' in e ? String((e as any).stack) : undefined;
-    console.error('Error in agent-chat-v2:', e);
+    console.error('Error in agents:', e);
     return new Response(
       JSON.stringify({
         error: msg,

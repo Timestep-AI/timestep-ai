@@ -41,8 +41,7 @@ export const getBackendBaseUrl = (backendType?: BackendType): string => {
   } else {
     // TypeScript backend (Supabase Edge Functions)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-    // return `${supabaseUrl}/functions/v1/agent-chat`;
-    return `${supabaseUrl}/functions/v1/agent-chat-v2`;
+    return `${supabaseUrl}/functions/v1/agents`;
   }
 };
 
