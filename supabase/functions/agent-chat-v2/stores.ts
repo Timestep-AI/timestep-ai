@@ -1,6 +1,7 @@
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { ThreadMetadata, ThreadItem, Page } from './chatkit/types.ts';
 import type { Store, AttachmentStore } from './chatkit/store.ts';
+import OpenAI from 'openai';
 
 export type TContext = {
   supabase: SupabaseClient;
@@ -9,163 +10,359 @@ export type TContext = {
   agent_id?: string | null;
 };
 
-function randomId(len = 6): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let out = '';
-  for (let i = 0; i < len; i++) out += chars[(Math.random() * chars.length) | 0];
-  return out;
-}
+/**
+ * ChatKit Data Store implementation using OpenAI ChatKit API via OpenAI client.
+ * This store calls the ChatKit API endpoints in the openai-polyfill edge function.
+ */
+export class ChatKitDataStore implements Store<TContext> {
+  private base_url: string;
 
-export class PostgresStore implements Store<TContext> {
+  constructor() {
+    // Point to our Supabase edge function that implements ChatKit API
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'http://127.0.0.1:54321';
+    this.base_url = `${supabaseUrl}/functions/v1/openai-polyfill`;
+  }
+
+  private _get_client(context: TContext | null): OpenAI {
+    const api_key = context?.user_jwt || 'dummy-key';
+    return new OpenAI({
+      apiKey: api_key,
+      baseURL: this.base_url,
+      defaultHeaders: {
+        'OpenAI-Beta': 'chatkit_beta=v1',
+      },
+    });
+  }
+
   static generate_thread_id(_context?: TContext | null): string {
-    // UUID v4 style simplified
-    return crypto.randomUUID();
+    return `cthr_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
   }
 
   generate_thread_id(context?: TContext | null): string {
-    return PostgresStore.generate_thread_id(context);
+    return ChatKitDataStore.generate_thread_id(context);
   }
 
-  generate_item_id(item_type: string, _thread: ThreadMetadata, _context?: TContext | null): string {
-    const ts = Date.now();
-    return `${item_type}_${ts}_${randomId()}`;
+  generate_item_id(_item_type: string, _thread: ThreadMetadata, _context?: TContext | null): string {
+    const timestamp = Date.now();
+    const random_str = crypto.randomUUID().replace(/-/g, '').substring(0, 6);
+    return `cthi_${timestamp}_${random_str}`;
   }
 
   async add_thread_item(thread_id: string, item: ThreadItem, context?: TContext | null): Promise<void> {
     if (!context) throw new Error('Missing request context');
-    if (!context.user_id) throw new Error("Missing user_id (supply 'x-user-id' header for anonymous users)");
+    if (!context.user_id) throw new Error('Missing user_id');
 
-    const supabase = context.supabase;
-    const { data: nextIdx, error: rpcErr } = await supabase.rpc('get_next_message_index', { p_thread_id: thread_id });
-    if (rpcErr) throw rpcErr;
-    const message_index = Number(nextIdx ?? 0);
+    const client = this._get_client(context);
 
-    let role = 'assistant';
-    let content = '';
-    if (item?.type === 'user_message') {
-      role = 'user';
-      content = Array.isArray(item.content)
-        ? item.content.map((p: any) => p?.text || '').join('\n')
-        : typeof item.content === 'string' ? item.content : '';
-    } else if (item?.type === 'assistant_message') {
-      role = 'assistant';
-      content = Array.isArray(item.content)
-        ? item.content.map((p: any) => p?.text || '').join('\n')
-        : typeof item.content === 'string' ? item.content : '';
-    } else {
-      content = JSON.stringify(item);
+    // CUSTOM: Ensure thread exists
+    try {
+      await client.post(`/chatkit/threads/${thread_id}/ensure`, { body: null });
+    } catch (e) {
+      throw new Error(`Failed to ensure thread: ${e}`);
     }
 
-    const payload = {
-      id: `msg_${Date.now()}_${randomId()}`,
-      thread_id,
-      user_id: context.user_id,
-      message_index,
-      role,
-      content,
-    };
-    const { error } = await supabase.from('thread_messages').insert(payload);
-    if (error) throw error;
+    // CUSTOM: Get next item index
+    let next_index: number;
+    try {
+      const result: any = await client.post(`/chatkit/threads/${thread_id}/next_index`, { body: null });
+      next_index = result.next_index;
+    } catch (e) {
+      throw new Error(`Failed to get next index: ${e}`);
+    }
+
+    // Serialize item to ChatKit format
+    const item_data = this._serialize_thread_item(item);
+
+    // CUSTOM: Add thread item
+    try {
+      await client.post(`/chatkit/threads/${thread_id}/items`, {
+        body: {
+          id: item.id,
+          created_at: Math.floor(item.created_at.getTime() / 1000),
+          type: item_data.type,
+          data: item_data,
+          item_index: next_index,
+        },
+      });
+    } catch (e) {
+      throw new Error(`Failed to add thread item: ${e}`);
+    }
+  }
+
+  private _serialize_thread_item(item: ThreadItem): any {
+    if (item.type === 'user_message') {
+      const result: any = {
+        type: 'chatkit.user_message',
+        content: Array.isArray(item.content)
+          ? item.content.filter((p: any) => p?.text).map((p: any) => ({ type: 'input_text', text: p.text }))
+          : [],
+        attachments: item.attachments || [],
+      };
+      if (item.inference_options) {
+        result.inference_options = item.inference_options;
+      }
+      return result;
+    } else if (item.type === 'assistant_message') {
+      return {
+        type: 'chatkit.assistant_message',
+        content: Array.isArray(item.content)
+          ? item.content.filter((p: any) => p?.text).map((p: any) => ({ type: 'output_text', text: p.text }))
+          : [],
+      };
+    } else if (item.type === 'client_tool_call') {
+      return {
+        type: 'chatkit.client_tool_call',
+        status: (item as any).status,
+        call_id: (item as any).call_id,
+        name: (item as any).name,
+        arguments: typeof (item as any).arguments === 'object' ? JSON.stringify((item as any).arguments) : (item as any).arguments,
+        output: (item as any).output && typeof (item as any).output === 'object' ? JSON.stringify((item as any).output) : (item as any).output,
+      };
+    } else {
+      throw new Error(`Unsupported item type: ${item.type}`);
+    }
+  }
+
+  private _deserialize_thread_item(item_data: any): ThreadItem {
+    const item_type = item_data.type;
+    const item_id = item_data.id;
+    const thread_id = item_data.thread_id;
+    const created_at = new Date(item_data.created_at * 1000);
+
+    if (item_type === 'chatkit.user_message') {
+      const content = (item_data.content || [])
+        .filter((p: any) => p?.type === 'input_text')
+        .map((p: any) => ({ type: 'input_text', text: p.text }));
+
+      const inference_options_data = item_data.inference_options;
+      const inference_options = inference_options_data || {};
+
+      return {
+        type: 'user_message',
+        id: item_id,
+        thread_id,
+        created_at,
+        content,
+        attachments: item_data.attachments || [],
+        quoted_text: null,
+        inference_options,
+      };
+    } else if (item_type === 'chatkit.assistant_message') {
+      const content = (item_data.content || [])
+        .filter((p: any) => p?.type === 'output_text')
+        .map((p: any) => ({ type: 'output_text', text: p.text }));
+
+      return {
+        type: 'assistant_message',
+        id: item_id,
+        thread_id,
+        created_at,
+        content,
+      };
+    } else if (item_type === 'chatkit.client_tool_call') {
+      let arguments_obj = item_data.arguments || '{}';
+      if (typeof arguments_obj === 'string') {
+        try {
+          arguments_obj = JSON.parse(arguments_obj);
+        } catch {
+          arguments_obj = {};
+        }
+      }
+
+      let output_obj = item_data.output;
+      if (output_obj && typeof output_obj === 'string') {
+        try {
+          output_obj = JSON.parse(output_obj);
+        } catch {
+          // keep as string
+        }
+      }
+
+      return {
+        type: 'client_tool_call',
+        id: item_id,
+        thread_id,
+        created_at,
+        status: item_data.status || 'pending',
+        call_id: item_data.call_id || '',
+        name: item_data.name || '',
+        arguments: arguments_obj,
+        output: output_obj,
+      } as any;
+    } else {
+      throw new Error(`Unsupported item type: ${item_type}`);
+    }
   }
 
   async load_thread(thread_id: string, context?: TContext | null): Promise<ThreadMetadata> {
     if (!context) throw new Error('Missing request context');
-    const supabase = context.supabase;
-    const { data, error } = await supabase
-      .from('threads')
-      .select('id, user_id, created_at, metadata')
-      .eq('id', thread_id)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) {
-      return { id: thread_id, title: 'New Chat', created_at: new Date(), status: { type: 'active' }, metadata: {} };
+
+    const client = this._get_client(context);
+
+    try {
+      const thread = await client.beta.chatkit.threads.retrieve(thread_id);
+      return {
+        id: thread.id,
+        title: 'New Chat',
+        created_at: new Date(thread.created_at * 1000),
+        status: { type: 'active' },
+        metadata: {},
+      };
+    } catch (e: any) {
+      if (e?.status === 404 || e?.message?.includes('404')) {
+        throw new Error('Thread not found');
+      }
+      throw e;
     }
-    const created = typeof data.created_at === 'number' ? new Date(data.created_at * 1000) : new Date();
-    const metadata = data.metadata || {};
-    return { id: data.id, title: metadata.title || 'New Chat', created_at: created, status: metadata.status || { type: 'active' }, metadata };
   }
 
   async load_thread_items(thread_id: string, after: string | null, limit: number, order: 'asc' | 'desc', context?: TContext | null): Promise<Page<ThreadItem>> {
     if (!context) throw new Error('Missing request context');
-    const supabase = context.supabase;
-    let q = supabase
-      .from('thread_messages')
-      .select('id, message_index, role, content, created_at')
-      .eq('thread_id', thread_id);
 
-    if (after !== null && after !== undefined) {
-      const afterIdx = Number(after);
-      if (order === 'asc') q = q.gt('message_index', afterIdx);
-      else q = q.lt('message_index', afterIdx);
-    }
+    const client = this._get_client(context);
 
-    const effectiveLimit = Math.max(1, Math.min(limit || 50, 200));
-    q = q.order('message_index', { ascending: order === 'asc' }).limit(effectiveLimit + 1);
-    const { data, error } = await q;
-    if (error) throw error;
-    const rows = data || [];
-    const has_more = rows.length > effectiveLimit;
-    const page = rows.slice(0, effectiveLimit);
-    const next_after = page.length ? String(page[page.length - 1].message_index) : null;
-
-    const items: ThreadItem[] = page.map((r) => {
-      const created = typeof r.created_at === 'number' ? new Date(r.created_at * 1000) : new Date();
-      if (r.role === 'user') {
-        return { type: 'user_message', id: r.id, thread_id, created_at: created, content: [{ type: 'input_text', text: r.content }], attachments: [], quoted_text: null, inference_options: {} };
+    try {
+      const params: any = {
+        limit,
+        order,
+      };
+      if (after) {
+        params.after = after;
       }
-      return { type: 'assistant_message', id: r.id, thread_id, created_at: created, content: [{ type: 'output_text', text: r.content }] };
-    });
 
-    return { data: items, has_more, after: next_after };
+      const response = await client.beta.chatkit.threads.listItems(thread_id, params);
+
+      const items = response.data.map((item: any) => this._deserialize_thread_item(item));
+
+      return {
+        data: items,
+        has_more: response.has_more,
+        after: response.last_id || null,
+      };
+    } catch (e: any) {
+      if (e?.status === 404 || e?.message?.includes('404')) {
+        throw new Error('Thread not found');
+      }
+      throw e;
+    }
   }
 
   async load_threads(limit: number, after: string | null, order: 'asc' | 'desc', context?: TContext | null): Promise<Page<ThreadMetadata>> {
     if (!context) throw new Error('Missing request context');
-    if (!context.user_id) throw new Error("Missing user_id (supply 'x-user-id' header for anonymous users)");
-    const supabase = context.supabase;
-    let q = supabase.from('threads').select('id, user_id, created_at, metadata').eq('user_id', context.user_id);
 
-    if (after !== null && after !== undefined) {
-      const afterTs = Number(after);
-      if (order === 'asc') q = q.gt('created_at', afterTs);
-      else q = q.lt('created_at', afterTs);
+    const client = this._get_client(context);
+
+    try {
+      const params: any = {
+        limit,
+        order,
+      };
+      if (after) {
+        params.after = after;
+      }
+
+      const response = await client.beta.chatkit.threads.list(params);
+
+      const threads = response.data.map((t: any) => ({
+        id: t.id,
+        title: 'New Chat',
+        created_at: new Date(t.created_at * 1000),
+        status: { type: 'active' },
+        metadata: {},
+      }));
+
+      return {
+        data: threads,
+        has_more: response.has_more,
+        after: response.last_id || null,
+      };
+    } catch (e) {
+      throw e;
     }
-
-    q = q.order('created_at', { ascending: order === 'asc' }).limit((limit || 20) + 1);
-    const { data, error } = await q;
-    if (error) throw error;
-    const rows = data || [];
-    const has_more = rows.length > (limit || 20);
-    const page = rows.slice(0, limit || 20);
-    const next_after = page.length ? String(page[page.length - 1].created_at) : null;
-
-    const out: ThreadMetadata[] = page.map((row) => {
-      const created = typeof row.created_at === 'number' ? new Date(row.created_at * 1000) : new Date();
-      const metadata = row.metadata || {};
-      return { id: row.id, title: metadata.title || 'New Chat', created_at: created, status: metadata.status || { type: 'active' }, metadata };
-    });
-    return { data: out, has_more, after: next_after };
   }
 
-  async save_thread(thread: ThreadMetadata, context?: TContext | null): Promise<void> {
+  async save_thread(_thread: ThreadMetadata, _context?: TContext | null): Promise<void> {
+    // Threads are auto-created when adding items
+  }
+
+  async save_item(thread_id: string, item: ThreadItem, context?: TContext | null): Promise<void> {
     if (!context) throw new Error('Missing request context');
-    if (!context.user_id) throw new Error("Missing user_id (supply 'x-user-id' header for anonymous users)");
-    const supabase = context.supabase;
-    const created_ts = Math.floor((thread.created_at instanceof Date ? thread.created_at : new Date()).getTime() / 1000);
-    const payload = { id: thread.id, user_id: context.user_id, created_at: created_ts, metadata: thread.metadata || {}, object: 'thread' } as any;
-    const { error } = await supabase.from('threads').upsert(payload);
-    if (error) throw error;
-  }
-}
 
-export class BlobStorageStore implements AttachmentStore<TContext> {
-  constructor(private data_store: Store<TContext>) {}
+    const client = this._get_client(context);
+    const item_data = this._serialize_thread_item(item);
+
+    // CUSTOM: Update thread item
+    try {
+      await client.put(`/chatkit/threads/${thread_id}/items/${item.id}`, {
+        body: { data: item_data },
+      });
+    } catch (e) {
+      throw new Error(`Failed to update thread item: ${e}`);
+    }
+  }
+
+  async delete_thread_item(thread_id: string, item_id: string, context?: TContext | null): Promise<void> {
+    if (!context) throw new Error('Missing request context');
+
+    const client = this._get_client(context);
+
+    // CUSTOM: Delete thread item
+    try {
+      await client.delete(`/chatkit/threads/${thread_id}/items/${item_id}`);
+    } catch (e) {
+      throw new Error(`Failed to delete thread item: ${e}`);
+    }
+  }
+
+  // Match Python: load_item is required
+  async load_item(thread_id: string, item_id: string, context?: TContext | null): Promise<ThreadItem> {
+    if (!context) throw new Error('Missing request context');
+
+    const client = this._get_client(context);
+
+    try {
+      // Load all items and find the one we need
+      // TODO: Implement a direct API call if available
+      const items = await this.load_thread_items(thread_id, null, 100, 'asc', context);
+      const item = items.data.find(i => i.id === item_id);
+      if (!item) {
+        throw new Error(`Item ${item_id} not found in thread ${thread_id}`);
+      }
+      return item;
+    } catch (e) {
+      throw new Error(`Failed to load item: ${e}`);
+    }
+  }
+
+  // Match Python: delete_thread is required
+  async delete_thread(_thread_id: string, _context?: TContext | null): Promise<void> {
+    throw new Error('delete_thread not yet implemented');
+  }
+
+  // Match Python: save_attachment is required
+  async save_attachment(_attachment: any, _context?: TContext | null): Promise<void> {
+    throw new Error('Attachments not yet supported');
+  }
+
+  // Match Python: load_attachment is required
+  async load_attachment(_attachment_id: string, _context?: TContext | null): Promise<any> {
+    throw new Error('Attachments not yet supported');
+  }
+
+  // Match Python: delete_attachment is required in Store
   async delete_attachment(_attachment_id: string, _context?: TContext | null): Promise<void> {
-    throw new Error('delete_attachment is not implemented');
-  }
-  generate_attachment_id(_mime_type: string, _context: TContext): string {
-    throw new Error('generate_attachment_id is not implemented');
+    throw new Error('Attachments not yet supported');
   }
 }
 
+export class ChatKitAttachmentStore implements AttachmentStore<TContext> {
+  constructor(private data_store: Store<TContext>) {}
 
+  async delete_attachment(_attachment_id: string, _context?: TContext | null): Promise<void> {
+    throw new Error('Attachments not yet supported');
+  }
+
+  generate_attachment_id(_mime_type: string, _context: TContext): string {
+    return `attach_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+  }
+}

@@ -1,10 +1,7 @@
+"""ChatKit Data Store implementation that uses OpenAI ChatKit API via OpenAI Python client."""
 from typing import Any
 from datetime import datetime
-import uuid
-import time
-import random
-import string
-import json
+import os
 
 from fastapi import HTTPException
 from chatkit.store import Store, AttachmentStore
@@ -13,18 +10,22 @@ from chatkit.types import (
     ThreadItem,
     UserMessageItem,
     AssistantMessageItem,
+    ClientToolCallItem,
     UserMessageTextContent,
     AssistantMessageContent,
     InferenceOptions,
     Page as ChatKitPage,
 )
+from openai import AsyncOpenAI
+
 
 class TContext(dict):
     """Request-scoped context passed through ChatKit and Store.
 
     Expected keys:
       - supabase: Client (RLS-aware; auth set with the user's JWT if provided)
-      - user_id: str | None (UUID string; for anonymous usage provide a stable client UUID)
+      - user_id: str | None (UUID string)
+      - user_jwt: str | None (JWT token for API authentication)
       - agent_id: str | None (optional agent ID from URL)
     """
     @property
@@ -39,325 +40,392 @@ class TContext(dict):
     @property
     def user_jwt(self) -> str | None:
         return self.get("user_jwt")
-    
+
     @property
     def agent_id(self) -> str | None:
         return self.get("agent_id")
 
-class StoreItemType:
-    pass
 
-def _parse_ts(value: Any) -> datetime:
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value)
-    if isinstance(value, str):
-        try:
-            if value.endswith("Z"):
-                value = value.replace("Z", "+00:00")
-            return datetime.fromisoformat(value)
-        except Exception:
-            return datetime.now()
-    return datetime.now()
+class ChatKitDataStore(Store):
+    """Store implementation using OpenAI ChatKit API."""
 
-class PostgresStore(Store):
+    def __init__(self):
+        """Initialize the ChatKit data store with OpenAI client."""
+        # Point to our Supabase edge function that implements ChatKit API
+        supabase_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+        self.base_url = f"{supabase_url}/functions/v1/openai-polyfill"
+
+    def _get_client(self, context: TContext | None) -> AsyncOpenAI:
+        """Get OpenAI client with proper authentication."""
+        api_key = context.user_jwt if context and context.user_jwt else "dummy-key"
+        return AsyncOpenAI(
+            api_key=api_key,
+            base_url=self.base_url,
+            default_headers={
+                "OpenAI-Beta": "chatkit_beta=v1",
+            }
+        )
+
     @staticmethod
     def generate_thread_id(context: TContext | None = None) -> str:
-        """Generate a new thread ID."""
-        return str(uuid.uuid4())
+        """Generate a new thread ID with chatkit prefix."""
+        import uuid
+        return f"cthr_{uuid.uuid4().hex[:12]}"
 
     def generate_item_id(
-        self, item_type: str | StoreItemType, thread: ThreadMetadata, context: TContext | None = None
+        self, item_type: str | Any, thread: ThreadMetadata, context: TContext | None = None
     ) -> str:
-        """Generate a unique item ID."""
-        # Convert item_type to string if it's not already
-        prefix = str(item_type) if isinstance(item_type, str) else "item"
-        timestamp = int(time.time() * 1000)  # milliseconds like JavaScript Date.now()
-        random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
-        return f"{prefix}_{timestamp}_{random_str}"
+        """Generate a unique item ID with chatkit prefix."""
+        import uuid
+        import time
+        timestamp = int(time.time() * 1000)
+        random_str = uuid.uuid4().hex[:6]
+        return f"cthi_{timestamp}_{random_str}"
 
     async def add_thread_item(
         self, thread_id: str, item: ThreadItem, context: TContext | None = None
     ) -> None:
-        """Add an item (message) to a thread."""
+        """Add an item to a thread using custom ChatKit API endpoints."""
         if context is None:
             raise HTTPException(status_code=400, detail="Missing request context")
         if not context.user_id:
-            raise HTTPException(status_code=400, detail="Missing user_id (supply 'x-user-id' header for anonymous users)")
+            raise HTTPException(status_code=400, detail="Missing user_id")
 
-        supabase = context.supabase
+        import httpx
 
-        # Get next message index via RPC to ensure ordering under concurrency
-        rpc_res = supabase.rpc("get_next_message_index", {"p_thread_id": thread_id}).execute()
-        if rpc_res.data is None:
-            raise HTTPException(status_code=500, detail="Failed to get next message index")
-        next_index = int(rpc_res.data)
+        client = self._get_client(context)
 
-        # Serialize ChatKit ThreadItem into (role, content) for DB
-        role = "assistant"
-        content = ""
-        if isinstance(item, UserMessageItem):
-            role = "user"
-            content = "\n".join(
-                part.text for part in item.content if isinstance(part, UserMessageTextContent)
+        # CUSTOM: Ensure thread exists
+        try:
+            await client.post(
+                f"/chatkit/threads/{thread_id}/ensure",
+                cast_to=httpx.Response,
             )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to ensure thread: {str(e)}")
+
+        # CUSTOM: Get next item index
+        try:
+            response = await client.post(
+                f"/chatkit/threads/{thread_id}/next_index",
+                cast_to=httpx.Response,
+            )
+            result = response.json()
+            next_index = result["next_index"]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get next index: {str(e)}")
+
+        # Serialize item to ChatKit format
+        item_data = self._serialize_thread_item(item)
+
+        # CUSTOM: Add thread item
+        try:
+            await client.post(
+                f"/chatkit/threads/{thread_id}/items",
+                cast_to=httpx.Response,
+                body={
+                    "id": item.id,
+                    "created_at": int(item.created_at.timestamp()),
+                    "type": item_data["type"],
+                    "data": item_data,
+                    "item_index": next_index,
+                },
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to add thread item: {str(e)}")
+
+    def _serialize_thread_item(self, item: ThreadItem) -> dict[str, Any]:
+        """Serialize a ThreadItem to ChatKit API format."""
+        import json
+
+        if isinstance(item, UserMessageItem):
+            result = {
+                "type": "chatkit.user_message",
+                "content": [
+                    {"type": "input_text", "text": part.text}
+                    for part in item.content
+                    if hasattr(part, "text")
+                ],
+                "attachments": item.attachments or [],
+            }
+            if item.inference_options:
+                # Convert InferenceOptions to dict for JSON serialization
+                if isinstance(item.inference_options, InferenceOptions):
+                    result["inference_options"] = item.inference_options.model_dump()
+                elif isinstance(item.inference_options, dict):
+                    result["inference_options"] = item.inference_options
+                else:
+                    result["inference_options"] = dict(item.inference_options)
+            return result
         elif isinstance(item, AssistantMessageItem):
-            role = "assistant"
-            content = "\n".join(
-                part.text for part in item.content if isinstance(part, AssistantMessageContent)
+            return {
+                "type": "chatkit.assistant_message",
+                "content": [
+                    {"type": "output_text", "text": part.text}
+                    for part in item.content
+                    if hasattr(part, "text")
+                ],
+            }
+        elif isinstance(item, ClientToolCallItem):
+            return {
+                "type": "chatkit.client_tool_call",
+                "status": item.status,
+                "call_id": item.call_id,
+                "name": item.name,
+                "arguments": json.dumps(item.arguments) if isinstance(item.arguments, dict) else item.arguments,
+                "output": json.dumps(item.output) if item.output and isinstance(item.output, dict) else item.output,
+            }
+        else:
+            raise ValueError(f"Unsupported item type: {type(item)}")
+
+    def _deserialize_thread_item(self, item_data: dict[str, Any]) -> ThreadItem:
+        """Deserialize ChatKit API format to ThreadItem."""
+        import json
+        import time
+
+        item_type = item_data.get("type")
+        item_id = item_data.get("id")
+        thread_id = item_data.get("thread_id")
+        created_at = datetime.fromtimestamp(item_data.get("created_at", time.time()))
+
+        if item_type == "chatkit.user_message":
+            content = [
+                UserMessageTextContent(type="input_text", text=part["text"])
+                for part in item_data.get("content", [])
+                if part.get("type") == "input_text"
+            ]
+            # Reconstruct InferenceOptions from dict if present
+            inference_options_data = item_data.get("inference_options")
+            inference_options = None
+            if inference_options_data:
+                if isinstance(inference_options_data, dict):
+                    inference_options = InferenceOptions(**inference_options_data)
+                elif isinstance(inference_options_data, InferenceOptions):
+                    inference_options = inference_options_data
+
+            return UserMessageItem(
+                id=item_id,
+                thread_id=thread_id,
+                created_at=created_at,
+                content=content,
+                attachments=item_data.get("attachments", []),
+                inference_options=inference_options,
+            )
+        elif item_type == "chatkit.assistant_message":
+            content = [
+                AssistantMessageContent(type="output_text", text=part["text"])
+                for part in item_data.get("content", [])
+                if part.get("type") == "output_text"
+            ]
+            return AssistantMessageItem(
+                id=item_id,
+                thread_id=thread_id,
+                created_at=created_at,
+                content=content,
+            )
+        elif item_type == "chatkit.client_tool_call":
+            arguments = item_data.get("arguments", "{}")
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments)
+                except:
+                    arguments = {}
+
+            output = item_data.get("output")
+            if output and isinstance(output, str):
+                try:
+                    output = json.loads(output)
+                except:
+                    pass
+
+            return ClientToolCallItem(
+                id=item_id,
+                thread_id=thread_id,
+                created_at=created_at,
+                status=item_data.get("status", "pending"),
+                call_id=item_data.get("call_id", ""),
+                name=item_data.get("name", ""),
+                arguments=arguments,
+                output=output,
             )
         else:
-            try:
-                content = json.dumps(item.model_dump(), default=str)
-            except Exception:
-                content = str(item)
-
-        insert_payload = {
-            "id": f"msg_{int(time.time()*1000)}_{''.join(random.choices(string.ascii_lowercase + string.digits, k=6))}",
-            "thread_id": thread_id,
-            "user_id": context.user_id,
-            "message_index": next_index,
-            "role": role,
-            "content": content,
-            # Optional fields left null by default: name, tool_calls, tool_call_id, file_id
-        }
-
-        supabase.table("thread_messages").insert(insert_payload).execute()
-
-    def delete_attachment(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("delete_attachment is not implemented")
-
-    def delete_thread(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("delete_thread is not implemented")
-
-    def delete_thread_item(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("delete_thread_item is not implemented")
-
-    def load_attachment(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("load_attachment is not implemented")
-
-    def load_item(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("load_item is not implemented")
+            raise ValueError(f"Unsupported item type: {item_type}")
 
     async def load_thread(
         self, thread_id: str, context: TContext | None = None
     ) -> ThreadMetadata:
-        """Load a thread by ID."""
+        """Load thread metadata via ChatKit API using OpenAI client."""
         if context is None:
             raise HTTPException(status_code=400, detail="Missing request context")
-        supabase = context.supabase
 
-        sel = (
-            supabase
-            .table("threads")
-            .select("id, user_id, created_at, metadata, object, vector_store_id, updated_at")
-            .eq("id", thread_id)
-            .limit(1)
-        ).execute()
-        rows = sel.data or []
-        if not rows:
-            # If not found, initialize a new thread metadata (not persisted yet)
+        client = self._get_client(context)
+
+        try:
+            # Use OpenAI client to retrieve thread
+            thread = await client.beta.chatkit.threads.retrieve(thread_id)
+
             return ThreadMetadata(
-                id=thread_id,
-                title="New Chat",
-                created_at=datetime.now(),
-                status={"type": "active"},
-                metadata={},
+                id=thread.id,
+                created_at=datetime.fromtimestamp(thread.created_at),
             )
-
-        row = rows[0]
-        created_at_ts = row.get("created_at")
-        created_dt = datetime.fromtimestamp(created_at_ts) if isinstance(created_at_ts, (int, float)) else datetime.now()
-        metadata = row.get("metadata") or {}
-        return ThreadMetadata(
-            id=row["id"],
-            title=metadata.get("title", "New Chat"),
-            created_at=created_dt,
-            status=metadata.get("status", {"type": "active"}),
-            metadata=metadata,
-        )
+        except Exception as e:
+            if "404" in str(e):
+                raise HTTPException(status_code=404, detail="Thread not found")
+            raise HTTPException(status_code=500, detail=str(e))
 
     async def load_thread_items(
-        self, thread_id: str, limit: int, after: str | None = None, order: str = "asc", context: TContext | None = None
+        self, thread_id: str, after: str | None, limit: int, order: str, context: TContext | None = None
     ) -> ChatKitPage[ThreadItem]:
-        """Load thread items (messages) with pagination."""
+        """Load thread items via ChatKit API using OpenAI client."""
         if context is None:
             raise HTTPException(status_code=400, detail="Missing request context")
-        supabase = context.supabase
 
-        q = (
-            supabase
-            .table("thread_messages")
-            .select("id, message_index, role, content, name, tool_calls, tool_call_id, file_id, created_at")
-            .eq("thread_id", thread_id)
-        )
+        client = self._get_client(context)
 
-        # Cursor-based on message_index
-        if after is not None:
-            try:
-                after_index = int(after)
-                if order == "asc":
-                    q = q.gt("message_index", after_index)
-                else:
-                    q = q.lt("message_index", after_index)
-            except ValueError:
-                pass
+        try:
+            # Use OpenAI client to list thread items
+            params = {
+                "limit": limit,
+                "order": order,
+            }
+            if after:
+                params["after"] = after
 
-        effective_limit = (limit or 50)  # guard against None
-        q = q.order("message_index", desc=(order != "asc")).limit(effective_limit + 1)
-        res = q.execute()
-        rows = res.data or []
-        has_more = len(rows) > effective_limit
-        rows = rows[:effective_limit]
-        next_after = str(rows[-1]["message_index"]) if rows else None
-
-        # Map DB rows to ChatKit ThreadItem models
-        items: list[ThreadItem] = []
-        for r in rows:
-            role = r.get("role")
-            item_id = r.get("id")
-            created_at = _parse_ts(r.get("created_at"))
-            text_content = (r.get("content") or "")
-
-            if role == "user":
-                items.append(
-                    UserMessageItem(
-                        id=item_id,
-                        thread_id=thread_id,
-                        created_at=created_at,
-                        content=[UserMessageTextContent(text=text_content)],
-                        attachments=[],
-                        quoted_text=None,
-                        inference_options=InferenceOptions(),
-                    )
-                )
-            elif role == "assistant":
-                items.append(
-                    AssistantMessageItem(
-                        id=item_id,
-                        thread_id=thread_id,
-                        created_at=created_at,
-                        content=[AssistantMessageContent(text=text_content)],
-                    )
-                )
-            else:
-                items.append(
-                    AssistantMessageItem(
-                        id=item_id,
-                        thread_id=thread_id,
-                        created_at=created_at,
-                        content=[AssistantMessageContent(text=text_content)],
-                    )
-                )
-
-        return ChatKitPage(data=items, has_more=has_more, after=next_after)
-
-    async def load_threads(
-        self, limit: int, after: str | None = None, order: str = "desc", context: TContext | None = None
-    ) -> ChatKitPage[ThreadMetadata]:
-        """Load threads with pagination. Returns a Page object."""
-        if context is None:
-            raise HTTPException(status_code=400, detail="Missing request context")
-        if not context.user_id:
-            # Require explicit user identity for listing to prevent anon from seeing all threads under permissive RLS
-            raise HTTPException(status_code=400, detail="Missing user_id (supply 'x-user-id' header for anonymous users)")
-
-        supabase = context.supabase
-        q = (
-            supabase
-            .table("threads")
-            .select("id, user_id, created_at, metadata, object, vector_store_id, updated_at")
-        ).eq("user_id", context.user_id)
-
-        if after is not None:
-            try:
-                after_ts = int(after)
-                if order == "asc":
-                    q = q.gt("created_at", after_ts)
-                else:
-                    q = q.lt("created_at", after_ts)
-            except ValueError:
-                pass
-
-        q = q.order("created_at", desc=(order != "asc")).limit(limit + 1)
-        res = q.execute()
-        rows = res.data or []
-        has_more = len(rows) > limit
-        rows = rows[:limit]
-        next_after = str(rows[-1]["created_at"]) if rows else None
-
-        # Map DB rows -> ThreadMetadata objects as expected by ChatKit
-        data: list[ThreadMetadata] = []
-        for row in rows:
-            created_at_ts = row.get("created_at")
-            created_dt = datetime.fromtimestamp(created_at_ts) if isinstance(created_at_ts, (int, float)) else datetime.now()
-            metadata = row.get("metadata") or {}
-            data.append(
-                ThreadMetadata(
-                    id=row["id"],
-                    title=metadata.get("title", "New Chat"),
-                    created_at=created_dt,
-                    status=metadata.get("status", {"type": "active"}),
-                    metadata=metadata,
-                )
+            response = await client.beta.chatkit.threads.list_items(
+                thread_id=thread_id,
+                **params
             )
 
-        return ChatKitPage(data=data, has_more=has_more, after=next_after)
+            # Convert response items to ThreadItem objects
+            items = [self._deserialize_thread_item(item.model_dump()) for item in response.data]
 
-    def save_attachment(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("save_attachment is not implemented")
+            return ChatKitPage(
+                data=items,
+                first_id=response.first_id,
+                last_id=response.last_id,
+                has_more=response.has_more,
+            )
+        except Exception as e:
+            if "404" in str(e):
+                raise HTTPException(status_code=404, detail="Thread not found")
+            raise HTTPException(status_code=500, detail=str(e))
 
-    def save_item(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("save_item is not implemented")
+    async def load_threads(
+        self, after: str | None, limit: int, order: str, context: TContext | None = None
+    ) -> ChatKitPage[ThreadMetadata]:
+        """Load threads via ChatKit API using OpenAI client."""
+        if context is None:
+            raise HTTPException(status_code=400, detail="Missing request context")
+
+        client = self._get_client(context)
+
+        try:
+            params = {
+                "limit": limit,
+                "order": order,
+            }
+            if after:
+                params["after"] = after
+
+            response = await client.beta.chatkit.threads.list(**params)
+
+            threads = [
+                ThreadMetadata(
+                    id=t.id,
+                    created_at=datetime.fromtimestamp(t.created_at),
+                )
+                for t in response.data
+            ]
+
+            return ChatKitPage(
+                data=threads,
+                first_id=response.first_id,
+                last_id=response.last_id,
+                has_more=response.has_more,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     async def save_thread(
         self, thread: ThreadMetadata, context: TContext | None = None
     ) -> None:
-        """Save or upsert a thread row."""
+        """Save thread metadata (threads are auto-created when adding items)."""
+        pass
+
+    async def save_item(
+        self, thread_id: str, item: ThreadItem, context: TContext | None = None
+    ) -> None:
+        """Update an existing thread item using custom ChatKit API endpoint."""
         if context is None:
             raise HTTPException(status_code=400, detail="Missing request context")
-        if not context.user_id:
-            raise HTTPException(status_code=400, detail="Missing user_id (supply 'x-user-id' header for anonymous users)")
 
-        supabase = context.supabase
-        created_ts = int(thread.created_at.timestamp()) if isinstance(thread.created_at, datetime) else int(time.time())
+        import httpx
 
-        payload = {
-            "id": thread.id,
-            "user_id": context.user_id,
-            "created_at": created_ts,
-            "metadata": thread.metadata or {},
-            "object": "thread",
-        }
+        client = self._get_client(context)
+        item_data = self._serialize_thread_item(item)
 
-        supabase.table("threads").upsert(payload).execute()
+        # CUSTOM: Update thread item
+        try:
+            await client.put(
+                f"/chatkit/threads/{thread_id}/items/{item.id}",
+                cast_to=httpx.Response,
+                body={"data": item_data},
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to update thread item: {str(e)}")
 
-class BlobStorageStore(AttachmentStore):
+    async def delete_thread_item(
+        self, thread_id: str, item_id: str, context: TContext | None = None
+    ) -> None:
+        """Delete a thread item using custom ChatKit API endpoint."""
+        if context is None:
+            raise HTTPException(status_code=400, detail="Missing request context")
+
+        import httpx
+
+        client = self._get_client(context)
+
+        # CUSTOM: Delete thread item
+        try:
+            await client.delete(
+                f"/chatkit/threads/{thread_id}/items/{item_id}",
+                cast_to=httpx.Response,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to delete thread item: {str(e)}")
+
+    # Stub methods required by Store interface
+    def delete_attachment(self, attachment_id: str, context: TContext | None = None) -> None:
+        raise NotImplementedError("Attachments not yet supported")
+
+    def delete_thread(self, thread_id: str, context: TContext | None = None) -> None:
+        raise NotImplementedError("delete_thread not yet implemented")
+
+    def load_attachment(self, attachment_id: str, context: TContext | None = None) -> bytes:
+        raise NotImplementedError("Attachments not yet supported")
+
+    def load_item(self, thread_id: str, item_id: str, context: TContext | None = None) -> ThreadItem:
+        raise NotImplementedError("load_item not yet implemented")
+
+    def save_attachment(self, attachment_id: str, data: bytes, context: TContext | None = None) -> None:
+        raise NotImplementedError("Attachments not yet supported")
+
+
+class ChatKitAttachmentStore(AttachmentStore):
+    """Attachment store implementation for ChatKit (not yet implemented)."""
+
     def __init__(self, data_store: Store):
         self.data_store = data_store
 
-    def delete_attachment(
-        self, *args: any, **kwargs: any
-    ) -> None:
-        raise NotImplementedError("delete_attachment is not implemented")
+    def delete_attachment(self, attachment_id: str, context: Any = None) -> None:
+        raise NotImplementedError("Attachments not yet supported")
 
-    def generate_attachment_id(
-        self, mime_type: str, context: TContext
-    ) -> str:
-        raise NotImplementedError("generate_attachment_id is not implemented")
+    def generate_attachment_id(self, context: Any = None) -> str:
+        import uuid
+        return f"attach_{uuid.uuid4().hex[:12]}"
 
+    def load_attachment(self, attachment_id: str, context: Any = None) -> bytes:
+        raise NotImplementedError("Attachments not yet supported")
+
+    def save_attachment(self, attachment_id: str, data: bytes, context: Any = None) -> None:
+        raise NotImplementedError("Attachments not yet supported")

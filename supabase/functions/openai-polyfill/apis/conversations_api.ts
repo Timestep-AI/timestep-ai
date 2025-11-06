@@ -12,10 +12,15 @@ export interface Conversation {
 
 export interface ConversationItem {
   id: string;
-  type: 'message';
-  role: 'user' | 'assistant' | 'system' | string;
-  content: string | { type: string; text?: string }[];
+  type: 'message' | 'function_call' | 'function_call_output';
+  role?: 'user' | 'assistant' | 'system' | string;
+  content?: string | { type: string; text?: string }[];
   created_at: number;
+  // Function call specific fields
+  call_id?: string;
+  name?: string;
+  arguments?: string | Record<string, any>;
+  output?: any;
 }
 
 interface UserStore {
@@ -268,20 +273,69 @@ export async function handleConversationsRequest(
     // Process each item
     const createdItems: ConversationItem[] = [];
     for (const itemInput of itemsToProcess) {
+      const itemType = itemInput?.type ?? 'message';
       const role = itemInput?.role ?? 'user';
-      const normalizedContent = toParts(itemInput?.content ?? '', role);
-      
-      const item: ConversationItem = {
-        id: genId('item'),
-        type: itemInput?.type ?? 'message',
-        role: role,
-        content: normalizedContent,
-        created_at: Math.floor(Date.now() / 1000),
-      };
-      
+
+      // Build the ConversationItem based on type
+      let item: ConversationItem;
+      let dbContent: any;
+
+      if (itemType === 'function_call') {
+        // Function call: store call_id, name, arguments in content field as structured data
+        item = {
+          id: genId('item'),
+          type: 'function_call',
+          created_at: Math.floor(Date.now() / 1000),
+          call_id: itemInput.call_id,
+          name: itemInput.name,
+          arguments: typeof itemInput.arguments === 'string' ? itemInput.arguments : JSON.stringify(itemInput.arguments ?? {}),
+        };
+        // Store all function_call data in content JSONB field
+        dbContent = {
+          call_id: item.call_id,
+          name: item.name,
+          arguments: item.arguments,
+          status: itemInput.status,
+        };
+      } else if (itemType === 'function_call_output') {
+        // Function call output: store call_id and output in content field
+        item = {
+          id: genId('item'),
+          type: 'function_call_output',
+          created_at: Math.floor(Date.now() / 1000),
+          call_id: itemInput.call_id,
+          output: itemInput.output,
+        };
+        // Store all function_call_output data in content JSONB field
+        dbContent = {
+          call_id: item.call_id,
+          output: item.output,
+          status: itemInput.status,
+        };
+      } else {
+        // Regular message: store content parts
+        const normalizedContent = toParts(itemInput?.content ?? '', role);
+        item = {
+          id: genId('item'),
+          type: 'message',
+          role: role,
+          content: normalizedContent,
+          created_at: Math.floor(Date.now() / 1000),
+        };
+        dbContent = normalizedContent;
+      }
+
       const { error } = await supabaseClient
         .from('conversation_items')
-        .insert({ id: item.id, conversation_id: convId, user_id: userId, created_at: item.created_at, type: item.type, role: item.role, content: item.content });
+        .insert({
+          id: item.id,
+          conversation_id: convId,
+          user_id: userId,
+          created_at: item.created_at,
+          type: item.type,
+          role: item.role ?? null,
+          content: dbContent
+        });
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
@@ -343,18 +397,44 @@ export async function handleConversationsRequest(
       .eq('conversation_id', convId);
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     let list = (itemsData || []) as any[];
-    
-    // Normalize content types based on role (assistant messages should use output_text, not input_text)
-    list = list.map((item: any) => {
-      if (item.role === 'assistant' && Array.isArray(item.content)) {
-        item.content = item.content.map((part: any) => {
-          if (part && typeof part === 'object' && part.type === 'input_text' && item.role === 'assistant') {
-            return { ...part, type: 'output_text' };
-          }
-          return part;
-        });
+
+    // Reconstruct items based on type
+    list = list.map((dbItem: any) => {
+      if (dbItem.type === 'function_call') {
+        // Reconstruct function_call item from content JSONB
+        const content = dbItem.content || {};
+        return {
+          id: dbItem.id,
+          type: 'function_call',
+          created_at: dbItem.created_at,
+          call_id: content.call_id,
+          name: content.name,
+          arguments: content.arguments,
+          status: content.status,
+        };
+      } else if (dbItem.type === 'function_call_output') {
+        // Reconstruct function_call_output item from content JSONB
+        const content = dbItem.content || {};
+        return {
+          id: dbItem.id,
+          type: 'function_call_output',
+          created_at: dbItem.created_at,
+          call_id: content.call_id,
+          output: content.output,
+          status: content.status,
+        };
+      } else {
+        // Regular message: normalize content types based on role
+        if (dbItem.role === 'assistant' && Array.isArray(dbItem.content)) {
+          dbItem.content = dbItem.content.map((part: any) => {
+            if (part && typeof part === 'object' && part.type === 'input_text') {
+              return { ...part, type: 'output_text' };
+            }
+            return part;
+          });
+        }
+        return dbItem;
       }
-      return item;
     });
     
     const url = new URL(req.url);
@@ -401,20 +481,44 @@ export async function handleConversationsRequest(
       .eq('id', itemId)
       .maybeSingle();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    
-    // Normalize content types based on role
+
+    // Reconstruct item based on type
+    let item: ConversationItem | undefined;
     if (data) {
-      if (data.role === 'assistant' && Array.isArray(data.content)) {
-        data.content = data.content.map((part: any) => {
-          if (part && typeof part === 'object' && part.type === 'input_text' && data.role === 'assistant') {
-            return { ...part, type: 'output_text' };
-          }
-          return part;
-        });
+      if (data.type === 'function_call') {
+        // Reconstruct function_call item from content JSONB
+        const content = data.content || {};
+        item = {
+          id: data.id,
+          type: 'function_call',
+          created_at: data.created_at,
+          call_id: content.call_id,
+          name: content.name,
+          arguments: content.arguments,
+        };
+      } else if (data.type === 'function_call_output') {
+        // Reconstruct function_call_output item from content JSONB
+        const content = data.content || {};
+        item = {
+          id: data.id,
+          type: 'function_call_output',
+          created_at: data.created_at,
+          call_id: content.call_id,
+          output: content.output,
+        };
+      } else {
+        // Regular message: normalize content types based on role
+        if (data.role === 'assistant' && Array.isArray(data.content)) {
+          data.content = data.content.map((part: any) => {
+            if (part && typeof part === 'object' && part.type === 'input_text') {
+              return { ...part, type: 'output_text' };
+            }
+            return part;
+          });
+        }
+        item = { id: data.id, created_at: data.created_at, type: data.type, role: data.role, content: data.content } as ConversationItem;
       }
     }
-    
-    const item = data ? ({ id: data.id, created_at: data.created_at, type: data.type, role: data.role, content: data.content } as ConversationItem) : undefined;
     if (!item) {
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,

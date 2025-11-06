@@ -264,8 +264,18 @@ class OllamaModel(Model):
         ollama_tools = []
         if tools:
             for tool in tools:
-                # Handle Tool objects or dicts
-                if hasattr(tool, 'type') and tool.type == 'function':
+                # Handle FunctionTool objects (from function_tool decorator)
+                if hasattr(tool, 'name') and hasattr(tool, 'params_json_schema'):
+                    ollama_tools.append({
+                        'type': 'function',
+                        'function': {
+                            'name': tool.name,
+                            'description': tool.description or '',
+                            'parameters': tool.params_json_schema or {},
+                        },
+                    })
+                # Handle Tool objects with type='function'
+                elif hasattr(tool, 'type') and tool.type == 'function':
                     ollama_tools.append({
                         'type': 'function',
                         'function': {
@@ -274,6 +284,7 @@ class OllamaModel(Model):
                             'parameters': tool.parameters or {},
                         },
                     })
+                # Handle dict-based tools
                 elif isinstance(tool, dict) and tool.get('type') == 'function':
                     ollama_tools.append({
                         'type': 'function',

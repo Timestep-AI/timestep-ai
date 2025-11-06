@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, TypedDict
+from typing import Any, AsyncIterator, TypedDict, Final
 import os
 import json
 import base64
@@ -7,15 +7,34 @@ from fastapi.responses import Response, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import logging
-from agents import Agent, Runner, RunConfig, OpenAIProvider
+from agents import Agent, Runner, RunConfig, OpenAIProvider, function_tool, RunContextWrapper, StopAtTools
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
-from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext
+from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext, ClientToolCall
 from chatkit.server import StreamingResult, ChatKitServer
-from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, UserMessageTextContent
+from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, UserMessageTextContent, ClientToolCallItem
 from chatkit.store import Store, AttachmentStore
 from supabase import create_client, Client
-from .stores import PostgresStore, BlobStorageStore, TContext
+from .stores import ChatKitDataStore, ChatKitAttachmentStore, TContext
+
+# Constants for theme switching
+SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
+CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
+
+def _normalize_color_scheme(value: str) -> str:
+    """Normalize color scheme input to 'light' or 'dark'."""
+    normalized = str(value).strip().lower()
+    if normalized in SUPPORTED_COLOR_SCHEMES:
+        return normalized
+    if "dark" in normalized:
+        return "dark"
+    if "light" in normalized:
+        return "light"
+    raise ValueError("Theme must be either 'light' or 'dark'.")
+
+def _is_tool_completion_item(item: Any) -> bool:
+    """Check if a thread item is a ClientToolCallItem."""
+    return isinstance(item, ClientToolCallItem)
 
 # Interface for agent record from database
 # Matches TypeScript AgentRecord interface
@@ -77,8 +96,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-data_store = PostgresStore()
-attachment_store = BlobStorageStore(data_store)
+data_store = ChatKitDataStore()
+attachment_store = ChatKitAttachmentStore(data_store)
 
 def _construct_supabase_db_url() -> str:
     """Construct Supabase database connection URL from available environment variables.
@@ -214,6 +233,28 @@ def ensure_default_mcp_server(ctx: TContext) -> None:
         if error_code != "23505":
             logger.warning(f"Error creating default MCP server: {insert_response.error}")
 
+@function_tool(
+    description_override="Switch the chat interface between light and dark color schemes."
+)
+async def switch_theme(
+    ctx: RunContextWrapper[AgentContext],
+    theme: str,
+) -> dict[str, str] | None:
+    """Switch the theme between light and dark mode.
+
+    This is a client tool that triggers a theme change in the frontend.
+    """
+    try:
+        requested = _normalize_color_scheme(theme)
+        ctx.context.client_tool_call = ClientToolCall(
+            name=CLIENT_THEME_TOOL_NAME,
+            arguments={"theme": requested},
+        )
+        return {"theme": requested}
+    except Exception:
+        logger.exception("Failed to switch theme")
+        return None
+
 def ensure_default_agents_exist(ctx: TContext) -> None:
     """Ensure default agents exist for the user.
     
@@ -284,26 +325,36 @@ You are an AI agent acting as a personal assistant.""",
 
 def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
     """Load an agent from the database by ID.
-    
+
     Matches TypeScript implementation: queries agents table with RLS.
     Returns an Agent configured with the database record's settings.
     """
     if not ctx.user_id:
         raise HTTPException(status_code=400, detail="user_id is required to load agents")
-    
+
     agent_record = get_agent_by_id(agent_id, ctx)
     if not agent_record:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
-    
+
     # Create Agent from database record
     # Use model from database, fallback to 'gpt-4o' if not set
-    model = agent_record.get("model") or "gpt-4o"
-    
-    return Agent[AgentContext](
+    model = agent_record.get("model") or "gpt-4o" # TODO: No fallbacks!
+
+    # Add client tools (like switch_theme) to all agents
+    tools = [switch_theme]
+
+    logger.info(f"Loading agent {agent_id} with model {model} and tools: {[t.__name__ if hasattr(t, '__name__') else str(t) for t in tools]}")
+
+    agent = Agent[AgentContext](
         model=model,
         name=agent_record.get("name", "Assistant"),
         instructions=agent_record.get("instructions", "You are a helpful assistant"),
+        tools=tools,  # type: ignore[arg-type]
+        tool_use_behavior=StopAtTools(stop_at_tool_names=[CLIENT_THEME_TOOL_NAME]),
     )
+
+    logger.info(f"Agent created with tools: {agent.tools}")
+    return agent
 
 def get_session_for_thread(thread_id: str, ctx: TContext) -> OpenAIConversationsSession:
     """Create or get an OpenAIConversationsSession for a given thread.
@@ -343,48 +394,138 @@ class MyChatKitServer(ChatKitServer):
             store=self.store,
             request_context=context,
         )
-        
+
+        # NOTE: Removed early return for ClientToolCallItem
+        # With StopAtTools, the agent naturally stops after calling the client tool,
+        # and should not continue until explicitly resumed. The early return was
+        # preventing the initial agent response from being generated.
+
         # Load agent from database using agent_id from context
         # agent_id is required - no fallbacks
         agent_id = context.get("agent_id")
         if not agent_id:
             raise HTTPException(status_code=400, detail="agent_id is required in context")
-        
+
         agent = load_agent_from_database(agent_id, context)
         
         # Create Conversations session bound to polyfill with per-request JWT
         session = get_session_for_thread(thread.id, context)
         
         # Convert input to agent format
+        logger.info(f"[python-respond] input is: {input}")
+        logger.info(f"[python-respond] input is None: {input is None}")
         agent_input = await simple_to_agent_input(input) if input else []
+        logger.info(f"[python-respond] agent_input after conversion: {agent_input}")
+        logger.info(f"[python-respond] agent_input length: {len(agent_input)}")
+        logger.info(f"[python-respond] agent_input type: {type(agent_input)}")
         
         # When using session memory with list inputs, we need to provide a callback
         # that defines how to merge history items with new items.
         # The session automatically saves items after the run completes.
         def session_input_callback(history_items, new_items):
             """Merge conversation history with new input items.
-            
+
             The session automatically:
             - Retrieves history_items from the conversation API before each run
             - Saves all items (user input + assistant responses) after each run
             This callback defines how to merge them and sanitizes items to remove
             fields that OpenAI doesn't accept (like created_at, id, type).
+
+            CRITICAL: ClientToolCallItems must be converted to function_call + function_call_output
+            format so the agent knows the tool was already called and can continue.
             """
+            logger.info(f"[session_input_callback] ===== CALLBACK INVOKED ===== (Python)")
+            logger.info(f"[session_input_callback] Called with {len(history_items)} history items and {len(new_items)} new items")
+            logger.info(f"[session_input_callback] History items: {history_items}")
+            logger.info(f"[session_input_callback] New items: {new_items}")
+            logger.info(f"[session_input_callback] New items length: {len(new_items)}")
+            logger.info(f"[session_input_callback] New items type: {type(new_items)}")
+
             def sanitize_item(item):
-                """Remove fields that OpenAI Responses API doesn't accept."""
+                """Remove fields that OpenAI Responses API doesn't accept.
+
+                IMPORTANT: function_call and function_call_output items must be preserved
+                with ALL their fields so the agent can see the complete tool call history.
+                """
                 if isinstance(item, dict):
+                    item_type = item.get("type")
+
+                    # Check if this is a ClientToolCallItem (type='client_tool_call')
+                    # These need special handling - must NOT be stripped to just role/content
+                    if item_type == "client_tool_call":
+                        logger.info(f"[session_input_callback] Found client_tool_call item: status={item.get('status')}, name={item.get('name')}")
+                        # Only include completed tool calls (skip pending ones)
+                        if item.get("status") == "completed":
+                            # Convert to the format the agent expects:
+                            # First the function_call, then the function_call_output
+                            result = [
+                                {
+                                    "type": "function_call",
+                                    "call_id": item.get("call_id"),
+                                    "name": item.get("name"),
+                                    "arguments": item.get("arguments", {}),
+                                },
+                                {
+                                    "type": "function_call_output",
+                                    "call_id": item.get("call_id"),
+                                    "output": item.get("output"),
+                                }
+                            ]
+                            logger.info(f"[session_input_callback] Converted completed client_tool_call to: {result}")
+                            return result
+                        else:
+                            # Pending tool calls should be filtered out
+                            logger.info(f"[session_input_callback] Filtering out pending client_tool_call")
+                            return None
+
+                    # If this is already a function_call or function_call_output from the
+                    # Conversations API, keep it as-is (don't strip fields!)
+                    if item_type == "function_call" or item_type == "function_call_output":
+                        logger.info(f"[session_input_callback] Preserving {item_type} item: {item}")
+                        # Remove extra fields that OpenAI doesn't accept, but keep the essential ones
+                        sanitized = {"type": item_type}
+                        if item_type == "function_call":
+                            sanitized["call_id"] = item.get("call_id")
+                            sanitized["name"] = item.get("name")
+                            sanitized["arguments"] = item.get("arguments", {})
+                        else:  # function_call_output
+                            sanitized["call_id"] = item.get("call_id")
+                            sanitized["output"] = item.get("output")
+                        return sanitized
+
+                    # For regular messages, keep only role and content
                     return {
                         "role": item.get("role"),
                         "content": item.get("content"),
                     }
                 return item
-            
+
             # Sanitize history items (they come from the conversation API with extra fields)
-            sanitized_history = [sanitize_item(item) for item in history_items]
+            sanitized_history = []
+            for item in history_items:
+                result = sanitize_item(item)
+                if result is not None:
+                    # sanitize_item can return a list (for client tool calls) or a dict
+                    if isinstance(result, list):
+                        sanitized_history.extend(result)
+                    else:
+                        sanitized_history.append(result)
+
             # New items should already be clean, but sanitize them too just in case
-            sanitized_new = [sanitize_item(item) for item in new_items]
-            
-            return sanitized_history + sanitized_new
+            sanitized_new = []
+            for item in new_items:
+                result = sanitize_item(item)
+                if result is not None:
+                    if isinstance(result, list):
+                        sanitized_new.extend(result)
+                    else:
+                        sanitized_new.append(result)
+
+            merged = sanitized_history + sanitized_new
+            logger.info(f"[session_input_callback] Returning {len(merged)} merged items: {merged}")
+            logger.info(f"[session_input_callback] Merged items length: {len(merged)}")
+            logger.info(f"[session_input_callback] Merged items type: {type(merged)}")
+            return merged
         
         # Create RunConfig with session_input_callback
         # Set up multi-provider support - match TypeScript implementation
@@ -443,6 +584,11 @@ class MyChatKitServer(ChatKitServer):
         )
         
         # Use the dynamically loaded agent instead of hardcoded self.assistant_agent
+        logger.info(f"[python-respond] About to call Runner.run_streamed with agent_input: {agent_input}")
+        logger.info(f"[python-respond] agent_input length: {len(agent_input)}")
+        logger.info(f"[python-respond] agent_input type: {type(agent_input)}")
+        logger.info(f"[python-respond] session is: {session}")
+        logger.info(f"[python-respond] run_config has session_input_callback: {run_config.session_input_callback is not None}")
         result = Runner.run_streamed(
             agent,
             agent_input,
@@ -450,6 +596,7 @@ class MyChatKitServer(ChatKitServer):
             session=session,
             run_config=run_config,
         )
+        logger.info(f"[python-respond] Runner.run_streamed returned, result type: {type(result)}")
         
         async for event in stream_agent_response(agent_context, result):
             yield event

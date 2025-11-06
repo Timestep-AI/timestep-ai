@@ -6,6 +6,7 @@ import { handleVectorStoresRequest } from './apis/vector_stores_api.ts';
 import { handleFilesRequest } from './apis/files_api.ts';
 import { handleUploadsRequest } from './apis/uploads_api.ts';
 import { handleConversationsRequest } from './apis/conversations_api.ts';
+import { handleChatKitRequest } from './apis/chatkit_api.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,12 +85,15 @@ serve(async (req) => {
     } else if (pathname.startsWith('/conversations')) {
       // Handle OpenAI Conversations API endpoints
       return await handleConversationsRequest(req, user.id, pathname, supabaseClient);
+    } else if (pathname.startsWith('/chatkit')) {
+      // Handle ChatKit API endpoints
+      return await handleChatKitRequest(req, supabaseClient, user.id, pathname);
     } else {
       // Return 404 for unknown endpoints
       return new Response(
         JSON.stringify({
           error:
-            'Endpoint not found. Available endpoints: /embeddings, /vector_stores, /uploads, /files',
+            'Endpoint not found. Available endpoints: /embeddings, /vector_stores, /uploads, /files, /chatkit',
         }),
         {
           status: 404,

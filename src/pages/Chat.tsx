@@ -205,6 +205,23 @@ const Chat = () => {
     onThreadChange: ({ threadId }) => {
       setCurrentThreadId(threadId);
     },
+    onClientTool: async (invocation) => {
+      if (invocation.name === "switch_theme") {
+        const requested = invocation.params.theme;
+        if (requested === "light" || requested === "dark") {
+          if (import.meta.env.DEV) {
+            console.debug("[Chat] switch_theme", requested);
+          }
+          setDarkMode(requested === "dark");
+          console.log("onClientTool; returning success: true");
+          return { success: true }; // TODO: do we need to return an id here?
+        }
+        console.log("onClientTool; returning success: false; case 1");
+        return { success: false };
+      }
+      console.log("onClientTool; returning success: false; case 2");
+      return { success: false };
+    },
     api: {
       url: chatKitUrl,
 
