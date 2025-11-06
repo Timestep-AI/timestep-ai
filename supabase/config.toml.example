@@ -6,7 +6,7 @@ enabled = true
 [edge_runtime.secrets]
 ANTHROPIC_API_KEY = "your-anthropic-api-key"
 # Default model for agents
-DEFAULT_AGENT_MODEL = "ollama/gpt-oss:120b-cloud"
+DEFAULT_AGENT_MODEL = "openai/gpt-4.1"
 # Add your Hugging Face token here for AI features
 HF_TOKEN = "your-huggingface-token"
 OLLAMA_API_KEY = "your-ollama-cloud-api-key"

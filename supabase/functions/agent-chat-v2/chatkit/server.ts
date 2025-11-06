@@ -444,7 +444,9 @@ export class ChatKitServer<TCtx = TContext> {
         const thread = await this.store.load_thread(req.params.thread_id, context);
         // Load recent items to find the pending client_tool_call
         // Match Python: items = await self.store.load_thread_items(thread.id, None, 1, "desc", context)
-        const items = await this.store.load_thread_items(thread.id, null, 1, 'desc', context);
+        // BUT: We need to load more items to find the pending tool call if an assistant message was saved after it
+        // Load DEFAULT_PAGE_SIZE items to find the pending tool call
+        const items = await this.store.load_thread_items(thread.id, null, DEFAULT_PAGE_SIZE, 'desc', context);
         // Match Python: tool_call = next((item for item in items.data if isinstance(item, ClientToolCallItem) and item.status == "pending"), None)
         const toolCall = items.data.find((item: ThreadItem) => {
           const typedItem = item as { type: string; status?: string };

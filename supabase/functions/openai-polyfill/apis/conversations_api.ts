@@ -439,11 +439,21 @@ export async function handleConversationsRequest(
     
     const url = new URL(req.url);
     const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10), 1), 100);
-    const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc';
+    // Match OpenAI spec: default order is 'desc' (line 6508 in openapi.documented.yml)
+    const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
     const after = url.searchParams.get('after');
     const before = url.searchParams.get('before');
 
-    let sorted = [...list].sort((a, b) => (order === 'asc' ? a.created_at - b.created_at : b.created_at - a.created_at));
+    // Sort by created_at, but use id as secondary sort key to ensure stable ordering
+    // This is critical because items inserted in the same second will have the same created_at,
+    // and JavaScript's sort() is not stable, which can cause function_call and function_call_output
+    // to be returned in the wrong order
+    let sorted = [...list].sort((a, b) => {
+      const timeDiff = order === 'asc' ? a.created_at - b.created_at : b.created_at - a.created_at;
+      if (timeDiff !== 0) return timeDiff;
+      // If timestamps are equal, sort by id to ensure stable ordering
+      return a.id.localeCompare(b.id);
+    });
     if (after) {
       const idx = sorted.findIndex((i) => i.id === after);
       if (idx >= 0) sorted = sorted.slice(idx + 1);

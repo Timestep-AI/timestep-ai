@@ -20,7 +20,7 @@ env:
   VITE_SUPABASE_URL: http://127.0.0.1:54321
   VITE_SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
   # Supabase edge function secrets
-  DEFAULT_AGENT_MODEL: ollama/gpt-oss:120b-cloud
+  DEFAULT_AGENT_MODEL: openai/gpt-4.1
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
   HF_TOKEN: ${{ secrets.HF_TOKEN }}

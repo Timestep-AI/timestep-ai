@@ -414,26 +414,47 @@ class MyChatKitServer extends ChatKitServer {
           }
         }
 
-        // If this is already a function_call or function_call_output from the
-        // Conversations API, keep it as-is (don't strip fields!)
-        // Match Python: if item_type == "function_call" or item_type == "function_call_output"
-        if (itemType === 'function_call' || itemType === 'function_call_output') {
-          console.log(`[session_input_callback] Preserving ${itemType} item:`, item);
+        // Handle function_call_result from Conversations API
+        // TypeScript Agents SDK accepts function_call_result and converts it to function_call_output internally
+        if (itemType === 'function_call_result') {
+          console.log(`[session_input_callback] Preserving function_call_result item:`, item);
+          // TypeScript Agents SDK expects function_call_result format (not function_call_output)
+          const sanitized: any = {
+            type: 'function_call_result',
+            // Support both camelCase (callId) and snake_case (call_id) from Conversations API
+            callId: item.callId || item.call_id,
+            output: item.output,
+            status: item.status,
+          };
+          return sanitized;
+        }
+
+        // If this is already a function_call from the Conversations API, keep it as-is
+        if (itemType === 'function_call') {
+          console.log(`[session_input_callback] Preserving function_call item:`, item);
           // Remove extra fields that OpenAI doesn't accept, but keep the essential ones
-          const sanitized: any = { type: itemType };
-          
-          if (itemType === 'function_call') {
-            // Match Python: sanitized["call_id"] = item.get("call_id")
-            sanitized.call_id = item.call_id;
-            sanitized.name = item.name;
-            // Match Python: sanitized["arguments"] = item.get("arguments", {})
-            sanitized.arguments = item.arguments || {};
-          } else {
-            // function_call_output
-            // Match Python: sanitized["call_id"] = item.get("call_id")
-            sanitized.call_id = item.call_id;
-            sanitized.output = item.output;
-          }
+          const sanitized: any = {
+            type: 'function_call',
+            // Support both camelCase (callId) and snake_case (call_id) from Conversations API
+            callId: item.callId || item.call_id,
+            name: item.name,
+            arguments: item.arguments || {},
+            status: item.status,
+          };
+          return sanitized;
+        }
+
+        // Convert function_call_output to function_call_result format
+        // TypeScript Agents SDK expects function_call_result (not function_call_output) in input
+        if (itemType === 'function_call_output') {
+          console.log(`[session_input_callback] Converting function_call_output to function_call_result:`, item);
+          const sanitized: any = {
+            type: 'function_call_result',
+            // Support both camelCase (callId) and snake_case (call_id) from Conversations API
+            callId: item.callId || item.call_id,
+            output: item.output,
+            status: item.status || 'completed',
+          };
           return sanitized;
         }
 
@@ -476,8 +497,44 @@ class MyChatKitServer extends ChatKitServer {
       }
 
       const merged = [...sanitizedHistory, ...sanitizedNew];
-      console.log(`[session_input_callback] Returning ${merged.length} merged items:`, merged);
-      return merged;
+      
+      // Sort items to ensure function_call always comes before function_call_result
+      // This is required by the Chat Completions API: tool messages must follow assistant messages with tool_calls
+      // The SDK converts function_call to assistant message with tool_calls, and function_call_result to tool message
+      // We need to ensure that for each callId, function_call comes before function_call_result
+      // NOTE: Both Python and TypeScript SDKs handle ordering the same way (accumulate tool calls, flush on output),
+      // but if items come from the Conversations API in the wrong order (function_call_result before function_call),
+      // the SDK will create a tool message without a corresponding assistant message with tool_calls, which violates
+      // the Chat Completions API. The Python version might not need this if history items are already in the correct
+      // order, but we need to sort items here to ensure they're in the correct order before passing them to the SDK.
+      // First, assign original indices to preserve order
+      const itemsWithIndices = merged.map((item, index) => ({ item, originalIndex: index }));
+      
+      const sorted = itemsWithIndices.sort((a, b) => {
+        const aItem = a.item;
+        const bItem = b.item;
+        const aType = aItem.type;
+        const bType = bItem.type;
+        const aCallId = aItem.callId || aItem.call_id;
+        const bCallId = bItem.callId || bItem.call_id;
+        
+        // If both items have the same callId, ensure function_call comes before function_call_result
+        if (aCallId && bCallId && aCallId === bCallId) {
+          if (aType === 'function_call' && bType === 'function_call_result') {
+            return -1; // function_call comes before function_call_result
+          }
+          if (aType === 'function_call_result' && bType === 'function_call') {
+            return 1; // function_call comes before function_call_result
+          }
+        }
+        
+        // Otherwise, preserve original order
+        return a.originalIndex - b.originalIndex;
+      });
+
+      const sortedItems = sorted.map(({ item }) => item);
+      console.log(`[session_input_callback] Returning ${sortedItems.length} merged items (sorted):`, sortedItems);
+      return sortedItems;
       } catch (error) {
         console.error(`[session_input_callback] ERROR in callback:`, error);
         throw error;
@@ -613,7 +670,95 @@ class MyChatKitServer extends ChatKitServer {
       // CRITICAL: When agentInput is empty but result.input has merged history, we MUST iterate
       // the stream to start the ReadableStream, which allows the stream loop to enqueue items
       // The stream loop runs asynchronously and enqueues items to #readableController when available
-      for await (const event of streamAgentResponse(agentContext, streamToIterate)) {
+      
+      // Wrap streamAgentResponse to fix __fake_id__ in thread.item.added and thread.item.done events
+      // CRITICAL: If items are saved with __fake_id__, they will overwrite each other due to PRIMARY KEY constraint
+      // CRITICAL: Both thread.item.added and thread.item.done must have the SAME ID so the frontend recognizes them as the same item
+      // This ensures ChatKit items have proper IDs (defense-in-depth - add_thread_item also fixes IDs)
+      async function* fixChatKitEventIds(events: AsyncIterable<ThreadStreamEvent>): AsyncIterable<ThreadStreamEvent> {
+        // Track IDs we've generated for items, so thread.item.added and thread.item.done use the same ID
+        const itemIdMap: Map<string, string> = new Map(); // Maps original __fake_id__ to generated ID
+        
+        for await (const event of events) {
+          // Fix __fake_id__ in thread.item.added events
+          if (event.type === 'thread.item.added' && (event as any).item) {
+            const item = (event as any).item;
+            const originalId = item.id || 'N/A';
+            const itemType = item.type || 'unknown';
+            const contentLength = item.content && Array.isArray(item.content) && item.content.length > 0
+              ? (item.content[0].text || '').length
+              : 0;
+            const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
+              ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
+              : '';
+            console.log(`[agent-chat-v2] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            
+            if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
+              // Check if we've already generated an ID for this item (from a previous event)
+              if (itemIdMap.has(originalId)) {
+                item.id = itemIdMap.get(originalId)!;
+                console.log(`[agent-chat-v2] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
+              } else {
+                console.error(`[agent-chat-v2] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
+                let itemTypeForId: string;
+                if (itemType === 'client_tool_call') {
+                  itemTypeForId = 'tool_call';
+                } else if (itemType === 'assistant_message' || itemType === 'user_message') {
+                  itemTypeForId = 'message';
+                } else {
+                  itemTypeForId = 'message'; // Default fallback
+                }
+                item.id = data_store.generate_item_id(itemTypeForId, thread, context);
+                itemIdMap.set(originalId, item.id);
+                console.log(`[agent-chat-v2] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
+              }
+            } else {
+              console.log(`[agent-chat-v2] Item ${itemType} already has valid ID: ${originalId}`);
+            }
+          }
+          
+          // Fix __fake_id__ in thread.item.done events before they're saved
+          if (event.type === 'thread.item.done' && (event as any).item) {
+            const item = (event as any).item;
+            const originalId = item.id || 'N/A';
+            const itemType = item.type || 'unknown';
+            const contentLength = item.content && Array.isArray(item.content) && item.content.length > 0
+              ? (item.content[0].text || '').length
+              : 0;
+            const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
+              ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
+              : '';
+            console.log(`[agent-chat-v2] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            
+            if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
+              // Check if we've already generated an ID for this item (from thread.item.added)
+              if (itemIdMap.has(originalId)) {
+                item.id = itemIdMap.get(originalId)!;
+                console.log(`[agent-chat-v2] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
+              } else {
+                console.error(`[agent-chat-v2] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
+                let itemTypeForId: string;
+                if (itemType === 'client_tool_call') {
+                  itemTypeForId = 'tool_call';
+                } else if (itemType === 'assistant_message' || itemType === 'user_message') {
+                  itemTypeForId = 'message';
+                } else {
+                  itemTypeForId = 'message'; // Default fallback
+                }
+                item.id = data_store.generate_item_id(itemTypeForId, thread, context);
+                itemIdMap.set(originalId, item.id);
+                console.log(`[agent-chat-v2] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
+              }
+            } else {
+              console.log(`[agent-chat-v2] Item ${itemType} already has valid ID: ${originalId}`);
+            }
+          }
+          
+          yield event;
+        }
+      }
+      
+      for await (const event of fixChatKitEventIds(streamAgentResponse(agentContext, streamToIterate))) {
         eventCount++;
         console.log(`[agent-chat-v2] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
         yield event;

@@ -2,6 +2,7 @@
 from typing import Any
 from datetime import datetime
 import os
+import logging
 
 from fastapi import HTTPException
 from chatkit.store import Store, AttachmentStore
@@ -17,6 +18,8 @@ from chatkit.types import (
     Page as ChatKitPage,
 )
 from openai import AsyncOpenAI
+
+logger = logging.getLogger(__name__)
 
 
 class TContext(dict):
@@ -90,6 +93,31 @@ class ChatKitDataStore(Store):
             raise HTTPException(status_code=400, detail="Missing request context")
         if not context.user_id:
             raise HTTPException(status_code=400, detail="Missing user_id")
+
+        item_id = item.id if hasattr(item, 'id') else 'N/A'
+        logger.info(f"[add_thread_item] Adding item to thread {thread_id}: type={item.type if hasattr(item, 'type') else type(item).__name__}, id={item_id}")
+        
+        # CRITICAL: Check if ID is invalid for any item type
+        # If items are saved with __fake_id__, they will overwrite each other due to PRIMARY KEY constraint
+        if item_id == '__fake_id__' or not item_id or item_id == 'N/A':
+            logger.error(f"[add_thread_item] WARNING: Item has invalid ID: {item_id}, type={item.type if hasattr(item, 'type') else type(item).__name__}")
+            # Generate a proper ID if missing
+            # Create a minimal ThreadMetadata for generate_item_id
+            thread_meta = ThreadMetadata(id=thread_id, created_at=datetime.now())
+            # Determine item type for ID generation
+            if isinstance(item, ClientToolCallItem):
+                item_type_for_id = "tool_call"
+                logger.info(f"[add_thread_item] ClientToolCallItem: status={item.status}, name={item.name}, call_id={item.call_id}")
+            elif isinstance(item, AssistantMessageItem):
+                item_type_for_id = "message"
+            elif isinstance(item, UserMessageItem):
+                item_type_for_id = "message"
+            else:
+                item_type_for_id = "message"  # Default fallback
+            item.id = self.generate_item_id(item_type_for_id, thread_meta, context)
+            logger.info(f"[add_thread_item] Generated new ID for item: {item.id}")
+        elif isinstance(item, ClientToolCallItem):
+            logger.info(f"[add_thread_item] ClientToolCallItem: status={item.status}, name={item.name}, call_id={item.call_id}, id={item_id}")
 
         import httpx
 

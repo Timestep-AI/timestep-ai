@@ -38,7 +38,15 @@ export class OllamaModelProvider implements ModelProvider {
   async #getClient(): Promise<any> {
     if (!this.#client) {
       // Dynamically import Ollama only when needed
-      const { Ollama } = await import('ollama');
+      let Ollama: any;
+      try {
+        const ollamaModule = await import('ollama');
+        Ollama = ollamaModule.Ollama;
+      } catch (error) {
+        throw new Error(
+          'ollama package is required. Install it with: npm install ollama'
+        );
+      }
 
       // Use Ollama Cloud URL if model name ends with "-cloud", otherwise use localhost
       const defaultHost = this.#currentModelName?.endsWith('-cloud')

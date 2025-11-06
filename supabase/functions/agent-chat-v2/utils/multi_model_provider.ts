@@ -73,7 +73,7 @@ export class MultiModelProvider implements ModelProvider {
       openai_use_responses?: boolean;
     } = {}
   ) {
-    /** Create a new OpenAI provider.
+    /** Create a new MultiModelProvider.
 
         Args:
             provider_map: A MultiModelProviderMap that maps prefixes to ModelProviders. If not provided,

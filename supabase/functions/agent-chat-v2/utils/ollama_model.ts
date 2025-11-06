@@ -143,7 +143,7 @@ export class OllamaModel implements Model {
               content: '',
               tool_calls: [
                 {
-                  id: item.callId,
+                  id: (item as any).callId || (item as any).call_id,
                   type: 'function',
                   function: {
                     name: item.name,
@@ -167,7 +167,7 @@ export class OllamaModel implements Model {
             return {
               role: 'tool',
               content: content,
-              tool_call_id: item.callId,
+              tool_call_id: (item as any).callId || (item as any).call_id,
             };
           } else if (item.role) {
             const msg: any = {
@@ -286,6 +286,18 @@ export class OllamaModel implements Model {
                 name: tool.name,
                 description: tool.description,
                 parameters: tool.parameters,
+              },
+            };
+          }
+          // Handle dict-based tools
+          if (typeof tool === 'object' && tool !== null && !Array.isArray(tool) && (tool as any).type === 'function') {
+            console.log('[ollama_model] Matched dict-based tool with type=function:', (tool as any).name);
+            return {
+              type: 'function',
+              function: {
+                name: (tool as any).name,
+                description: (tool as any).description || '',
+                parameters: (tool as any).parameters || {},
               },
             };
           }
@@ -426,7 +438,7 @@ export class OllamaModel implements Model {
             {
               type: 'output_text',
               text: content || '',
-              providerData: rest,
+              provider_data: rest, // Match Python: 'provider_data' (snake_case, line 420)
             },
           ],
           status: 'completed',
@@ -441,7 +453,7 @@ export class OllamaModel implements Model {
             {
               type: 'refusal',
               refusal: refusal || '',
-              providerData: rest,
+              provider_data: rest, // Match Python: 'provider_data' (snake_case, line 436)
             },
           ],
           status: 'completed',
@@ -456,9 +468,9 @@ export class OllamaModel implements Model {
               type: 'function_call',
               arguments: args,
               name: name,
-              callId: callId,
+              call_id: callId, // Match Python: 'call_id' (snake_case, line 454)
               status: 'completed',
-              providerData: {
+              provider_data: { // Match Python: 'provider_data' (snake_case, line 456)
                 ...remainingToolCallData,
                 ...remainingFunctionData,
               },
@@ -522,27 +534,14 @@ export class OllamaModel implements Model {
     span?: Span<any>,
     tracingEnabled?: boolean
   ): AsyncIterable<ResponseStreamEvent> {
+    // Match Python: Match Python implementation exactly - yield OpenAI Response API events
     let usage: any = undefined;
-    let started = false;
     let accumulatedText = '';
     const responseId = generateCompletionId();
+    // Generate a temporary item_id for streaming events (matches Python line 517)
+    const itemId = generateCompletionId();
 
     for await (const chunk of stream) {
-      if (!started) {
-        started = true;
-        // Yield response_started event in TypeScript SDK format
-        yield {
-          type: 'response_started',
-          providerData: chunk,
-        };
-      }
-
-      // Yield model event in TypeScript SDK format
-      yield {
-        type: 'model',
-        event: chunk,
-      };
-
       if (chunk.eval_count || chunk.prompt_eval_count) {
         usage = {
           prompt_tokens: chunk.prompt_eval_count || 0,
@@ -552,11 +551,16 @@ export class OllamaModel implements Model {
       }
 
       if (chunk.message && chunk.message.content) {
+        // Match Python: Yield ResponseTextDeltaEvent for streaming text (lines 529-537)
         yield {
-          type: 'output_text_delta',
+          type: 'response.output_text.delta',
+          item_id: itemId,
+          content_index: 0,
+          output_index: 0,
           delta: chunk.message.content,
-          providerData: chunk,
-        };
+          sequence_number: 1,
+          logprobs: [],
+        } as any;
         accumulatedText += chunk.message.content;
       }
 
@@ -568,82 +572,140 @@ export class OllamaModel implements Model {
                 ? tool_call.id
                 : generateToolCallId();
 
-            const functionCallEvent = {
-              type: 'response_done' as const,
-              response: {
-                id: responseId,
-                usage: {
-                  inputTokens: usage?.prompt_tokens ?? 0,
-                  outputTokens: usage?.completion_tokens ?? 0,
-                  totalTokens: usage?.total_tokens ?? 0,
-                  inputTokensDetails: { cached_tokens: 0 },
-                  outputTokensDetails: { reasoning_tokens: 0 },
-                },
-                output: [
-                  {
-                    id: responseId,
-                    type: 'function_call',
-                    arguments: JSON.stringify(tool_call.function.arguments),
-                    name: tool_call.function.name,
-                    callId: callId,
-                    status: 'completed' as const,
-                    providerData: tool_call,
-                  },
-                ],
-              },
+            // Match Python: Create output with tool call - use proper ResponseFunctionToolCall type (lines 550-556)
+            const toolCallOutputItem = {
+              id: responseId,
+              type: 'function_call',
+              call_id: callId,
+              name: tool_call.function.name,
+              arguments: JSON.stringify(tool_call.function.arguments || {}),
+            };
+
+            const toolCallOutput = [toolCallOutputItem];
+
+            // Match Python: Create ResponseUsage for tool (lines 559-567)
+            let responseUsageForTool: any = null;
+            if (usage) {
+              responseUsageForTool = {
+                input_tokens: usage.prompt_tokens || 0,
+                output_tokens: usage.completion_tokens || 0,
+                total_tokens: usage.total_tokens || 0,
+                input_tokens_details: { cached_tokens: 0 },
+                output_tokens_details: { reasoning_tokens: 0 },
+              };
+            }
+
+            // Match Python: Create Response object (lines 569-579)
+            const responseForTool = {
+              id: responseId,
+              created_at: Math.floor(Date.now() / 1000),
+              model: 'ollama',
+              object: 'response',
+              output: toolCallOutput,
+              parallel_tool_calls: false,
+              tool_choice: 'none',
+              tools: [],
+              usage: responseUsageForTool,
             };
 
             if (span && tracingEnabled === true) {
-              span.spanData.output = functionCallEvent.response.output;
+              span.spanData.output = toolCallOutput;
             }
 
-            yield functionCallEvent;
+            // Match Python: Yield ResponseCompletedEvent (lines 585-589)
+            yield {
+              type: 'response.completed',
+              response: responseForTool,
+              sequence_number: 1,
+            } as any;
             return;
           }
         }
       }
 
       if (chunk.done) {
-        const outputs: protocol.OutputModelItem[] = [];
+        const outputs: any[] = [];
 
         if (accumulatedText) {
-          outputs.push({
-            id: responseId,
+          // Match Python: Yield response.output_text.done event for chatkit (lines 597-605)
+          yield {
+            type: 'response.output_text.done',
+            item_id: itemId,
+            content_index: 0,
+            output_index: 0,
+            text: accumulatedText,
+            sequence_number: 1,
+            logprobs: [],
+          } as any;
+
+          // Match Python: Create proper ResponseOutputMessage with ResponseOutputText content (lines 608-620)
+          const outputText = {
+            type: 'output_text',
+            text: accumulatedText,
+            annotations: [],
+            logprobs: null,
+          };
+
+          const outputMessage = {
+            id: itemId, // Use item_id for message id to match deltas (matches Python line 615)
             type: 'message',
             role: 'assistant',
-            content: [
-              {
-                type: 'output_text',
-                text: accumulatedText,
-              },
-            ],
             status: 'completed',
-          });
+            content: [outputText],
+          };
+
+          outputs.push(outputMessage);
+
+          // Match Python: Yield response.output_item.added event for chatkit (needed before done) (lines 624-629)
+          yield {
+            type: 'response.output_item.added',
+            item: outputMessage,
+            output_index: 0,
+            sequence_number: 1,
+          } as any;
+
+          // Match Python: Yield response.output_item.done event for chatkit (lines 632-637)
+          yield {
+            type: 'response.output_item.done',
+            item: outputMessage,
+            output_index: 0,
+            sequence_number: 1,
+          } as any;
         }
 
         if (span && tracingEnabled === true) {
           span.spanData.output = outputs;
         }
 
-        // Yield response_done event in TypeScript SDK format
-        yield {
-          type: 'response_done' as const,
-          response: {
-            id: responseId,
-            usage: {
-              inputTokens: usage?.prompt_tokens ?? 0,
-              outputTokens: usage?.completion_tokens ?? 0,
-              totalTokens: usage?.total_tokens ?? 0,
-              inputTokensDetails: {
-                cached_tokens: 0,
-              },
-              outputTokensDetails: {
-                reasoning_tokens: 0,
-              },
-            },
-            output: outputs,
-          },
+        // Match Python: Yield ResponseCompletedEvent for agents library to extract final_response (lines 668-672)
+        let responseUsage: any = null;
+        if (usage) {
+          responseUsage = {
+            input_tokens: usage.prompt_tokens || 0,
+            output_tokens: usage.completion_tokens || 0,
+            total_tokens: usage.total_tokens || 0,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens_details: { reasoning_tokens: 0 },
+          };
+        }
+
+        const response = {
+          id: responseId,
+          created_at: Math.floor(Date.now() / 1000),
+          model: 'ollama',
+          object: 'response',
+          output: outputs,
+          parallel_tool_calls: false,
+          tool_choice: 'none',
+          tools: [],
+          usage: responseUsage,
         };
+
+        yield {
+          type: 'response.completed',
+          response: response,
+          sequence_number: 1,
+        } as any;
         break;
       }
     }

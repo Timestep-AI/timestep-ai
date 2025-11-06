@@ -212,6 +212,22 @@ async function addThreadItem(
     });
   }
 
+  // Check if item already exists (idempotent operation)
+  const { data: existingItem, error: checkError } = await supabaseClient
+    .from('chatkit_thread_items')
+    .select('id')
+    .eq('id', id)
+    .eq('thread_id', threadId)
+    .maybeSingle();
+
+  // If item exists, skip insert (idempotent operation)
+  if (existingItem && !checkError) {
+    return new Response(JSON.stringify({ success: true, id, skipped: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   // Insert the item
   const { error } = await supabaseClient
     .from('chatkit_thread_items')
@@ -226,6 +242,15 @@ async function addThreadItem(
     });
 
   if (error) {
+    // Check if error is a duplicate key violation (idempotent operation)
+    if (error.message?.includes('duplicate key') || error.code === '23505') {
+      // Item already exists - return success (idempotent operation)
+      return new Response(JSON.stringify({ success: true, id, skipped: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

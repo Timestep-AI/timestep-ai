@@ -12,8 +12,10 @@ from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
 from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext, ClientToolCall
 from chatkit.server import StreamingResult, ChatKitServer
-from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, UserMessageTextContent, ClientToolCallItem
+from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, UserMessageTextContent, ClientToolCallItem, ThreadsAddClientToolOutputReq, StreamingReq, ThreadItemDoneEvent, ThreadItemAddedEvent, AssistantMessageItem
+from datetime import datetime
 from chatkit.store import Store, AttachmentStore
+from chatkit.server import DEFAULT_PAGE_SIZE
 from supabase import create_client, Client
 from .stores import ChatKitDataStore, ChatKitAttachmentStore, TContext
 
@@ -383,6 +385,61 @@ class MyChatKitServer(ChatKitServer):
     ):
         super().__init__(data_store, attachment_store)
 
+    async def _process_streaming_impl(
+        self, request: StreamingReq, context: TContext
+    ) -> AsyncIterator[ThreadStreamEvent]:
+        # Override to fix threads.add_client_tool_output handler
+        # The library loads only 1 item, but we need to load more to find pending tool calls
+        # if an assistant message was saved after the tool call
+        
+        if isinstance(request, ThreadsAddClientToolOutputReq):
+            thread = await self.store.load_thread(
+                request.params.thread_id, context=context
+            )
+            # Load DEFAULT_PAGE_SIZE items instead of just 1 to find pending tool calls
+            items = await self.store.load_thread_items(
+                thread.id, None, DEFAULT_PAGE_SIZE, "desc", context
+            )
+            logger.info(f"[_process_streaming_impl] Loaded {len(items.data)} items for thread {thread.id}")
+            logger.info(f"[_process_streaming_impl] Item types: {[item.type if hasattr(item, 'type') else type(item).__name__ for item in items.data]}")
+            tool_call = next(
+                (
+                    item
+                    for item in items.data
+                    if isinstance(item, ClientToolCallItem)
+                    and item.status == "pending"
+                ),
+                None,
+            )
+            if not tool_call:
+                logger.error(f"[_process_streaming_impl] No pending ClientToolCallItem found in {len(items.data)} items")
+                logger.error(f"[_process_streaming_impl] Items: {items.data}")
+                raise ValueError(
+                    f"Last thread item in {thread.id} was not a ClientToolCallItem"
+                )
+
+            tool_call.output = request.params.result
+            tool_call.status = "completed"
+
+            await self.store.save_item(thread.id, tool_call, context=context)
+
+            # Safety against dangling pending tool calls if there are
+            # multiple in a row, which should be impossible, and
+            # integrations should ultimately filter out pending tool calls
+            # when creating input response messages.
+            await self._cleanup_pending_client_tool_call(thread, context)
+
+            async for event in self._process_events(
+                thread,
+                context,
+                lambda: self.respond(thread, None, context),
+            ):
+                yield event
+        else:
+            # For all other cases, use the parent's implementation
+            async for event in super()._process_streaming_impl(request, context):
+                yield event
+
     async def respond(
         self,
         thread: ThreadMetadata,
@@ -494,9 +551,55 @@ class MyChatKitServer(ChatKitServer):
                         return sanitized
 
                     # For regular messages, keep only role and content
+                    # But ensure content is properly formatted for the Agents SDK
+                    # For agent inputs, assistant messages should use input_text content (not output_text)
+                    role = item.get("role")
+                    content = item.get("content", [])
+                    
+                    if isinstance(content, list):
+                        # Convert content items to the format Agents SDK expects
+                        formatted_content = []
+                        for c in content:
+                            if isinstance(c, dict):
+                                # Convert output_text to input_text for assistant messages (agent inputs use input_text)
+                                content_type = c.get("type")
+                                if content_type == "output_text":
+                                    # Convert output_text to input_text for agent inputs
+                                    formatted_content.append({
+                                        "type": "input_text",
+                                        "text": c.get("text", ""),
+                                    })
+                                elif content_type == "input_text":
+                                    # Already correct format
+                                    formatted_content.append({
+                                        "type": "input_text",
+                                        "text": c.get("text", ""),
+                                    })
+                                elif "text" in c:
+                                    # Unknown type but has text, convert to input_text
+                                    formatted_content.append({
+                                        "type": "input_text",
+                                        "text": c.get("text", ""),
+                                    })
+                                else:
+                                    # Unknown format, try to preserve it
+                                    formatted_content.append(c)
+                            elif isinstance(c, str):
+                                # Plain string, wrap in input_text
+                                formatted_content.append({
+                                    "type": "input_text",
+                                    "text": c,
+                                })
+                            else:
+                                formatted_content.append(c)
+                        content = formatted_content
+                    elif isinstance(content, str):
+                        # Plain string, wrap in input_text array
+                        content = [{"type": "input_text", "text": content}]
+                    
                     return {
-                        "role": item.get("role"),
-                        "content": item.get("content"),
+                        "role": role,
+                        "content": content,
                     }
                 return item
 
@@ -598,7 +701,97 @@ class MyChatKitServer(ChatKitServer):
         )
         logger.info(f"[python-respond] Runner.run_streamed returned, result type: {type(result)}")
         
-        async for event in stream_agent_response(agent_context, result):
+        # Wrap stream_agent_response to fix __fake_id__ in ThreadItemAddedEvent and ThreadItemDoneEvent items
+        # CRITICAL: If items are saved with __fake_id__, they will overwrite each other due to PRIMARY KEY constraint
+        # CRITICAL: Both thread.item.added and thread.item.done must have the SAME ID so the frontend recognizes them as the same item
+        # This ensures ChatKit items have proper IDs (defense-in-depth - add_thread_item also fixes IDs)
+        async def fix_chatkit_event_ids(events):
+            event_count = 0
+            # Track IDs we've generated for items, so thread.item.added and thread.item.done use the same ID
+            item_id_map: dict[str, str] = {}  # Maps original __fake_id__ to generated ID
+            
+            async for event in events:
+                event_count += 1
+                event_type = event.type if hasattr(event, 'type') else type(event).__name__
+                logger.info(f"[python-respond] Event #{event_count}: {event_type}")
+                
+                # Fix __fake_id__ in ThreadItemAddedEvent items
+                if isinstance(event, ThreadItemAddedEvent) and hasattr(event, 'item'):
+                    item = event.item
+                    original_id = item.id if hasattr(item, 'id') else 'N/A'
+                    item_type = item.type if hasattr(item, 'type') else type(item).__name__
+                    content_preview = ""
+                    content_length = 0
+                    if isinstance(item, AssistantMessageItem) and item.content:
+                        # Get first 50 chars of content for logging
+                        first_content = item.content[0] if item.content else None
+                        if first_content and hasattr(first_content, 'text'):
+                            content_length = len(first_content.text)
+                            content_preview = first_content.text[:50] + "..." if len(first_content.text) > 50 else first_content.text
+                    logger.info(f"[python-respond] ThreadItemAddedEvent: type={item_type}, id={original_id}, content_length={content_length}, content_preview={content_preview}")
+                    
+                    if hasattr(item, 'id') and (item.id == '__fake_id__' or not item.id or item.id == 'N/A'):
+                        # Check if we've already generated an ID for this item (from a previous event)
+                        if original_id in item_id_map:
+                            item.id = item_id_map[original_id]
+                            logger.info(f"[python-respond] Reusing ID for ThreadItemAddedEvent: {original_id} -> {item.id}")
+                        else:
+                            logger.error(f"[python-respond] CRITICAL: Fixing __fake_id__ for {type(item).__name__} in ThreadItemAddedEvent (original_id={original_id})")
+                            thread_meta = ThreadMetadata(id=thread.id, created_at=datetime.now())
+                            if isinstance(item, ClientToolCallItem):
+                                item_type_for_id = "tool_call"
+                            elif isinstance(item, AssistantMessageItem):
+                                item_type_for_id = "message"
+                            elif isinstance(item, UserMessageItem):
+                                item_type_for_id = "message"
+                            else:
+                                item_type_for_id = "message"
+                            item.id = self.store.generate_item_id(item_type_for_id, thread_meta, context)
+                            item_id_map[original_id] = item.id
+                            logger.info(f"[python-respond] Fixed ID in ThreadItemAddedEvent: {original_id} -> {item.id}")
+                    else:
+                        logger.info(f"[python-respond] Item {type(item).__name__} already has valid ID: {original_id}")
+                
+                # Fix __fake_id__ in ThreadItemDoneEvent items before they're saved
+                if isinstance(event, ThreadItemDoneEvent) and hasattr(event, 'item'):
+                    item = event.item
+                    original_id = item.id if hasattr(item, 'id') else 'N/A'
+                    item_type = item.type if hasattr(item, 'type') else type(item).__name__
+                    content_preview = ""
+                    content_length = 0
+                    if isinstance(item, AssistantMessageItem) and item.content:
+                        # Get first 50 chars of content for logging
+                        first_content = item.content[0] if item.content else None
+                        if first_content and hasattr(first_content, 'text'):
+                            content_length = len(first_content.text)
+                            content_preview = first_content.text[:50] + "..." if len(first_content.text) > 50 else first_content.text
+                    logger.info(f"[python-respond] ThreadItemDoneEvent: type={item_type}, id={original_id}, content_length={content_length}, content_preview={content_preview}")
+                    
+                    if hasattr(item, 'id') and (item.id == '__fake_id__' or not item.id or item.id == 'N/A'):
+                        # Check if we've already generated an ID for this item (from thread.item.added)
+                        if original_id in item_id_map:
+                            item.id = item_id_map[original_id]
+                            logger.info(f"[python-respond] Reusing ID for ThreadItemDoneEvent: {original_id} -> {item.id}")
+                        else:
+                            logger.error(f"[python-respond] CRITICAL: Fixing __fake_id__ for {type(item).__name__} in ThreadItemDoneEvent (original_id={original_id})")
+                            thread_meta = ThreadMetadata(id=thread.id, created_at=datetime.now())
+                            if isinstance(item, ClientToolCallItem):
+                                item_type_for_id = "tool_call"
+                            elif isinstance(item, AssistantMessageItem):
+                                item_type_for_id = "message"
+                            elif isinstance(item, UserMessageItem):
+                                item_type_for_id = "message"
+                            else:
+                                item_type_for_id = "message"
+                            item.id = self.store.generate_item_id(item_type_for_id, thread_meta, context)
+                            item_id_map[original_id] = item.id
+                            logger.info(f"[python-respond] Fixed ID in ThreadItemDoneEvent: {original_id} -> {item.id}")
+                    else:
+                        logger.info(f"[python-respond] Item {type(item).__name__} already has valid ID: {original_id}")
+                yield event
+        
+        # Stream events with fixed IDs
+        async for event in fix_chatkit_event_ids(stream_agent_response(agent_context, result)):
             yield event
 
 server = MyChatKitServer(data_store, attachment_store)
