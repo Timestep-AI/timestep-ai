@@ -270,7 +270,19 @@ export class ChatKitServer<TCtx = TContext> {
       })());
     } else {
       const json = await this._process_non_streaming(req, context);
-      return new NonStreamingResult(encoder.encode(JSON.stringify(json)));
+      // Serialize with proper date handling (matches Python Pydantic model_dump_json behavior)
+      // Python's datetime serializes to ISO format without timezone: "2025-11-03T18:10:07.829180"
+      // NOT with Z timezone like JavaScript's toISOString(): "2025-11-04T02:07:12.171Z"
+      const serialized = JSON.stringify(json, (key, value) => {
+        // Convert Date objects to ISO strings without timezone (matching Python datetime.isoformat())
+        if (value instanceof Date) {
+          const iso = value.toISOString();
+          // Remove the 'Z' timezone suffix to match Python's datetime.isoformat()
+          return iso.replace('Z', '');
+        }
+        return value;
+      });
+      return new NonStreamingResult(encoder.encode(serialized));
     }
   }
 
@@ -292,7 +304,6 @@ export class ChatKitServer<TCtx = TContext> {
         return this._to_thread_response(thread);
       }
       case 'threads.list': {
-        // Match Python: params = request.params; limit=params.limit or DEFAULT_PAGE_SIZE (line 334-340)
         const params = req.params;
         const page = await this.store.load_threads(
           params.limit || DEFAULT_PAGE_SIZE,
@@ -506,23 +517,16 @@ export class ChatKitServer<TCtx = TContext> {
     } as UserMessageItem;
   }
 
-  // Match Python: _to_thread_response method (line 715-728)
   _to_thread_response(thread: ThreadMetadata | Thread): Thread {
-    // Match Python: items = thread.items if isinstance(thread, Thread) else Page()
+    const is_hidden = (item: ThreadItem) => item.type === 'hidden_context_item';
     const items = (thread as any).items || { data: [], has_more: false, after: null };
-    // Match Python: items.data = [item for item in items.data if not is_hidden(item)]
-    const filteredItems = {
-      ...items,
-      data: items.data.filter((item: ThreadItem) => item.type !== 'hidden_context_item'),
-    };
-    // Match Python: return Thread(id=..., title=..., created_at=..., items=..., status=...)
-    // Note: Python doesn't explicitly set metadata, so we don't either (it's inherited from ThreadMetadata)
-    return { 
-      id: thread.id, 
-      title: thread.title, 
-      created_at: thread.created_at, 
-      status: thread.status, 
-      items: filteredItems 
+    items.data = items.data.filter((item: ThreadItem) => !is_hidden(item));
+    return {
+      id: thread.id,
+      title: thread.title,
+      created_at: thread.created_at,
+      items: items,
+      status: thread.status,
     } as Thread;
   }
 
@@ -538,11 +542,8 @@ export class ChatKitServer<TCtx = TContext> {
   }
 
   protected async _load_full_thread(threadId: string, context: TCtx): Promise<Thread> {
-    // Match Python: thread_meta = await self.store.load_thread(...); items = await self.store.load_thread_items(..., limit=DEFAULT_PAGE_SIZE, ...) (line 685-694)
     const meta = await this.store.load_thread(threadId, context);
     const items = await this.store.load_thread_items(threadId, null, DEFAULT_PAGE_SIZE, 'asc', context);
-    // Match Python: return Thread(**thread_meta.model_dump(), items=thread_items)
-    // Note: model_dump() includes all fields including metadata, so we spread meta and add items
     return { ...meta, items } as unknown as Thread;
   }
 

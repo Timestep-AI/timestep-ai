@@ -3,8 +3,10 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import { agentsService } from '@/services/agentsService';
+import { threadsService } from '@/services/threadsService';
 import { getBackendType, setBackendType, getBackendBaseUrl, getChatKitUrl, type BackendType } from '@/services/backendConfig';
 import type { AgentRecord } from '@/types/agent';
+import type { ThreadMetadata } from '@/types/thread';
 import {
   IonPage,
   IonHeader,
@@ -25,6 +27,8 @@ const Chat = () => {
   const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [threads, setThreads] = useState<ThreadMetadata[]>([]);
+  const [loadingThreads, setLoadingThreads] = useState(false);
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -74,29 +78,36 @@ const Chat = () => {
     }
   };
 
-  // Load the most recent thread for the current user
-  const loadMostRecentThread = useCallback(async () => {
-    try {
-      const authHeaders = await getAuthHeaders();
-      const response = await fetch(`${getServerBaseUrl()}/threads/list?limit=1&order=desc`, {
-        method: 'GET',
-        headers: authHeaders,
-      });
+  // Load threads for the current agent
+  const loadThreads = useCallback(async (skipAutoSelect: boolean = false) => {
+    if (!selectedAgent) {
+      setThreads([]);
+      return;
+    }
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.data && data.data.length > 0) {
-          const mostRecentThread = data.data[0];
-          console.log('Loading most recent thread:', mostRecentThread.id);
-          setCurrentThreadId(mostRecentThread.id);
-          return mostRecentThread.id;
-        }
+    try {
+      setLoadingThreads(true);
+      const response = await threadsService.listThreads(backendType, 50);
+      setThreads(response.data);
+      
+      // Auto-select the most recent thread if available and no thread is selected
+      // Skip auto-selection if explicitly requested (e.g., when creating a new thread)
+      if (!skipAutoSelect) {
+        setCurrentThreadId((prevThreadId) => {
+          if (response.data.length > 0 && !prevThreadId) {
+            return response.data[0].id;
+          }
+          return prevThreadId;
+        });
       }
     } catch (error) {
-      console.error('Error loading most recent thread:', error);
+      console.error('Error loading threads:', error);
+      toast.error('Failed to load threads');
+      setThreads([]);
+    } finally {
+      setLoadingThreads(false);
     }
-    return null;
-  }, [backendType]);
+  }, [selectedAgent, backendType]);
 
   // Check for existing session or sign in anonymously on component mount
   useEffect(() => {
@@ -112,8 +123,6 @@ const Chat = () => {
           // We have a valid session, use it
           setIsAuthenticated(true);
           await loadAgents();
-          // Load the most recent thread to continue the conversation
-          await loadMostRecentThread();
         } else {
           // No valid session, sign in anonymously
           const { data, error } = await supabase.auth.signInAnonymously();
@@ -123,8 +132,6 @@ const Chat = () => {
           } else {
             setIsAuthenticated(true);
             await loadAgents();
-            // Load the most recent thread to continue the conversation
-            await loadMostRecentThread();
           }
         }
       } catch (error) {
@@ -151,14 +158,20 @@ const Chat = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadAgents, loadMostRecentThread]);
+  }, [loadAgents]);
 
-  // Load agent details when selected agent changes
+  // Load agent details and threads when selected agent changes
   useEffect(() => {
     if (selectedAgent?.id) {
       loadAgentDetails(selectedAgent.id);
+      // Reset thread selection when agent changes
+      setCurrentThreadId(null);
+      loadThreads();
+    } else {
+      setThreads([]);
+      setCurrentThreadId(null);
     }
-  }, [selectedAgent?.id]);
+  }, [selectedAgent?.id, loadThreads]);
 
   // Handle backend type change
   const handleBackendChange = (newBackendType: BackendType) => {
@@ -195,15 +208,31 @@ const Chat = () => {
     const agent = agents.find((a) => a.id === agentId);
     if (agent) {
       setSelectedAgent(agent);
+      // Reset thread when switching agents
+      setCurrentThreadId(null);
     }
   };
 
   // ChatKit configuration - use a generic agents endpoint and route dynamically
   const chatKitUrl = getChatKitUrl(backendType);
 
-  const { control } = useChatKit({
+  const chatKitHook = useChatKit({
     onThreadChange: ({ threadId }) => {
-      setCurrentThreadId(threadId);
+      // Update thread ID when ChatKit changes it (e.g., when a new message creates a thread)
+      setCurrentThreadId((prevThreadId) => {
+        // Only update if threadId actually changed (avoid infinite loops)
+        if (threadId !== prevThreadId) {
+          // Reload threads when a new thread is created, but don't auto-select
+          // since we're already on the new thread
+          if (threadId) {
+            setTimeout(() => {
+              loadThreads(true); // Skip auto-selection since we're already on this thread
+            }, 500);
+          }
+          return threadId;
+        }
+        return prevThreadId;
+      });
     },
     onClientTool: async (invocation) => {
       if (invocation.name === "switch_theme") {
@@ -268,25 +297,11 @@ const Chat = () => {
       placeholder: `Message your ${selectedAgent?.name} AI agent...`,
       // tools: [{ id: "rate", label: "Rate", icon: "star", pinned: true }],
     },
+    history: {
+      enabled: false, // Disable built-in history management
+    },
     header: {
-      leftAction: {
-        icon: 'sidebar-left',
-        onClick: async () => {
-          // Open the left settings menu
-          if (leftMenuRef.current) {
-            await leftMenuRef.current.open();
-          }
-        },
-      },
-      // rightAction: {
-      //   icon: 'sidebar-right',
-      //   onClick: async () => {
-      //     // Open the right menu
-      //     if (rightMenuRef.current) {
-      //       await rightMenuRef.current.open();
-      //     }
-      //   },
-      // },
+      enabled: false, // Disable built-in header to use our custom one
     },
     startScreen: {
       // greeting: selectedAgent ? `Welcome to Timestep AI! You're chatting with ${selectedAgent.name}` : "Welcome to Timestep AI!",
@@ -307,6 +322,35 @@ const Chat = () => {
       typography: { fontFamily: 'Open Sans, sans-serif' },
     },
   });
+
+  // Extract control and setThreadId from the hook
+  const { control, setThreadId } = chatKitHook;
+
+  // Handle thread switching
+  const handleThreadChange = (threadId: string | null) => {
+    // Just update state - the useEffect will handle calling setThreadId
+    setCurrentThreadId(threadId);
+  };
+
+  // Handle creating a new thread
+  const handleCreateNewThread = () => {
+    // Just update state - the useEffect will handle calling setThreadId
+    setCurrentThreadId(null);
+    // Reload threads to get the new one when it's created, but skip auto-selection
+    // so we don't automatically switch away from the new thread
+    setTimeout(() => {
+      loadThreads(true); // Skip auto-selection
+    }, 1000);
+  };
+
+  // Set initial thread when component mounts or thread changes
+  // Only call setThreadId when we have a valid thread ID (not null) or when explicitly setting to null for new thread
+  useEffect(() => {
+    if (setThreadId && currentThreadId !== undefined && selectedAgent) {
+      // Only set thread ID if we have a valid thread ID or explicitly want to create a new thread
+      setThreadId(currentThreadId);
+    }
+  }, [setThreadId, currentThreadId, selectedAgent]);
 
   if (!isAuthenticated || loadingAgents) {
     return (
@@ -368,8 +412,13 @@ const Chat = () => {
                 backendType={backendType}
                 selectedAgent={selectedAgent}
                 agents={agents}
+                threads={threads}
+                selectedThreadId={currentThreadId}
+                loadingThreads={loadingThreads}
                 onBackendChange={handleBackendChange}
                 onAgentChange={handleAgentChange}
+                onThreadChange={handleThreadChange}
+                onCreateNewThread={handleCreateNewThread}
               />
             </IonButtons>
             <IonTitle>Timestep AI</IonTitle>

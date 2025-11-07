@@ -907,7 +907,7 @@ Deno.serve(async (request: Request) => {
 
         return {
           id: t.id,
-          title: t.title || 'New Chat',
+          title: t.title,
           created_at: Math.floor((t.created_at instanceof Date ? t.created_at : new Date(t.created_at)).getTime() / 1000),
           status: statusValue,
           metadata: t.metadata || {},

@@ -241,7 +241,11 @@ class ChatKitDataStore(Store):
             )
         elif item_type == "chatkit.assistant_message":
             content = [
-                AssistantMessageContent(type="output_text", text=part["text"])
+                AssistantMessageContent(
+                    type="output_text",
+                    text=part.get("text", ""),
+                    annotations=part.get("annotations", []) if isinstance(part.get("annotations"), list) else []
+                )
                 for part in item_data.get("content", [])
                 if part.get("type") == "output_text"
             ]
