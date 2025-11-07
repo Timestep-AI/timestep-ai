@@ -53,8 +53,29 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv --version
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Sync Python dependencies
+        run: |
+          uv sync
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -137,6 +158,39 @@ jobs:
             exit 1
           fi
 
+      - name: Start Python backend server
+        run: |
+          # Start Python backend in background and save PID for cleanup
+          OLLAMA_API_KEY="$OLLAMA_API_KEY" \
+          OPENAI_API_KEY="$OPENAI_API_KEY" \
+          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+          SUPABASE_URL="$SUPABASE_URL" \
+          npm run dev:api &
+          PYTHON_API_PID=$!
+          echo "PYTHON_API_PID=$PYTHON_API_PID" >> $GITHUB_ENV
+
+          # Wait for the Python backend to be ready
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:8000/health > /dev/null 2>&1 || curl -f http://127.0.0.1:8000/docs > /dev/null 2>&1; then
+              echo "Python backend server is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Waiting for Python backend server..."
+            sleep 2
+          done
+
+          # Final check
+          if ! curl -f http://127.0.0.1:8000/docs > /dev/null 2>&1; then
+            echo "Python backend server failed to start properly"
+            kill $PYTHON_API_PID 2>/dev/null || true
+            exit 1
+          fi
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+
       - name: Start frontend development server
         run: |
           # Start server in background and save PID for cleanup
@@ -172,6 +226,14 @@ jobs:
           if [ ! -z "$SERVER_PID" ]; then
             echo "Stopping frontend development server (PID: $SERVER_PID)..."
             kill $SERVER_PID 2>/dev/null || true
+          fi
+
+      - name: Stop Python backend server
+        if: always()
+        run: |
+          if [ ! -z "$PYTHON_API_PID" ]; then
+            echo "Stopping Python backend server (PID: $PYTHON_API_PID)..."
+            kill $PYTHON_API_PID 2>/dev/null || true
           fi
 
       - name: Stop Supabase local development
@@ -238,8 +300,29 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv --version
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Sync Python dependencies
+        run: |
+          uv sync
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -322,6 +405,39 @@ jobs:
             exit 1
           fi
 
+      - name: Start Python backend server
+        run: |
+          # Start Python backend in background and save PID for cleanup
+          OLLAMA_API_KEY="$OLLAMA_API_KEY" \
+          OPENAI_API_KEY="$OPENAI_API_KEY" \
+          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+          SUPABASE_URL="$SUPABASE_URL" \
+          npm run dev:api &
+          PYTHON_API_PID=$!
+          echo "PYTHON_API_PID=$PYTHON_API_PID" >> $GITHUB_ENV
+
+          # Wait for the Python backend to be ready
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:8000/health > /dev/null 2>&1 || curl -f http://127.0.0.1:8000/docs > /dev/null 2>&1; then
+              echo "Python backend server is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Waiting for Python backend server..."
+            sleep 2
+          done
+
+          # Final check
+          if ! curl -f http://127.0.0.1:8000/docs > /dev/null 2>&1; then
+            echo "Python backend server failed to start properly"
+            kill $PYTHON_API_PID 2>/dev/null || true
+            exit 1
+          fi
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+
       - name: Start frontend development server
         run: |
           # Start server in background and save PID for cleanup
@@ -357,6 +473,14 @@ jobs:
           if [ ! -z "$SERVER_PID" ]; then
             echo "Stopping frontend development server (PID: $SERVER_PID)..."
             kill $SERVER_PID 2>/dev/null || true
+          fi
+
+      - name: Stop Python backend server
+        if: always()
+        run: |
+          if [ ! -z "$PYTHON_API_PID" ]; then
+            echo "Stopping Python backend server (PID: $PYTHON_API_PID)..."
+            kill $PYTHON_API_PID 2>/dev/null || true
           fi
 
       - name: Stop Supabase local development
