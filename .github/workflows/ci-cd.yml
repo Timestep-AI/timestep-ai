@@ -275,13 +275,23 @@ jobs:
       - name: Set Vercel Environment Variables (Preview)
         run: |
           # Set environment variables for preview deployments
-          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          # Remove existing variables first (ignore errors if they don't exist), then add new ones
+          vercel env rm VITE_SUPABASE_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm VITE_SUPABASE_ANON_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm VITE_PYTHON_BACKEND_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm DEFAULT_AGENT_MODEL preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm OPENAI_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm OLLAMA_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm HF_TOKEN preview --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          
+          # Add environment variables
+          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN preview --token ${{ secrets.VERCEL_TOKEN }}
         continue-on-error: true
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -550,13 +560,23 @@ jobs:
       - name: Set Vercel Environment Variables (Production)
         run: |
           # Set environment variables for production deployments
-          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
-          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          # Remove existing variables first (ignore errors if they don't exist), then add new ones
+          vercel env rm VITE_SUPABASE_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm VITE_SUPABASE_ANON_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm VITE_PYTHON_BACKEND_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm DEFAULT_AGENT_MODEL production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm OPENAI_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm OLLAMA_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          vercel env rm HF_TOKEN production --token ${{ secrets.VERCEL_TOKEN }} --yes 2>/dev/null || true
+          
+          # Add environment variables
+          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY production --token ${{ secrets.VERCEL_TOKEN }}
+          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN production --token ${{ secrets.VERCEL_TOKEN }}
         continue-on-error: true
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
