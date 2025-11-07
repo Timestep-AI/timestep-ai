@@ -16,7 +16,8 @@ env:
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  # Frontend environment variables
+  # Frontend environment variables (for CI testing only - localhost values)
+  # Production deployments use secrets via Vercel CLI
   VITE_SUPABASE_URL: http://127.0.0.1:54321
   VITE_SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
   # Supabase edge function secrets
@@ -256,8 +257,10 @@ jobs:
           supabase db push --linked --yes --include-all
           supabase functions deploy --project-ref $PROJECT_ID --yes
 
-      - name: Build application
+      - name: Build application (test build)
         run: npm run build
+        # Note: This build uses localhost values for CI testing
+        # Vercel will rebuild with production values during deployment
 
       - name: Install Vercel CLI
         run: npm install -g vercel
@@ -268,6 +271,7 @@ jobs:
             --scope ${{ secrets.VERCEL_ORG_ID }} \
             --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
             --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            --env VITE_PYTHON_BACKEND_URL="${{ secrets.VITE_PYTHON_BACKEND_URL }}" \
             --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
             --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
             --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \
@@ -513,8 +517,10 @@ jobs:
       - name: Deploy Supabase functions
         run: supabase functions deploy --project-ref $PROJECT_ID --yes
 
-      - name: Build application
+      - name: Build application (test build)
         run: npm run build
+        # Note: This build uses localhost values for CI testing
+        # Vercel will rebuild with production values during deployment
 
       - name: Install Vercel CLI
         run: npm install -g vercel
@@ -526,6 +532,7 @@ jobs:
             --prod \
             --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
             --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            --env VITE_PYTHON_BACKEND_URL="${{ secrets.VITE_PYTHON_BACKEND_URL }}" \
             --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
             --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
             --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \

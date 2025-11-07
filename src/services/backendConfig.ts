@@ -37,11 +37,28 @@ export const getBackendBaseUrl = (backendType?: BackendType): string => {
   const type = backendType || getBackendType();
   
   if (type === 'python') {
-    return 'http://127.0.0.1:8000';
+    // In production, require environment variable
+    if (import.meta.env.PROD) {
+      const pythonBackendUrl = import.meta.env.VITE_PYTHON_BACKEND_URL;
+      if (!pythonBackendUrl) {
+        throw new Error('VITE_PYTHON_BACKEND_URL environment variable is required in production');
+      }
+      return pythonBackendUrl;
+    }
+    // Development fallback
+    return import.meta.env.VITE_PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
   } else {
     // TypeScript backend (Supabase Edge Functions)
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-    return `${supabaseUrl}/functions/v1/agents`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (import.meta.env.PROD && !supabaseUrl) {
+      throw new Error('VITE_SUPABASE_URL environment variable is required in production');
+    }
+    // Use environment variable or development fallback
+    const url = supabaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:54321' : '');
+    if (!url) {
+      throw new Error('VITE_SUPABASE_URL environment variable is required');
+    }
+    return `${url}/functions/v1/agents`;
   }
 };
 
