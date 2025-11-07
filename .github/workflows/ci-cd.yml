@@ -265,17 +265,32 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Link Vercel Project
+        run: |
+          vercel link --yes --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope ${{ secrets.VERCEL_ORG_ID }} \
+            --project ${{ secrets.VERCEL_PROJECT_ID }}
+        continue-on-error: true
+
+      - name: Set Vercel Environment Variables (Preview)
+        run: |
+          # Set environment variables for preview deployments
+          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN preview --token ${{ secrets.VERCEL_TOKEN }} --yes
+        continue-on-error: true
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Deploy to Vercel Preview
         run: |
           vercel --yes --token ${{ secrets.VERCEL_TOKEN }} \
-            --scope ${{ secrets.VERCEL_ORG_ID }} \
-            --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
-            --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
-            --env VITE_PYTHON_BACKEND_URL="${{ secrets.VITE_PYTHON_BACKEND_URL }}" \
-            --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
-            --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-            --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \
-            --env HF_TOKEN="${{ secrets.HF_TOKEN }}"
+            --scope ${{ secrets.VERCEL_ORG_ID }}
 
   # Production deployment for main branch
   production:
@@ -525,18 +540,33 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Link Vercel Project
+        run: |
+          vercel link --yes --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope ${{ secrets.VERCEL_ORG_ID }} \
+            --project ${{ secrets.VERCEL_PROJECT_ID }}
+        continue-on-error: true
+
+      - name: Set Vercel Environment Variables (Production)
+        run: |
+          # Set environment variables for production deployments
+          echo "${{ secrets.VITE_SUPABASE_URL }}" | vercel env add VITE_SUPABASE_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.VITE_SUPABASE_ANON_KEY }}" | vercel env add VITE_SUPABASE_ANON_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.VITE_PYTHON_BACKEND_URL }}" | vercel env add VITE_PYTHON_BACKEND_URL production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.DEFAULT_AGENT_MODEL }}" | vercel env add DEFAULT_AGENT_MODEL production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.OPENAI_API_KEY }}" | vercel env add OPENAI_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.OLLAMA_API_KEY }}" | vercel env add OLLAMA_API_KEY production --token ${{ secrets.VERCEL_TOKEN }} --yes
+          echo "${{ secrets.HF_TOKEN }}" | vercel env add HF_TOKEN production --token ${{ secrets.VERCEL_TOKEN }} --yes
+        continue-on-error: true
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Deploy to Vercel Production
         run: |
           vercel --yes --token ${{ secrets.VERCEL_TOKEN }} \
             --scope ${{ secrets.VERCEL_ORG_ID }} \
-            --prod \
-            --env VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}" \
-            --env VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
-            --env VITE_PYTHON_BACKEND_URL="${{ secrets.VITE_PYTHON_BACKEND_URL }}" \
-            --env DEFAULT_AGENT_MODEL="${{ secrets.DEFAULT_AGENT_MODEL }}" \
-            --env OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-            --env OLLAMA_API_KEY="${{ secrets.OLLAMA_API_KEY }}" \
-            --env HF_TOKEN="${{ secrets.HF_TOKEN }}"
+            --prod
 
   # Cleanup preview branches when PR is closed
   cleanup:
