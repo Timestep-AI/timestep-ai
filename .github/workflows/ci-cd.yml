@@ -253,7 +253,7 @@ jobs:
       - name: Deploy to Supabase preview branch
         run: |
           echo "Deploying to Supabase preview branch..."
-          supabase db push --linked --yes
+          supabase db push --linked --yes --include-all
           supabase functions deploy --project-ref $PROJECT_ID --yes
 
       - name: Build application
@@ -503,7 +503,7 @@ jobs:
       - name: Run database migrations
         run: |
           echo "Applying migrations to production..."
-          supabase db push --linked --yes
+          supabase db push --linked --yes --include-all
 
       - name: Verify migrations were applied
         run: |
