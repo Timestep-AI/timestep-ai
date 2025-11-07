@@ -43,10 +43,12 @@ export const getBackendBaseUrl = (backendType?: BackendType): string => {
       if (!pythonBackendUrl) {
         throw new Error('VITE_PYTHON_BACKEND_URL environment variable is required in production');
       }
-      return pythonBackendUrl;
+      // Ensure it ends with /api/v1
+      return pythonBackendUrl.endsWith('/api/v1') ? pythonBackendUrl : `${pythonBackendUrl}/api/v1`;
     }
-    // Development fallback
-    return import.meta.env.VITE_PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
+    // Development fallback - use /api/v1 prefix
+    const devUrl = import.meta.env.VITE_PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
+    return devUrl.endsWith('/api/v1') ? devUrl : `${devUrl}/api/v1`;
   } else {
     // TypeScript backend (Supabase Edge Functions)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

@@ -52,7 +52,7 @@ class AgentRecord(TypedDict, total=False):
     created_at: str | None
     updated_at: str | None
 
-app = FastAPI()
+app = FastAPI(root_path="/api/v1")
 
 # Add CORS middleware to handle OPTIONS preflight requests
 # IMPORTANT: CORS middleware must be added before exception handlers
