@@ -1,6 +1,6 @@
 # Timestep AI
 
-A production-ready AI agent platform built with React, Supabase, and OpenAI's Agents SDK. This application demonstrates how to build sophisticated multi-agent systems with real-time streaming, conversation tracing, agent handoffs, and tool execution using the Model Context Protocol (MCP).
+A production-ready AI agent platform built with React, Supabase, and OpenAI's Agents SDK. This application demonstrates how to build sophisticated multi-agent systems with real-time streaming, conversation tracing, agent handoffs, and tool execution using the Model Context Protocol (MCP). The platform supports dual backend implementations (Python FastAPI and TypeScript/Deno Supabase Edge Functions) with seamless switching between them.
 
 ## Features
 
@@ -16,6 +16,8 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
 - **Conversation Tracing**: Track and visualize agent workflows, responses, and execution traces
 - **File Attachments**: Support for file uploads with vector store integration
 - **Real-time Chat**: Interactive chat interface powered by Ionic framework
+- **Dual Backend Support**: Switch between Python FastAPI and TypeScript/Deno Supabase Edge Functions backends
+- **Multi-Model Provider Support**: Support for OpenAI, Anthropic, Hugging Face, and Ollama models
 - **Supabase Backend**: Scalable backend with PostgreSQL database and edge functions
 - **Mobile Ready**: Built with Capacitor for iOS and Android deployment
 - **CI/CD Pipeline**: Automated deployment with GitHub Actions
@@ -35,27 +37,31 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
 
 ### Backend
 
-- **Platform**: Supabase (PostgreSQL, Edge Functions)
-- **Runtime**: Deno (Edge Functions)
+- **Platform**: Supabase (PostgreSQL, Edge Functions) and Python FastAPI
+- **Runtimes**: 
+  - Deno (Supabase Edge Functions - TypeScript)
+  - Python 3.11+ (FastAPI - Python)
 - **AI Framework**: OpenAI Agents SDK (@openai/agents-openai, @openai/agents-core)
+- **Model Providers**: OpenAI, Anthropic, Hugging Face (inference endpoints & providers), Ollama (local & cloud)
 - **Protocol**: Model Context Protocol (MCP)
 - **Database**: PostgreSQL with Row-Level Security (RLS)
 - **Authentication**: Supabase Auth (anonymous & authenticated users)
 
 ### DevOps & Testing
 
-- **E2E Testing**: Playwright
+- **E2E Testing**: Cucumber (Gherkin) with Playwright
 - **CI/CD**: GitHub Actions
 - **Linting**: ESLint, Prettier
 - **Mobile**: Capacitor (iOS & Android)
-- **Package Manager**: npm/bun
+- **Package Managers**: npm/bun (frontend), uv (Python backend)
 
 ## Prerequisites
 
 - Node.js 18+ and npm
+- Python 3.11+ and [uv](https://github.com/astral-sh/uv) (for Python backend)
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 - OpenAI API Key (for agent functionality)
-- Optional: Hugging Face token (for AI features)
+- Optional: Anthropic API Key, Hugging Face token, Ollama API Key (for additional model providers)
 
 ## Getting Started
 
@@ -68,8 +74,14 @@ cd timestep-ai
 
 ### 2. Install Dependencies
 
+**Frontend dependencies:**
 ```bash
 npm install
+```
+
+**Python backend dependencies (if using Python backend):**
+```bash
+uv sync
 ```
 
 ### 3. Configure Environment Variables
@@ -99,8 +111,22 @@ Edit `supabase/config.toml` and add your API keys:
 
 ```toml
 [edge_runtime.secrets]
+ANTHROPIC_API_KEY = "your-anthropic-api-key"
+DEFAULT_AGENT_MODEL = "openai/gpt-4.1"
 HF_TOKEN = "your-huggingface-token"
+OLLAMA_API_KEY = "your-ollama-cloud-api-key"
 OPENAI_API_KEY = "your-openai-api-key"
+```
+
+**For Python backend**, create a `.env` file in the `api/` directory (or set environment variables):
+
+```env
+OPENAI_API_KEY=your-openai-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key
+HF_TOKEN=your-huggingface-token
+OLLAMA_API_KEY=your-ollama-cloud-api-key
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 **Important**: Never commit `supabase/config.toml` to version control. It's already in `.gitignore`.
@@ -123,19 +149,34 @@ This creates all necessary tables (users, traces, responses, spans, etc.).
 
 ### 7. Start the Development Server
 
+**Start the frontend:**
 ```bash
 npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
 
-### 8. Start Supabase Edge Functions (Optional for Development)
+### 8. Start Backend (Choose One)
+
+**Option A: TypeScript/Deno Backend (Supabase Edge Functions)**
 
 In a separate terminal:
-
 ```bash
 npx supabase functions serve
 ```
+
+**Option B: Python Backend (FastAPI)**
+
+In a separate terminal:
+```bash
+npm run dev:api
+# or
+uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The Python backend will be available at `http://127.0.0.1:8000`.
+
+**Note**: You can switch between backends using the backend selector in the UI. The frontend defaults to the TypeScript backend but can be configured to use the Python backend.
 
 ## Project Structure
 
@@ -145,27 +186,40 @@ timestep-ai/
 │   ├── App.tsx                  # Root component with routing
 │   ├── main.tsx                 # React entry point
 │   ├── components/              # Reusable React components
+│   │   ├── CombinedAgentSelector.tsx  # Agent/thread selector
 │   │   └── SidebarMenu.tsx     # Agent settings sidebar
 │   ├── pages/                   # Page components
 │   │   └── Chat.tsx            # Main chat interface
 │   ├── services/                # API services
-│   │   └── agentsService.ts    # Agent API client
+│   │   ├── agentsService.ts    # Agent API client
+│   │   ├── backendConfig.ts    # Backend type configuration
+│   │   └── threadsService.ts    # Thread API client
 │   ├── integrations/            # Third-party integrations
 │   │   └── supabase/           # Supabase client setup
 │   │       ├── client.ts       # Supabase initialization
 │   │       └── types.ts        # Generated TypeScript types
 │   └── types/                   # TypeScript interfaces
-│       └── agent.ts            # Agent type definitions
+│       ├── agent.ts            # Agent type definitions
+│       └── thread.ts           # Thread type definitions
 │
-├── supabase/                     # Backend infrastructure
+├── api/                          # Python FastAPI backend
+│   ├── main.py                  # FastAPI application entry point
+│   ├── stores.py                # ChatKit data store implementation
+│   └── utils/                   # Utility modules
+│       ├── multi_model_provider.py    # Multi-provider support
+│       ├── ollama_model_provider.py   # Ollama provider
+│       └── ollama_model.py            # Ollama model implementation
+│
+├── supabase/                     # TypeScript/Deno backend
 │   ├── functions/               # Edge Functions (Deno runtime)
-│   │   ├── agents/         # Main agent orchestration
+│   │   ├── agents/              # Main agent orchestration
 │   │   │   ├── index.ts        # Request router & handler
-│   │   │   ├── apis/           # HTTP API handlers
-│   │   │   ├── services/       # Business logic layer
-│   │   │   ├── stores/         # Database access layer
-│   │   │   ├── types/          # ChatKit type definitions
+│   │   │   ├── chatkit/        # ChatKit implementation
+│   │   │   ├── stores.ts       # Database access layer
 │   │   │   └── utils/          # Helper utilities
+│   │   │       ├── multi_model_provider.ts
+│   │   │       ├── ollama_model_provider.ts
+│   │   │       └── ollama_model.ts
 │   │   ├── mcp-env/            # Model Context Protocol server
 │   │   │   ├── index.ts        # MCP HTTP/SSE server
 │   │   │   └── tools/          # MCP tools (weather, think)
@@ -177,9 +231,12 @@ timestep-ai/
 │       ├── *_files_and_vector_stores.sql
 │       └── ...
 │
-├── tests/                        # Playwright E2E tests
-│   ├── personal-assistant.spec.ts
-│   └── weather-assistant.spec.ts
+├── tests/                        # E2E tests
+│   ├── cucumber/                # Cucumber/Gherkin tests
+│   │   ├── features/           # Feature files
+│   │   ├── steps/              # Step definitions
+│   │   └── support/            # Test support files
+│   └── helpers/                 # Test helper functions
 │
 ├── .github/
 │   └── workflows/
@@ -187,23 +244,27 @@ timestep-ai/
 │
 ├── public/                       # Static assets
 ├── capacitor.config.ts          # Mobile app configuration
-├── package.json                 # Dependencies & scripts
+├── package.json                 # Frontend dependencies & scripts
+├── pyproject.toml               # Python backend dependencies
 ├── tsconfig.json                # TypeScript configuration
 └── tailwind.config.ts           # Tailwind CSS configuration
 ```
 
 ## Available Scripts
 
+**Frontend:**
 - `npm run dev` - Start Vite development server (port 5173)
+- `npm run dev:api` - Start Python FastAPI backend (port 8000)
 - `npm run build` - Build for production
 - `npm run build:dev` - Build in development mode
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting
-- `npm test` - Run Playwright E2E tests
-- `npm run test:ui` - Run tests with Playwright UI
-- `npm run test:headed` - Run tests in headed mode (visible browser)
+
+**Testing:**
+- `npm test` - Run Cucumber E2E tests
+- `npm run test:feature` - Run specific Cucumber feature
 
 ## Key Features Explained
 
@@ -264,25 +325,33 @@ The app integrates MCP for extensible tool execution:
   - `think`: Internal reasoning tool for agent reflection
 - **Extensible**: Add custom tools by implementing MCP tool interface
 
+### Multi-Model Provider Support
+
+The app supports multiple AI model providers through a unified interface:
+
+- **OpenAI**: Default provider, supports all OpenAI models (e.g., `gpt-4.1`, `gpt-4o-mini`)
+- **Anthropic**: Supports Claude models (e.g., `anthropic/claude-3-5-sonnet-20241022`)
+- **Hugging Face**: Supports inference endpoints and provider router (e.g., `hf_inference_endpoints/model-name`)
+- **Ollama**: Supports local and cloud Ollama models (e.g., `ollama/gpt-oss:20b`)
+
+Models are selected by prefix in the model name. The multi-provider system automatically routes requests to the appropriate provider based on the model name prefix.
+
 ## Testing
 
-Run end-to-end tests with Playwright:
+Run end-to-end tests with Cucumber (Gherkin):
 
 ```bash
-npm test              # Run all tests
-npm run test:ui       # Run with Playwright UI
-npm run test:headed   # Run in headed mode (visible browser)
+npm test              # Run all Cucumber tests
+npm run test:feature  # Run specific feature by name
 ```
 
 **Test Coverage**:
 
-- **Personal Assistant**: Tests general conversation flows
-- **Weather Assistant**: Tests weather queries and tool execution
-- **Anonymous Authentication**: Verifies anonymous user flows
-- **Thread Management**: Tests conversation persistence
-- **Agent Interactions**: Validates agent responses and behavior
+- **Theme Switching**: Tests theme switching functionality for both Python and TypeScript backends
+- **Conversation Flows**: Tests general conversation flows
+- **Backend Switching**: Tests switching between Python and TypeScript backends
 
-Test files located in `/tests` directory.
+Test files are located in `/tests/cucumber` directory. Tests use Cucumber/Gherkin syntax with Playwright for browser automation.
 
 ## Deployment
 
@@ -313,8 +382,10 @@ Deploy the `dist` folder to your hosting provider (Vercel, Netlify, etc.).
    ```
 5. Set environment secrets in Supabase dashboard:
    - `OPENAI_API_KEY` - OpenAI API key for agent functionality
+   - `ANTHROPIC_API_KEY` - Anthropic API key (optional)
    - `HF_TOKEN` - Hugging Face token (optional)
-   - `DEFAULT_AGENT_MODEL` - Default model (e.g., `gpt-4`)
+   - `OLLAMA_API_KEY` - Ollama Cloud API key (optional)
+   - `DEFAULT_AGENT_MODEL` - Default model (e.g., `openai/gpt-4.1`)
 
 ### CI/CD Pipeline
 
@@ -360,13 +431,28 @@ npx cap open android
 - `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key
 - `VITE_SUPABASE_PROJECT_ID` - Optional: Your Supabase project ID
 
-### Supabase Edge Functions (config.toml)
+### Backend Configuration
+
+**TypeScript/Deno Backend (supabase/config.toml):**
 
 - `OPENAI_API_KEY` - OpenAI API key for agent functionality
-- `HF_TOKEN` - Hugging Face token (optional, for AI features)
-- `DEFAULT_AGENT_MODEL` - Default OpenAI model (e.g., `gpt-4`, `gpt-4o-mini`)
+- `ANTHROPIC_API_KEY` - Anthropic API key (optional, for Claude models)
+- `HF_TOKEN` - Hugging Face token (optional, for Hugging Face models)
+- `OLLAMA_API_KEY` - Ollama Cloud API key (optional, for Ollama models)
+- `DEFAULT_AGENT_MODEL` - Default model (e.g., `openai/gpt-4.1`, `anthropic/claude-3-5-sonnet-20241022`)
 
-**Note**: These are configured locally in `supabase/config.toml` (gitignored) and in production via Supabase dashboard secrets.
+**Python Backend (api/.env or environment variables):**
+
+- `OPENAI_API_KEY` - OpenAI API key for agent functionality
+- `ANTHROPIC_API_KEY` - Anthropic API key (optional)
+- `HF_TOKEN` - Hugging Face token (optional)
+- `OLLAMA_API_KEY` - Ollama Cloud API key (optional)
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+
+**Note**: 
+- TypeScript backend secrets are configured locally in `supabase/config.toml` (gitignored) and in production via Supabase dashboard secrets.
+- Python backend uses environment variables or a `.env` file in the `api/` directory.
 
 ## Architecture
 
@@ -382,39 +468,55 @@ The frontend follows a component-based architecture with clear separation of con
 
 ### Backend Architecture
 
-The backend uses a **service-layer pattern** with Supabase Edge Functions:
+The application supports **dual backend implementations**:
 
+**TypeScript/Deno Backend (Supabase Edge Functions):**
 ```
 API Layer (index.ts)
     ↓
-Service Layer (services/)
+ChatKit Server (chatkit/server.ts)
     ↓
-Data Access Layer (stores/)
+Data Access Layer (stores.ts)
     ↓
-Database (PostgreSQL)
+Database (PostgreSQL via Supabase)
+```
+
+**Python Backend (FastAPI):**
+```
+API Layer (main.py)
+    ↓
+ChatKit Server (chatkit.server)
+    ↓
+Data Access Layer (stores.py)
+    ↓
+Database (PostgreSQL via Supabase)
 ```
 
 **Key Components**:
 
-- **API Handlers** (`apis/`): Process HTTP requests and responses
-- **Services** (`services/`): Business logic and orchestration
-- **Stores** (`stores/`): Database queries and data persistence
-- **Utils** (`utils/`): Helper functions and utilities
+- **API Handlers**: Process HTTP requests and responses
+- **ChatKit Server**: Handles ChatKit protocol operations
+- **Stores**: Database queries and data persistence (ChatKitDataStore, ChatKitAttachmentStore)
+- **Utils**: Helper functions and utilities (multi-model providers, Ollama support)
+
+Both backends share the same database schema and provide identical API interfaces, allowing seamless switching between them.
 
 ### Data Flow
 
 1. **User Action**: User sends message in chat interface
 2. **Frontend**: ChatKit component captures message
-3. **HTTP Request**: Custom fetch with auth headers sent to edge function
-4. **Backend Processing**:
+3. **Backend Selection**: Frontend routes to selected backend (Python or TypeScript)
+4. **HTTP Request**: Custom fetch with auth headers sent to backend
+5. **Backend Processing**:
    - Authenticate user via JWT
    - Load conversation thread from database
    - Build agent with tools and configuration
-   - Execute agent with OpenAI SDK
+   - Select model provider based on model name prefix (openai/, anthropic/, ollama/, etc.)
+   - Execute agent with OpenAI Agents SDK
    - Stream events back to client
-5. **Tool Execution**: Agent calls MCP tools if needed
-6. **Response**: Assistant message streamed to frontend
-7. **Persistence**: Thread, messages, and run state saved to database
+6. **Tool Execution**: Agent calls MCP tools if needed
+7. **Response**: Assistant message streamed to frontend
+8. **Persistence**: Thread, messages, and run state saved to database
 
 ### Database Schema
 
@@ -431,7 +533,7 @@ All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 
 ## API Endpoints
 
-### Edge Function: agents
+### TypeScript/Deno Backend (Supabase Edge Functions)
 
 **Base URL**: `{SUPABASE_URL}/functions/v1/agents`
 
@@ -440,6 +542,18 @@ All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 | GET    | `/agents`                          | List all agents for authenticated user        |
 | POST   | `/agents/{agentId}/chatkit`        | ChatKit protocol endpoint (threads, messages) |
 | POST   | `/agents/{agentId}/chatkit/upload` | File upload for attachments                   |
+
+### Python Backend (FastAPI)
+
+**Base URL**: `http://127.0.0.1:8000` (development) or your deployment URL
+
+| Method | Path                               | Description                                   |
+| ------ | ---------------------------------- | --------------------------------------------- |
+| GET    | `/agents`                          | List all agents for authenticated user        |
+| POST   | `/agents/{agentId}/chatkit`        | ChatKit protocol endpoint (threads, messages) |
+| POST   | `/agents/{agentId}/chatkit/upload` | File upload for attachments                   |
+
+Both backends provide identical API interfaces and can be used interchangeably.
 
 ### ChatKit Operations
 
@@ -487,8 +601,12 @@ All tables enforce RLS policies:
 
 **Agent not responding**
 
-- Verify `OPENAI_API_KEY` is set in `supabase/config.toml`
-- Check edge function logs: `npx supabase functions logs agents`
+- Verify `OPENAI_API_KEY` is set in `supabase/config.toml` (TypeScript backend) or environment variables (Python backend)
+- Check backend logs:
+  - TypeScript: `npx supabase functions logs agents`
+  - Python: Check console output from `npm run dev:api`
+- Verify the correct backend is selected in the UI
+- Check that the backend server is running (TypeScript: Supabase functions serve, Python: FastAPI server)
 
 **Database migration errors**
 
