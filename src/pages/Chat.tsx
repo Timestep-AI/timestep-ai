@@ -62,7 +62,7 @@ const Chat = () => {
     } finally {
       setLoadingAgents(false);
     }
-  }, [selectedAgent, backendType]);
+  }, [selectedAgent]);
 
   // Load agent details
   const loadAgentDetails = async (agentId: string) => {

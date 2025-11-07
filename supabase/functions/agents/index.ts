@@ -835,7 +835,7 @@ Deno.serve(async (request: Request) => {
     const path = url.pathname;
 
     // Handle /agents/{agent_id}/chatkit endpoint
-    const chatkitMatch = path.match(/\/agents\/([^\/]+)\/chatkit/);
+    const chatkitMatch = path.match(/\/agents\/([^/]+)\/chatkit/);
     if (chatkitMatch) {
       const agentId = chatkitMatch[1];
       console.log('[agents] Processing chatkit request for agent:', agentId);

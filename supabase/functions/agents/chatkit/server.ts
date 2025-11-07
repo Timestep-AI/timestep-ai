@@ -356,10 +356,11 @@ export class ChatKitServer<TCtx = TContext> {
         await this.store.delete_thread(req.params.thread_id, context);
         return {};
       }
-      default:
+      default: {
         // Match Python: case _: assert_never(request)
         const _exhaustive: never = req as never;
         throw new Error(`Unknown request type: ${(_exhaustive as any).type}`);
+      }
     }
   }
 
@@ -483,10 +484,11 @@ export class ChatKitServer<TCtx = TContext> {
         yield* this._process_events(thread, context, () => this.respond(thread, null, context));
         break;
       }
-      default:
+      default: {
         // Match Python: case _: assert_never(request)
         const _exhaustive: never = req as never;
         throw new Error(`Unknown request type: ${(_exhaustive as any).type}`);
+      }
     }
   }
 
@@ -675,6 +677,7 @@ export class ChatKitServer<TCtx = TContext> {
   // Match Python: action method signature (line 299-309)
   async *action(_thread: ThreadMetadata, _action: Action, _sender: WidgetItem | null, _context: TCtx): AsyncIterable<ThreadStreamEvent> {
     throw new Error('The action() method must be overridden to react to actions.');
+    yield; // Unreachable, but satisfies ESLint require-yield
   }
 
   // To be overridden by subclass

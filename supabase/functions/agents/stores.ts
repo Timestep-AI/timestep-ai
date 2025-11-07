@@ -276,32 +276,28 @@ export class ChatKitDataStore implements Store<TContext> {
 
     const client = this._get_client(context);
 
-    try {
-      const params: any = {
-        limit,
-        order,
-      };
-      if (after) {
-        params.after = after;
-      }
-
-      const response = await client.beta.chatkit.threads.list(params);
-
-      const threads = response.data.map((t: any) => ({
-        id: t.id,
-        created_at: new Date(t.created_at * 1000),
-        status: { type: 'active' } as const,
-        metadata: {},
-      }));
-
-      return {
-        data: threads,
-        has_more: response.has_more,
-        after: response.last_id || null,
-      };
-    } catch (e) {
-      throw e;
+    const params: any = {
+      limit,
+      order,
+    };
+    if (after) {
+      params.after = after;
     }
+
+    const response = await client.beta.chatkit.threads.list(params);
+
+    const threads = response.data.map((t: any) => ({
+      id: t.id,
+      created_at: new Date(t.created_at * 1000),
+      status: { type: 'active' } as const,
+      metadata: {},
+    }));
+
+    return {
+      data: threads,
+      has_more: response.has_more,
+      after: response.last_id || null,
+    };
   }
 
   async save_thread(_thread: ThreadMetadata, _context?: TContext | null): Promise<void> {

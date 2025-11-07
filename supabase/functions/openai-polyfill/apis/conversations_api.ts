@@ -144,7 +144,7 @@ export async function handleConversationsRequest(
   }
 
   // GET /conversations/{conversation_id}
-  const convIdMatch = pathname.match(/^\/conversations\/([^\/]+)$/);
+  const convIdMatch = pathname.match(/^\/conversations\/([^/]+)$/);
   if (convIdMatch && method === 'GET') {
     const convId = convIdMatch[1];
     const { data } = await supabaseClient.from('conversations').select('id, created_at, metadata').eq('id', convId).maybeSingle();
@@ -193,7 +193,7 @@ export async function handleConversationsRequest(
   }
 
   // POST /conversations/{conversation_id}/items → append item(s)
-  const convItemsMatch = pathname.match(/^\/conversations\/([^\/]+)\/items$/);
+  const convItemsMatch = pathname.match(/^\/conversations\/([^/]+)\/items$/);
   if (convItemsMatch && method === 'POST') {
     const convId = convItemsMatch[1];
     const { data: exists } = await supabaseClient.from('conversations').select('id').eq('id', convId).maybeSingle();
@@ -480,7 +480,7 @@ export async function handleConversationsRequest(
   }
 
   // GET /conversations/{conversation_id}/items/{item_id} → retrieve item
-  const convItemMatch = pathname.match(/^\/conversations\/([^\/]+)\/items\/([^\/]+)$/);
+  const convItemMatch = pathname.match(/^\/conversations\/([^/]+)\/items\/([^/]+)$/);
   if (convItemMatch && method === 'GET') {
     const convId = convItemMatch[1];
     const itemId = convItemMatch[2];

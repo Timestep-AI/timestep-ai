@@ -723,7 +723,7 @@ export async function* stream_agent_response(
 ): AsyncIterable<ThreadStreamEvent> {
   // Track state for converting raw_model_stream_event to raw_response_event format
   let currentItemId: string | null = null;
-  let currentContentIndex = 0;
+  const currentContentIndex = 0;
   let accumulatedText = '';
 
   // Track tool call IDs from run_item_stream_event (matches Python lines 417-427)
