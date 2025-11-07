@@ -42,3 +42,4 @@ supabase/config.toml
 
 # Python
 __pycache__
+requirements.txt
