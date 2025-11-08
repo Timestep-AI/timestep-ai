@@ -92,12 +92,15 @@ Create a `.env.local` file from the example:
 cp .env.example .env.local
 ```
 
-Edit `.env.local` with your Supabase configuration:
+Edit `.env.local` with your configuration. **All environment variables are required** - the application will throw errors if they are missing:
 
 ```env
 VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=your-local-anon-key-from-supabase-start
+VITE_PYTHON_BACKEND_URL=http://127.0.0.1:8000
 ```
+
+**Note**: `VITE_PYTHON_BACKEND_URL` is required if you plan to use the Python backend. Set it to your local FastAPI server base URL (without `/api/v1` - it will be appended automatically).
 
 ### 4. Configure Supabase
 
@@ -212,23 +215,28 @@ timestep-ai/
 │
 ├── supabase/                     # TypeScript/Deno backend
 │   ├── functions/               # Edge Functions (Deno runtime)
+│   │   ├── _shared/             # Shared code between edge functions
+│   │   │   ├── stores.ts       # ChatKit data store implementation
+│   │   │   ├── store.ts        # Store interfaces
+│   │   │   ├── types.ts        # ChatKit type definitions
+│   │   │   ├── errors.ts       # Error types
+│   │   │   └── widgets.ts      # Widget types
 │   │   ├── agents/              # Main agent orchestration
 │   │   │   ├── index.ts        # Request router & handler
 │   │   │   ├── chatkit/        # ChatKit implementation
-│   │   │   ├── stores.ts       # Database access layer
 │   │   │   └── utils/          # Helper utilities
 │   │   │       ├── multi_model_provider.ts
 │   │   │       ├── ollama_model_provider.ts
 │   │   │       └── ollama_model.ts
-│   │   ├── mcp-env/            # Model Context Protocol server
-│   │   │   ├── index.ts        # MCP HTTP/SSE server
-│   │   │   └── tools/          # MCP tools (weather, think)
+│   │   ├── threads/             # Threads management edge function
+│   │   │   └── index.ts        # Threads list endpoint
 │   │   └── openai-polyfill/    # OpenAI API polyfills
 │   │
 │   └── migrations/              # Database schema migrations
 │       ├── *_initial_schema.sql
-│       ├── *_threads_and_messages.sql
+│       ├── *_add_chatkit_tables.sql
 │       ├── *_files_and_vector_stores.sql
+│       ├── *_remove_threads_tables.sql
 │       └── ...
 │
 ├── tests/                        # E2E tests
@@ -319,7 +327,6 @@ Uses OpenAI's ChatKit React components for a polished chat experience with featu
 
 The app integrates MCP for extensible tool execution:
 
-- **MCP Server**: HTTP/SSE server exposing tools (`mcp-env` edge function)
 - **Built-in Tools**:
   - `get_weather`: Fetch real-time weather data for any location
   - `think`: Internal reasoning tool for agent reflection
@@ -365,6 +372,14 @@ npm run build
 
 Deploy the `dist` folder to your hosting provider (Vercel, Netlify, etc.).
 
+**Important**: Set the following environment variables in your hosting provider (Vercel, Netlify, etc.):
+
+- `VITE_SUPABASE_URL` - Your production Supabase project URL (e.g., `https://your-project.supabase.co`)
+- `VITE_SUPABASE_ANON_KEY` - Your production Supabase anonymous/public key
+- `VITE_PYTHON_BACKEND_URL` - Your production Python backend base URL without `/api/v1` (e.g., `https://your-domain.com`) - Required if using Python backend. The `/api/v1` prefix will be appended automatically.
+
+**Note**: All environment variables are required. The application will throw errors if they are missing.
+
 ### Supabase Deployment
 
 1. Create a Supabase project at [supabase.com](https://supabase.com)
@@ -399,6 +414,12 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci-cd.yml`) t
 
 - `SUPABASE_ACCESS_TOKEN` - Supabase access token
 - `SUPABASE_DB_PASSWORD` - Database password
+- `VITE_SUPABASE_URL` - Production Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Production Supabase anonymous/public key
+- `VITE_PYTHON_BACKEND_URL` - Production Python backend base URL without `/api/v1` (required if using Python backend). The `/api/v1` prefix will be appended automatically.
+- `VERCEL_TOKEN` - Vercel deployment token
+- `VERCEL_ORG_ID` - Vercel organization ID
+- `VERCEL_PROJECT_ID` - Vercel project ID
 
 The workflow runs on:
 
@@ -427,9 +448,11 @@ npx cap open android
 
 ### Frontend (.env.local)
 
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-- `VITE_SUPABASE_PROJECT_ID` - Optional: Your Supabase project ID
+**All environment variables are required** - the application will throw errors if they are missing:
+
+- `VITE_SUPABASE_URL` - **Required**: Your Supabase project URL (e.g., `http://127.0.0.1:54321` for local, `https://your-project.supabase.co` for production)
+- `VITE_SUPABASE_ANON_KEY` - **Required**: Your Supabase anonymous/public key
+- `VITE_PYTHON_BACKEND_URL` - **Required if using Python backend**: Your Python backend base URL without `/api/v1` (e.g., `http://127.0.0.1:8000` for local, `https://your-domain.com` for production). The `/api/v1` prefix will be appended automatically.
 
 ### Backend Configuration
 
@@ -472,11 +495,17 @@ The application supports **dual backend implementations**:
 
 **TypeScript/Deno Backend (Supabase Edge Functions):**
 ```
-API Layer (index.ts)
+Agents Function (agents/index.ts)
     ↓
 ChatKit Server (chatkit/server.ts)
     ↓
-Data Access Layer (stores.ts)
+Data Access Layer (_shared/stores.ts)
+    ↓
+Database (PostgreSQL via Supabase)
+
+Threads Function (threads/index.ts)
+    ↓
+Data Access Layer (_shared/stores.ts)
     ↓
 Database (PostgreSQL via Supabase)
 ```
@@ -496,10 +525,14 @@ Database (PostgreSQL via Supabase)
 
 - **API Handlers**: Process HTTP requests and responses
 - **ChatKit Server**: Handles ChatKit protocol operations
-- **Stores**: Database queries and data persistence (ChatKitDataStore, ChatKitAttachmentStore)
+- **Stores**: Database queries and data persistence (ChatKitDataStore, ChatKitAttachmentStore) - shared via `_shared/` directory
 - **Utils**: Helper functions and utilities (multi-model providers, Ollama support)
+- **Edge Functions**: 
+  - `agents`: Main agent orchestration and ChatKit protocol
+  - `threads`: Thread listing and management
+  - `openai-polyfill`: OpenAI API compatibility layer
 
-Both backends share the same database schema and provide identical API interfaces, allowing seamless switching between them.
+Both backends share the same database schema and provide identical API interfaces, allowing seamless switching between them. Shared code between edge functions is located in `_shared/` to avoid duplication.
 
 ### Data Flow
 
@@ -523,19 +556,20 @@ Both backends share the same database schema and provide identical API interface
 **Key Tables**:
 
 - `agents`: Agent configurations (instructions, tools, model settings)
-- `threads`: Conversation threads
-- `thread_messages`: Individual messages in conversations
-- `thread_run_states`: Serialized agent execution state
+- `chatkit_threads`: Conversation threads (ChatKit format)
+- `chatkit_thread_items`: Individual messages and items in conversations (ChatKit format)
 - `profiles`: User profile information
 - `mcp_servers`: MCP server configurations
 
 All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 
+**Note**: The legacy `threads`, `thread_messages`, and `thread_run_states` tables have been removed in favor of the ChatKit tables (`chatkit_threads` and `chatkit_thread_items`).
+
 ## API Endpoints
 
 ### TypeScript/Deno Backend (Supabase Edge Functions)
 
-**Base URL**: `{SUPABASE_URL}/functions/v1/agents`
+**Agents Function** - Base URL: `{SUPABASE_URL}/functions/v1/agents`
 
 | Method | Path                               | Description                                   |
 | ------ | ---------------------------------- | --------------------------------------------- |
@@ -543,9 +577,15 @@ All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 | POST   | `/agents/{agentId}/chatkit`        | ChatKit protocol endpoint (threads, messages) |
 | POST   | `/agents/{agentId}/chatkit/upload` | File upload for attachments                   |
 
+**Threads Function** - Base URL: `{SUPABASE_URL}/functions/v1/threads`
+
+| Method | Path                               | Description                                   |
+| ------ | ---------------------------------- | --------------------------------------------- |
+| GET    | `/threads/list`                    | List all threads for authenticated user       |
+
 ### Python Backend (FastAPI)
 
-**Base URL**: `http://127.0.0.1:8000` (development) or your deployment URL
+**Base URL**: `http://127.0.0.1:8000/api/v1` (development) or your deployment URL with `/api/v1` prefix (e.g., `https://your-domain.com/api/v1`)
 
 | Method | Path                               | Description                                   |
 | ------ | ---------------------------------- | --------------------------------------------- |
@@ -597,7 +637,11 @@ All tables enforce RLS policies:
 **Supabase connection failed**
 
 - Ensure Supabase is running: `npx supabase status`
-- Check `.env.local` has correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- Check `.env.local` has all required environment variables:
+  - `VITE_SUPABASE_URL` - Required
+  - `VITE_SUPABASE_ANON_KEY` - Required
+  - `VITE_PYTHON_BACKEND_URL` - Required if using Python backend
+- The application will throw clear errors if environment variables are missing
 
 **Agent not responding**
 

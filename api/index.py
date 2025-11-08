@@ -190,50 +190,6 @@ def get_agent_by_id(agent_id: str, ctx: TContext) -> AgentRecord | None:
     
     return response.data[0]
 
-def ensure_default_mcp_server(ctx: TContext) -> None:
-    """Ensure the default MCP server exists for the user.
-    
-    Matches TypeScript McpServerStore.createDefaultMcpServer implementation.
-    """
-    if not ctx.user_id:
-        return
-    
-    default_server_id = "00000000-0000-0000-0000-000000000000"
-    supabase = ctx.supabase
-    
-    # Check if it exists
-    response = (
-        supabase.table("mcp_servers")
-        .select("*")
-        .eq("id", default_server_id)
-        .eq("user_id", ctx.user_id)
-        .execute()
-    )
-    
-    if response.data and len(response.data) > 0:
-        return  # Already exists
-    
-    # Create it
-    supabase_url = os.environ.get("SUPABASE_URL")
-    if not supabase_url:
-        return  # Skip if URL not available
-    
-    insert_response = (
-        supabase.table("mcp_servers")
-        .insert({
-            "id": default_server_id,
-            "user_id": ctx.user_id,
-            "name": "MCP Environment Server",
-            "url": f"{supabase_url.rstrip('/')}/functions/v1/mcp-env/mcp",
-        })
-        .execute()
-    )
-    
-    # Ignore duplicate key errors (23505) - means another process created it
-    if insert_response.data is None and hasattr(insert_response, "error"):
-        error_code = getattr(insert_response.error, "code", None)
-        if error_code != "23505":
-            logger.warning(f"Error creating default MCP server: {insert_response.error}")
 
 @function_tool(
     description_override="Switch the chat interface between light and dark color schemes."
@@ -955,7 +911,6 @@ async def get_agents(request: Request):
         
         # Ensure default agents exist first
         ensure_default_agents_exist(ctx)
-        ensure_default_mcp_server(ctx)
         
         # Fetch all agents for the user
         supabase: Client = ctx["supabase"]

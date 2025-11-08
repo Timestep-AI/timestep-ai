@@ -2,20 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Get Supabase URL - require in production, use fallback in development
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 
-  (import.meta.env.DEV ? 'http://127.0.0.1:54321' : '');
-
+// Get Supabase URL - require environment variable
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 if (!SUPABASE_URL) {
-  throw new Error('VITE_SUPABASE_URL environment variable is required in production');
+  throw new Error('VITE_SUPABASE_URL environment variable is required');
 }
 
-// Get Supabase key - require in production, use fallback in development
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 
-  (import.meta.env.DEV ? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' : '');
-
+// Get Supabase key - require environment variable
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 if (!SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('VITE_SUPABASE_ANON_KEY environment variable is required in production');
+  throw new Error('VITE_SUPABASE_ANON_KEY environment variable is required');
 }
 
 // Import the supabase client like this:

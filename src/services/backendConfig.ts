@@ -37,38 +37,22 @@ export const getBackendBaseUrl = (backendType?: BackendType): string => {
   const type = backendType || getBackendType();
   
   if (type === 'python') {
-    // In production, require environment variable
-    if (import.meta.env.PROD) {
-      const pythonBackendUrl = import.meta.env.VITE_PYTHON_BACKEND_URL;
-      if (!pythonBackendUrl) {
-        throw new Error('VITE_PYTHON_BACKEND_URL environment variable is required in production');
-      }
-      // Remove trailing slash and check if /api/v1 is already included
-      const cleanUrl = pythonBackendUrl.replace(/\/+$/, '');
-      if (cleanUrl.endsWith('/api/v1')) {
-        return cleanUrl;
-      }
-      return `${cleanUrl}/api/v1`;
+    const pythonBackendUrl = import.meta.env.VITE_PYTHON_BACKEND_URL;
+    if (!pythonBackendUrl) {
+      throw new Error('VITE_PYTHON_BACKEND_URL environment variable is required');
     }
-    // Development fallback - use /api/v1 prefix
-    const devUrl = import.meta.env.VITE_PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
-    const cleanDevUrl = devUrl.replace(/\/+$/, '');
-    if (cleanDevUrl.endsWith('/api/v1')) {
-      return cleanDevUrl;
-    }
-    return `${cleanDevUrl}/api/v1`;
+    // Remove trailing slash and append /api/v1
+    const cleanUrl = pythonBackendUrl.replace(/\/+$/, '');
+    return `${cleanUrl}/api/v1`;
   } else {
     // TypeScript backend (Supabase Edge Functions)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (import.meta.env.PROD && !supabaseUrl) {
-      throw new Error('VITE_SUPABASE_URL environment variable is required in production');
-    }
-    // Use environment variable or development fallback
-    const url = supabaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:54321' : '');
-    if (!url) {
+    if (!supabaseUrl) {
       throw new Error('VITE_SUPABASE_URL environment variable is required');
     }
-    return `${url}/functions/v1/agents`;
+    // Remove trailing slash and append /functions/v1
+    const cleanUrl = supabaseUrl.replace(/\/+$/, '');
+    return `${cleanUrl}/functions/v1`;
   }
 };
 

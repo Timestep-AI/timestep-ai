@@ -17,9 +17,9 @@ if (DEFAULT_OPENAI_API_KEY) {
 
 // Configure HTTP exporter to send traces to OpenAI's servers
 setDefaultOpenAITracingExporter();
-import { ChatKitDataStore, ChatKitAttachmentStore, type TContext } from './stores.ts';
-import type { Store, AttachmentStore } from './chatkit/store.ts';
-import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from './chatkit/types.ts';
+import { ChatKitDataStore, ChatKitAttachmentStore, type TContext } from '../_shared/stores.ts';
+import type { Store, AttachmentStore } from '../_shared/store.ts';
+import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from '../_shared/types.ts';
 import { ChatKitServer, StreamingResult } from './chatkit/server.ts';
 import { AgentContext, simple_to_agent_input as simpleToAgentInput, stream_agent_response as streamAgentResponse, type ClientToolCall } from './chatkit/agents.ts';
 import { Agent, Runner, tool } from '@openai/agents-core';
@@ -91,47 +91,6 @@ async function getAgentById(agentId: string, ctx: TContext): Promise<AgentRecord
   return agentData as AgentRecord | null;
 }
 
-/**
- * Ensure the default MCP server exists for the user
- * Matches Python ensure_default_mcp_server implementation
- */
-async function ensureDefaultMcpServer(ctx: TContext): Promise<void> {
-  if (!ctx.user_id) {
-    return;
-  }
-  
-  const defaultServerId = '00000000-0000-0000-0000-000000000000';
-  
-  // Check if it exists
-  const { data: existing } = await ctx.supabase
-    .from('mcp_servers')
-    .select('*')
-    .eq('id', defaultServerId)
-    .eq('user_id', ctx.user_id)
-    .single();
-  
-  if (existing) {
-    return; // Already exists
-  }
-  
-  // Create it
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  if (!supabaseUrl) {
-    return; // Skip if URL not available
-  }
-  
-  const { error } = await ctx.supabase.from('mcp_servers').insert({
-    id: defaultServerId,
-    user_id: ctx.user_id,
-    name: 'MCP Environment Server',
-    url: `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mcp-env/mcp`,
-  });
-  
-  // Ignore duplicate key errors (23505) - means another process created it
-  if (error && error.code !== '23505') {
-    console.warn('[agents] Error creating default MCP server:', error);
-  }
-}
 
 /**
  * Switch the theme between light and dark mode.
@@ -885,51 +844,6 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    // Handle /threads/list endpoint
-    if (path === '/threads/list' || path.endsWith('/threads/list')) {
-      const limit = parseInt(url.searchParams.get('limit') || '20');
-      const after = url.searchParams.get('after') || null;
-      const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
-
-      const ctx = buildRequestContext(request);
-      const page = await data_store.load_threads(limit, after, order, ctx);
-
-      // Convert ThreadMetadata to JSON-friendly dicts (matching Python implementation)
-      const jsonData = page.data.map((t: ThreadMetadata) => {
-        let statusValue = t.status;
-        if (!statusValue || typeof statusValue !== 'object') {
-          if (statusValue && typeof statusValue === 'object' && 'type' in statusValue) {
-            statusValue = { type: (statusValue as any).type };
-          } else {
-            statusValue = { type: String(statusValue || 'active') };
-          }
-        }
-
-        return {
-          id: t.id,
-          title: t.title,
-          created_at: Math.floor((t.created_at instanceof Date ? t.created_at : new Date(t.created_at)).getTime() / 1000),
-          status: statusValue,
-          metadata: t.metadata || {},
-        };
-      });
-
-      return new Response(
-        JSON.stringify({
-          data: jsonData,
-          has_more: page.has_more,
-          after: page.after,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
-
     // Handle /agents endpoint (GET and POST)
     if (path === '/agents' || path.endsWith('/agents')) {
       const ctx = buildRequestContext(request);
@@ -950,7 +864,6 @@ Deno.serve(async (request: Request) => {
       try {
         // Ensure default agents exist first
         await ensureDefaultAgentsExist(ctx);
-        await ensureDefaultMcpServer(ctx);
 
         // Fetch all agents for the user
         const { data: agents, error } = await ctx.supabase

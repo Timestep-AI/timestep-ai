@@ -117,17 +117,17 @@ jobs:
           import_map = "./functions/agents/deno.json"
           entrypoint = "./functions/agents/index.ts"
 
-          [functions.mcp-env]
-          enabled = true
-          verify_jwt = true
-          import_map = "./functions/mcp-env/deno.json"
-          entrypoint = "./functions/mcp-env/index.ts"
-
           [functions.openai-polyfill]
           enabled = true
           verify_jwt = true
           import_map = "./functions/openai-polyfill/deno.json"
           entrypoint = "./functions/openai-polyfill/index.ts"
+
+          [functions.threads]
+          enabled = true
+          verify_jwt = true
+          import_map = "./functions/threads/deno.json"
+          entrypoint = "./functions/threads/index.ts"
           EOF
 
       - name: Start Supabase local development
@@ -392,11 +392,6 @@ jobs:
           import_map = "./functions/agents/deno.json"
           entrypoint = "./functions/agents/index.ts"
 
-          [functions.mcp-env]
-          enabled = true
-          verify_jwt = true
-          import_map = "./functions/mcp-env/deno.json"
-          entrypoint = "./functions/mcp-env/index.ts"
 
           [functions.openai-polyfill]
           enabled = true
