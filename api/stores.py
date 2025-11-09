@@ -12,6 +12,7 @@ from chatkit.types import (
     UserMessageItem,
     AssistantMessageItem,
     ClientToolCallItem,
+    WidgetItem,
     UserMessageTextContent,
     AssistantMessageContent,
     InferenceOptions,
@@ -108,6 +109,8 @@ class ChatKitDataStore(Store):
             if isinstance(item, ClientToolCallItem):
                 item_type_for_id = "tool_call"
                 logger.info(f"[add_thread_item] ClientToolCallItem: status={item.status}, name={item.name}, call_id={item.call_id}")
+            elif isinstance(item, WidgetItem):
+                item_type_for_id = "widget"
             elif isinstance(item, AssistantMessageItem):
                 item_type_for_id = "message"
             elif isinstance(item, UserMessageItem):
@@ -203,6 +206,27 @@ class ChatKitDataStore(Store):
                 "arguments": json.dumps(item.arguments) if isinstance(item.arguments, dict) else item.arguments,
                 "output": json.dumps(item.output) if item.output and isinstance(item.output, dict) else item.output,
             }
+        elif isinstance(item, WidgetItem):
+            # Widget should be serialized as a JSON string per OpenAPI spec
+            widget_value = item.widget
+            if widget_value:
+                # Handle Pydantic models
+                if hasattr(widget_value, "model_dump"):
+                    widget_dict = widget_value.model_dump()
+                    serialized_widget = json.dumps(widget_dict)
+                elif isinstance(widget_value, dict):
+                    serialized_widget = json.dumps(widget_value)
+                elif isinstance(widget_value, str):
+                    serialized_widget = widget_value
+                else:
+                    serialized_widget = json.dumps({})
+            else:
+                serialized_widget = json.dumps({})
+            
+            return {
+                "type": "chatkit.widget",
+                "widget": serialized_widget,
+            }
         else:
             raise ValueError(f"Unsupported item type: {type(item)}")
 
@@ -279,6 +303,25 @@ class ChatKitDataStore(Store):
                 name=item_data.get("name", ""),
                 arguments=arguments,
                 output=output,
+            )
+        elif item_type == "chatkit.widget":
+            # Widget is stored as a JSON string per OpenAPI spec, deserialize it
+            widget_str = item_data.get("widget")
+            widget_obj = {}
+            if widget_str and isinstance(widget_str, str):
+                try:
+                    widget_obj = json.loads(widget_str)
+                except:
+                    widget_obj = {}
+            elif widget_str and isinstance(widget_str, dict):
+                widget_obj = widget_str
+            
+            return WidgetItem(
+                id=item_id,
+                thread_id=thread_id,
+                created_at=created_at,
+                widget=widget_obj,
+                copy_text=item_data.get("copy_text") if item_data.get("copy_text") else None,
             )
         else:
             raise ValueError(f"Unsupported item type: {item_type}")

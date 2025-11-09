@@ -19,14 +19,50 @@ class _EventWrapper {
   constructor(public event: ThreadStreamEvent) {}
 }
 
+// Async queue implementation (matches Python's asyncio.Queue)
+// This properly synchronizes producers (widget streaming) and consumers (event merging)
+class _AsyncQueue<T> {
+  private items: T[] = [];
+  private waiters: Array<(value: T) => void> = [];
+  private completed: boolean = false;
+
+  // Add an item to the queue (matches Python's Queue.put())
+  put(item: T): void {
+    if (this.waiters.length > 0) {
+      // Someone is waiting, give them the item directly
+      const waiter = this.waiters.shift()!;
+      waiter(item);
+    } else {
+      // No one waiting, add to queue
+      this.items.push(item);
+    }
+  }
+
+  // Get an item from the queue, waiting if necessary (matches Python's Queue.get())
+  async get(): Promise<T> {
+    if (this.items.length > 0) {
+      return this.items.shift()!;
+    }
+
+    // Queue is empty, wait for an item
+    return new Promise<T>((resolve) => {
+      this.waiters.push(resolve);
+    });
+  }
+
+  // Check if queue is empty (for optimization)
+  isEmpty(): boolean {
+    return this.items.length === 0;
+  }
+}
+
 export class AgentContext {
   public client_tool_call: ClientToolCall | null = null;
   public previous_response_id: string | null = null; // Match Python line 102
   public workflow_item: WorkflowItem | null = null; // Match Python line 104
   // Queue for events from agent context helpers (matches Python line 106 in agents.py)
-  private _events: ThreadStreamEvent[] = [];
-  // Track read position for queue iterator (allows resuming after merge)
-  private _queueIndex: number = 0;
+  // Using async queue instead of simple array to properly synchronize with event merging
+  private _events: _AsyncQueue<ThreadStreamEvent | _QueueCompleteSentinel> = new _AsyncQueue();
 
   constructor(
     public thread: ThreadMetadata,
@@ -156,30 +192,20 @@ export class AgentContext {
   // Matches Python's AgentContext._complete() method (line 205-206 in agents.py)
   // Puts a sentinel in the queue to mark completion
   _complete(): void {
-    // In TypeScript, we use a simple array instead of async queue
-    // The sentinel will be checked when draining the queue
-    this._events.push(null as any); // Use null as sentinel (will be checked in iterator)
+    // Put sentinel in async queue (matches Python's put_nowait)
+    this._events.put(new _QueueCompleteSentinel());
   }
 
   // Match Python: stream method (line 201-202)
   // Add event to queue (for use by agent context helpers)
   async stream(event: ThreadStreamEvent): Promise<void> {
-    this._events.push(event);
+    // Match Python: await self._events.put(event)
+    this._events.put(event);
   }
 
   // Get the events queue (for creating queue iterator)
-  get events(): ThreadStreamEvent[] {
+  get events(): _AsyncQueue<ThreadStreamEvent | _QueueCompleteSentinel> {
     return this._events;
-  }
-
-  // Get current queue read position
-  get queueIndex(): number {
-    return this._queueIndex;
-  }
-
-  // Set queue read position (for queue iterator)
-  set queueIndex(value: number) {
-    this._queueIndex = value;
   }
 }
 

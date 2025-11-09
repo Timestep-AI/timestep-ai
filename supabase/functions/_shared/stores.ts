@@ -1,6 +1,6 @@
 import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { ThreadMetadata, ThreadItem, Page } from './types.ts';
-import type { Store, AttachmentStore } from './store.ts';
+import type { ThreadMetadata, ThreadItem, Page } from './chatkit/types.ts';
+import type { Store, AttachmentStore } from './chatkit/store.ts';
 import OpenAI from 'openai';
 
 export type TContext = {
@@ -130,6 +130,17 @@ export class ChatKitDataStore implements Store<TContext> {
         arguments: serialized_arguments,
         output: serialized_output,
       };
+    } else if (item.type === 'widget') {
+      // Widget should be serialized as a JSON string per OpenAPI spec
+      const widget_value = (item as any).widget;
+      const serialized_widget = (widget_value && typeof widget_value === 'object')
+        ? JSON.stringify(widget_value)
+        : (typeof widget_value === 'string' ? widget_value : JSON.stringify({}));
+      
+      return {
+        type: 'chatkit.widget',
+        widget: serialized_widget,
+      };
     } else {
       throw new Error(`Unsupported item type: ${item.type}`);
     }
@@ -213,6 +224,28 @@ export class ChatKitDataStore implements Store<TContext> {
         name: item_data.name || '',
         arguments: arguments_obj,
         output: output_obj,
+      } as any;
+    } else if (item_type === 'chatkit.widget') {
+      // Widget is stored as a JSON string per OpenAPI spec, deserialize it
+      let widget_obj = {};
+      const widget_str = item_data.widget;
+      if (widget_str && typeof widget_str === 'string') {
+        try {
+          widget_obj = JSON.parse(widget_str);
+        } catch {
+          widget_obj = {};
+        }
+      } else if (widget_str && typeof widget_str === 'object') {
+        widget_obj = widget_str;
+      }
+      
+      return {
+        type: 'widget',
+        id: item_id,
+        thread_id,
+        created_at,
+        widget: widget_obj,
+        copy_text: item_data.copy_text || null, // Keep copy_text for internal use even though not in API spec
       } as any;
     } else {
       throw new Error(`Unsupported item type: ${item_type}`);

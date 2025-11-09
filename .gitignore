@@ -43,3 +43,8 @@ supabase/config.toml
 # Python
 __pycache__
 requirements.txt
+
+# Miscellaneous
+agent_hitl.py
+agent_hitl.ts
+openapi.documented.yml

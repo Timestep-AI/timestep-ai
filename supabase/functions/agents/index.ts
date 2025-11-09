@@ -18,10 +18,10 @@ if (DEFAULT_OPENAI_API_KEY) {
 // Configure HTTP exporter to send traces to OpenAI's servers
 setDefaultOpenAITracingExporter();
 import { ChatKitDataStore, ChatKitAttachmentStore, type TContext } from '../_shared/stores.ts';
-import type { Store, AttachmentStore } from '../_shared/store.ts';
-import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from '../_shared/types.ts';
-import { ChatKitServer, StreamingResult } from './chatkit/server.ts';
-import { AgentContext, simple_to_agent_input as simpleToAgentInput, stream_agent_response as streamAgentResponse, type ClientToolCall } from './chatkit/agents.ts';
+import type { Store, AttachmentStore } from '../_shared/chatkit/store.ts';
+import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from '../_shared/chatkit/types.ts';
+import { ChatKitServer, StreamingResult } from '../_shared/chatkit/server.ts';
+import { AgentContext, simple_to_agent_input as simpleToAgentInput, stream_agent_response as streamAgentResponse, type ClientToolCall } from '../_shared/chatkit/agents.ts';
 import { Agent, Runner, tool } from '@openai/agents-core';
 import type { ModelSettings } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';

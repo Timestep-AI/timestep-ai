@@ -6,7 +6,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ChatKitDataStore, type TContext } from '../_shared/stores.ts';
-import type { ThreadMetadata } from '../_shared/types.ts';
+import type { ThreadMetadata } from '../_shared/chatkit/types.ts';
 
 /**
  * Extract bearer token from request headers
