@@ -65,6 +65,12 @@ async function runConversationFlow(page, steps) {
       await verifyToolCall(root, page, step.expectToolCall);
     }
 
+    // --- Verify widget is displayed (if expected) ---
+    // This checks that a widget is actually rendered in the UI
+    if (step.expectWidget) {
+      await verifyWidget(root, currentTurn, step.expectWidget);
+    }
+
     // --- Before next user turn ---
     await expect(sendButton).toBeEnabled({ timeout: TIMEOUTS.SEND_BUTTON });
     console.log(`✓ Send button enabled, ready for next step`);
@@ -169,6 +175,72 @@ async function verifyToolCall(root, page, expectedToolCall) {
   }
   
   console.log(`✓ Tool call ${expectedToolCall.name} verified in thread items`);
+}
+
+async function verifyWidget(root, currentTurn, expectedWidget) {
+  console.log(`→ Verifying widget: ${expectedWidget.type}`);
+
+  // Wait a moment for widget to render
+  await currentTurn.page().waitForTimeout(1000);
+
+  // Get the HTML structure for debugging
+  const turnHTML = await currentTurn.innerHTML();
+  console.log(`→ Turn HTML length: ${turnHTML.length} chars`);
+
+  // Check if there's a data-widget-type attribute anywhere in the turn
+  const hasWidgetType = turnHTML.includes('data-widget-type');
+  console.log(`→ Has data-widget-type: ${hasWidgetType}`);
+
+  // ChatKit widgets are typically rendered with specific data attributes
+  // The actual selector used by ChatKit is [data-thread-item="widget"]
+  const selectors = [
+    '[data-thread-item="widget"]',
+    '[data-widget-type]',
+    '[data-chatkit-widget]',
+    '[data-testid*="widget"]',
+    'div[class*="Widget"]',
+    'div[class*="Card"]',
+  ];
+
+  let widget = null;
+  for (const selector of selectors) {
+    const found = currentTurn.locator(selector).first();
+    const count = await found.count();
+    if (count > 0) {
+      widget = found;
+      console.log(`✓ Found widget with selector: ${selector}`);
+      break;
+    }
+  }
+
+  // If no specific widget found, fail the test - we need actual widgets!
+  if (!widget) {
+    // Log the first 500 chars of HTML for debugging
+    console.error('❌ No widget element found! Turn HTML preview:');
+    console.error(turnHTML.substring(0, 500));
+    throw new Error(
+      `No widget element found with selectors: ${selectors.join(', ')}. ` +
+      `A weather widget should have been rendered with data-widget-type or similar attribute.`
+    );
+  }
+
+  // Wait for widget to be visible
+  await expect(widget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+  console.log(`✓ Widget is visible`);
+
+  // If specific text is expected in the widget, verify it
+  if (expectedWidget.expectText) {
+    const widgetText = await widget.textContent();
+    const regex = expectedWidget.expectText;
+    if (!regex.test(widgetText || '')) {
+      throw new Error(
+        `Widget text did not match expected pattern. Expected: ${regex}, Got: ${widgetText?.substring(0, 200)}`
+      );
+    }
+    console.log(`✓ Widget text matched: ${expectedWidget.expectText}`);
+  }
+
+  console.log(`✓ Widget ${expectedWidget.type} verified in UI`);
 }
 
 module.exports = {

@@ -2,6 +2,7 @@ const { Given, When, Then, Before, After, setDefaultTimeout } = require('@cucumb
 const { chromium, expect } = require('@playwright/test');
 const { runConversationFlow } = require('../../helpers/conversation-flow.cjs');
 const { themeSwitchingFlow } = require('../../helpers/theme-switching-flow.cjs');
+const { weatherFlow } = require('../../helpers/weather-flow.cjs');
 
 // Set default timeout to 60 seconds for all steps
 setDefaultTimeout(60000);
@@ -130,6 +131,12 @@ When('I run the theme switching conversation flow', async () => {
   // Tool call verification is done by checking thread items from the API
   // This ensures the tool call actually occurred, not just that the assistant said it did
   await runConversationFlow(page, themeSwitchingFlow);
+});
+
+When('I run the weather conversation flow', async () => {
+  // Tool call verification is done by checking thread items from the API
+  // This ensures the tool call actually occurred, not just that the assistant said it did
+  await runConversationFlow(page, weatherFlow);
 });
 
 Then('the conversation should complete successfully', async () => {

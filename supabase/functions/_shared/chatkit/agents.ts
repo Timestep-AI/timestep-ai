@@ -192,8 +192,12 @@ export class AgentContext {
   // Matches Python's AgentContext._complete() method (line 205-206 in agents.py)
   // Puts a sentinel in the queue to mark completion
   _complete(): void {
-    // Put sentinel in async queue (matches Python's put_nowait)
-    this._events.put(new _QueueCompleteSentinel());
+    // IMPORTANT: We put TWO sentinels to handle the merge generator case.
+    // When the merge breaks (agent stream ends), it abandons its pending queue.get()
+    // call. That waiter is still in the queue. The first sentinel goes to that
+    // abandoned waiter (ignored), and the second goes to the drain iterator.
+    this._events.put(new _QueueCompleteSentinel());  // For abandoned waiter (if any)
+    this._events.put(new _QueueCompleteSentinel());  // For drain iterator
   }
 
   // Match Python: stream method (line 201-202)
@@ -601,141 +605,95 @@ export async function simple_to_agent_input(thread_items: ThreadItem[] | ThreadI
 }
 
 // Queue iterator that wraps the events queue (matches Python line 302-334 in agents.py)
+// Match Python: class _AsyncQueueIterator (line 301-320)
 class _AsyncQueueIterator implements AsyncIterable<_EventWrapper> {
-  private context: AgentContext;
+  private queue: _AsyncQueue<ThreadStreamEvent | _QueueCompleteSentinel>;
   private completed: boolean = false;
 
-  constructor(context: AgentContext) {
-    this.context = context;
+  constructor(queue: _AsyncQueue<ThreadStreamEvent | _QueueCompleteSentinel>) {
+    this.queue = queue;
   }
 
-  async *[Symbol.asyncIterator](): AsyncGenerator<_EventWrapper> {
-    // Continue from current queue index (allows resuming after merge)
-    const queue = this.context.events;
-    while (this.context.queueIndex < queue.length && !this.completed) {
-      const item = queue[this.context.queueIndex];
-      this.context.queueIndex++;
-      
-      // Check for sentinel (null marks completion)
-      if (item === null) {
-        this.completed = true;
-        break;
-      }
-      yield new _EventWrapper(item);
+  [Symbol.asyncIterator](): AsyncIterator<_EventWrapper> {
+    return this;
+  }
+
+  async next(): Promise<IteratorResult<_EventWrapper>> {
+    if (this.completed) {
+      return { done: true, value: undefined };
     }
+
+    // Match Python: item = await self.queue.get()
+    const item = await this.queue.get();
+
+    // Match Python: if isinstance(item, _QueueCompleteSentinel)
+    if (item instanceof _QueueCompleteSentinel) {
+      this.completed = true;
+      return { done: true, value: undefined };
+    }
+
+    // Match Python: return _EventWrapper(item)
+    return { done: false, value: new _EventWrapper(item) };
   }
 }
 
-// Merge two async iterators (matches Python line 262-294 in agents.py)
-// Python uses asyncio.wait() with FIRST_COMPLETED to yield items as they arrive
+// Merge two async iterators (matches Python line 261-293 in agents.py)
+// Python: async def _merge_generators(a: AsyncIterator[T1], b: AsyncIterator[T2])
 async function* _mergeGenerators<T1, T2>(
   a: AsyncIterable<T1>,
   b: AsyncIterable<T2>
 ): AsyncIterable<T1 | T2> {
   const aIterator = a[Symbol.asyncIterator]();
   const bIterator = b[Symbol.asyncIterator]();
-  
-  // Track pending next() calls
-  let aNext: Promise<IteratorResult<T1>> | null = aIterator.next();
-  let bNext: Promise<IteratorResult<T2>> | null = bIterator.next();
-  let aDone = false;
-  let bDone = false;
+
+  // Match Python: pending_tasks dict tracking pending next() calls
+  const pendingTasks = new Map<Promise<IteratorResult<T1 | T2>>, 'a' | 'b'>();
+  pendingTasks.set(aIterator.next(), 'a');
+  pendingTasks.set(bIterator.next(), 'b');
 
   // Match Python: while len(pending_tasks) > 0
-  while (!aDone || !bDone) {
-    // Match Python: asyncio.wait(..., return_when="FIRST_COMPLETED")
-    // Use Promise.race to get the first completed promise
-    const promises: Array<Promise<{ source: 'a' | 'b'; result: IteratorResult<T1 | T2> }>> = [];
-    
-    if (!aDone && aNext) {
-      promises.push(
-        aNext.then(result => ({ source: 'a' as const, result }))
-      );
-    }
-    
-    if (!bDone && bNext) {
-      promises.push(
-        bNext.then(result => ({ source: 'b' as const, result }))
-      );
-    }
+  while (pendingTasks.size > 0) {
+    // Match Python: done, _ = await asyncio.wait(..., return_when="FIRST_COMPLETED")
+    const raceResult = await Promise.race(
+      Array.from(pendingTasks.keys()).map(p => p.then(result => ({ promise: p, result })))
+    );
 
-    if (promises.length === 0) {
-      break;
-    }
+    const source = pendingTasks.get(raceResult.promise)!;
+    const result = raceResult.result;
 
-    // Match Python: yield the first completed result
-    const completed = await Promise.race(promises);
-    
-    if (completed.source === 'a') {
-      const result = completed.result as IteratorResult<T1>;
-      if (!result.done && result.value !== undefined) {
-        yield result.value;
-        aNext = aIterator.next();
-      } else {
-        aDone = true;
-        aNext = null;
-        // Match Python: when one iterator completes, yield remaining items from the other
-        if (!bDone && bNext) {
-          try {
-            const bResult = await bNext;
-            if (!bResult.done && bResult.value !== undefined) {
-              yield bResult.value;
-            }
-          } catch (_e) {
-            // Ignore errors
-          }
-        }
-      }
-    } else {
-      const result = completed.result as IteratorResult<T2>;
-      if (!result.done && result.value !== undefined) {
-        yield result.value;
-        bNext = bIterator.next();
-      } else {
-        bDone = true;
-        bNext = null;
-        // Match Python: when one iterator completes, yield remaining items from the other
-        if (!aDone && aNext) {
-          try {
-            const aResult = await aNext;
-            if (!aResult.done && aResult.value !== undefined) {
-              yield aResult.value;
-            }
-          } catch (_e) {
-            // Ignore errors
-          }
-        }
-      }
-    }
-  }
+    // Match Python: stop = False
+    let stop = false;
 
-  // Match Python: yield any remaining items from both iterators
-  while (!aDone && aNext) {
+    // Match Python: try: result = d.result(); yield result
     try {
-      const result = await aNext;
-      if (!result.done && result.value !== undefined) {
+      if (!result.done) {
         yield result.value;
-        aNext = aIterator.next();
+        // Match Python: pending_tasks[asyncio.ensure_future(dg.__anext__())] = dg
+        const nextPromise = source === 'a' ? aIterator.next() : bIterator.next();
+        pendingTasks.delete(raceResult.promise);
+        pendingTasks.set(nextPromise, source);
       } else {
-        aDone = true;
-        break;
+        // Match Python: except StopAsyncIteration: stop = True
+        stop = true;
       }
-    } catch (_e) {
-      break;
+    } catch (_error) {
+      // Match Python: except StopAsyncIteration: stop = True
+      stop = true;
     }
-  }
 
-  while (!bDone && bNext) {
-    try {
-      const result = await bNext;
-      if (!result.done && result.value !== undefined) {
-        yield result.value;
-        bNext = bIterator.next();
-      } else {
-        bDone = true;
-        break;
+    // Match Python: finally: del pending_tasks[d]
+    if (stop) {
+      pendingTasks.delete(raceResult.promise);
+    }
+
+    // Match Python: if stop: cancel all remaining tasks and break
+    if (stop) {
+      // Python lines 285-293: cancel remaining tasks, yield their results if not cancelled, then break
+      for (const [promise] of pendingTasks) {
+        // In TypeScript, we can't truly cancel a Promise, but we can just ignore it
+        // The important part is to break immediately, not wait for other iterators
+        pendingTasks.delete(promise);
       }
-    } catch (_e) {
       break;
     }
   }
@@ -759,7 +717,7 @@ export async function* stream_agent_response(
   const producedItems = new Set<string>();
 
   // Match Python: create queue iterator (line 350 in agents.py)
-  const queueIterator = new _AsyncQueueIterator(agent_context);
+  const queueIterator = new _AsyncQueueIterator(agent_context.events);
 
   // Match Python: check if the last item in the thread was a workflow or a client tool call
   // if it was a client tool call, check if the second last item was a workflow
@@ -1128,16 +1086,17 @@ export async function* stream_agent_response(
   // This would be caught by the outer try/catch if guardrails are implemented
   // For now, we'll skip the explicit handling but keep the structure
 
-  // After streaming completes, mark context as complete (matches Python line 580 in agents.py)
+  // After streaming completes, mark context as complete (matches Python line 579 in agents.py)
   console.log(`[stream_agent_response] Finished iterating merged generators, rawEventCount: ${rawEventCount}`);
   agent_context._complete();
 
-  // Drain remaining events from queue (matches Python lines 582-584 in agents.py)
-  // Create a new iterator that continues from current queueIndex (after merge consumed some items)
-  console.log(`[stream_agent_response] Draining queue events...`);
-  const drainIterator = new _AsyncQueueIterator(agent_context);
+  // Drain remaining events from queue (matches Python lines 582-583 in agents.py)
+  // Python: async for event in queue_iterator: yield event.event
+  // IMPORTANT: Reuse the same queueIterator from the merge, don't create a new one!
+  // The sentinel will be delivered to the existing iterator's pending get() call
+  console.log(`[stream_agent_response] Draining queue events from same iterator...`);
   let queueEventCount = 0;
-  for await (const event of drainIterator) {
+  for await (const event of queueIterator) {
     queueEventCount++;
     console.log(`[stream_agent_response] Queue event ${queueEventCount}:`, event.event?.type);
     yield event.event;
