@@ -47,4 +47,5 @@ requirements.txt
 # Miscellaneous
 agent_hitl.py
 agent_hitl.ts
+ITEM_TYPE_MAPPING.md
 openapi.documented.yml

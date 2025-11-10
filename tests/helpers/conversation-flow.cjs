@@ -56,6 +56,44 @@ async function runConversationFlow(page, steps) {
         })
         .toMatch(step.expectAssistant);
       console.log(`✓ Assistant matched: ${step.expectAssistant}`);
+
+      // If expectAssistantMustNotBeOnlyWidget is set, verify there's actual assistant text
+      // separate from widget content
+      if (step.expectAssistantMustNotBeOnlyWidget) {
+        // Look for assistant message text that's NOT inside a widget
+        const assistantTextElements = currentTurn.locator('p, div').filter({
+          has: root.locator('text=/weather|temperature|forecast|currently/i')
+        }).filter({
+          hasNot: root.locator('[data-thread-item="widget"]')
+        });
+
+        const assistantTextCount = await assistantTextElements.count();
+        if (assistantTextCount === 0) {
+          // Fall back to checking if there's ANY text outside widgets
+          const allText = await currentTurn.textContent();
+          const widgetElements = currentTurn.locator('[data-thread-item="widget"]');
+          const widgetCount = await widgetElements.count();
+
+          let widgetText = '';
+          for (let i = 0; i < widgetCount; i++) {
+            widgetText += await widgetElements.nth(i).textContent();
+          }
+
+          // Remove widget text from total text to see if there's assistant message text
+          const nonWidgetText = allText.replace(widgetText, '').trim();
+
+          if (!nonWidgetText || nonWidgetText.length < 10) {
+            throw new Error(
+              `Expected assistant message with text separate from widgets, but found only widget content. ` +
+              `Total text length: ${allText.length}, Widget text length: ${widgetText.length}, ` +
+              `Non-widget text: "${nonWidgetText}"`
+            );
+          }
+          console.log(`✓ Found assistant text separate from widgets: ${nonWidgetText.substring(0, 100)}...`);
+        } else {
+          console.log(`✓ Found ${assistantTextCount} assistant text element(s) outside widgets`);
+        }
+      }
     }
 
     // --- Verify tool call occurred (if expected) ---
@@ -69,6 +107,16 @@ async function runConversationFlow(page, steps) {
     // This checks that a widget is actually rendered in the UI
     if (step.expectWidget) {
       await verifyWidget(root, currentTurn, step.expectWidget);
+    }
+
+    // --- Verify multiple widgets are displayed (if expected) ---
+    if (step.expectWidgets) {
+      await verifyMultipleWidgets(root, currentTurn, step.expectWidgets, false);
+    }
+
+    // --- Verify multiple widgets in any order (if expected) ---
+    if (step.expectWidgetsUnordered) {
+      await verifyMultipleWidgets(root, currentTurn, step.expectWidgetsUnordered, true);
     }
 
     // --- Before next user turn ---
@@ -241,6 +289,135 @@ async function verifyWidget(root, currentTurn, expectedWidget) {
   }
 
   console.log(`✓ Widget ${expectedWidget.type} verified in UI`);
+}
+
+async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAnyOrder = false) {
+  const orderMsg = allowAnyOrder ? ' (any order)' : ' (strict order)';
+  console.log(`→ Verifying ${expectedWidgets.length} widgets${orderMsg}`);
+
+  // Wait a moment for widgets to render
+  await currentTurn.page().waitForTimeout(1000);
+
+  // Get the HTML structure for debugging
+  const turnHTML = await currentTurn.innerHTML();
+  console.log(`→ Turn HTML length: ${turnHTML.length} chars`);
+
+  // The actual selector used by ChatKit is [data-thread-item="widget"]
+  const widgetSelector = '[data-thread-item="widget"]';
+  const widgets = currentTurn.locator(widgetSelector);
+  const widgetCount = await widgets.count();
+
+  console.log(`→ Found ${widgetCount} widget(s) with selector: ${widgetSelector}`);
+
+  if (widgetCount === 0) {
+    console.error('❌ No widget elements found! Turn HTML preview:');
+    console.error(turnHTML.substring(0, 500));
+    throw new Error(
+      `No widget elements found. Expected ${expectedWidgets.length} widgets to be rendered.`
+    );
+  }
+
+  if (widgetCount < expectedWidgets.length) {
+    throw new Error(
+      `Expected ${expectedWidgets.length} widgets but only found ${widgetCount}`
+    );
+  }
+
+  if (allowAnyOrder) {
+    // For unordered verification, collect all widget texts and match against expectations
+    const widgetTexts = [];
+    for (let i = 0; i < widgetCount; i++) {
+      const widget = widgets.nth(i);
+      await expect(widget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+      const widgetText = await widget.textContent();
+      widgetTexts.push(widgetText || '');
+    }
+
+    // Verify each expected widget is present somewhere
+    for (const expectedWidget of expectedWidgets) {
+      console.log(`→ Verifying presence of ${expectedWidget.type} widget`);
+
+      let found = false;
+      let matchedText = '';
+
+      for (const widgetText of widgetTexts) {
+        let matches = true;
+
+        // Check expectText if specified
+        if (expectedWidget.expectText) {
+          const regex = expectedWidget.expectText;
+          if (!regex.test(widgetText)) {
+            matches = false;
+          }
+        }
+
+        // Check mustContain if specified
+        if (expectedWidget.mustContain) {
+          if (!widgetText.includes(expectedWidget.mustContain)) {
+            matches = false;
+          }
+        }
+
+        if (matches) {
+          found = true;
+          matchedText = widgetText.substring(0, 100).replace(/\s+/g, ' ');
+          break;
+        }
+      }
+
+      if (!found) {
+        throw new Error(
+          `Expected widget with type="${expectedWidget.type}", ` +
+          `expectText=${expectedWidget.expectText}, ` +
+          `mustContain="${expectedWidget.mustContain}" not found`
+        );
+      }
+
+      console.log(`✓ Found ${expectedWidget.type} widget: ${matchedText}...`);
+    }
+
+    console.log(`✓ All ${expectedWidgets.length} widgets verified (any order)`);
+  } else {
+    // Strict order verification (original behavior)
+    for (let i = 0; i < expectedWidgets.length; i++) {
+      const expectedWidget = expectedWidgets[i];
+      console.log(`→ Verifying widget ${i + 1}/${expectedWidgets.length}: ${expectedWidget.type}`);
+
+      const widget = widgets.nth(i);
+
+      // Wait for widget to be visible
+      await expect(widget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+
+      // Get widget text for debugging
+      const widgetText = await widget.textContent();
+      const preview = widgetText?.substring(0, 100).replace(/\s+/g, ' ');
+      console.log(`✓ Widget ${i + 1} is visible - preview: ${preview}...`);
+
+      // If specific text is expected in the widget, verify it
+      if (expectedWidget.expectText) {
+        const regex = expectedWidget.expectText;
+        if (!regex.test(widgetText || '')) {
+          throw new Error(
+            `Widget ${i + 1} text did not match expected pattern. Expected: ${regex}, Got: ${widgetText?.substring(0, 200)}`
+          );
+        }
+        console.log(`✓ Widget ${i + 1} text matched: ${expectedWidget.expectText}`);
+      }
+
+      // If mustContain is specified, verify it strictly
+      if (expectedWidget.mustContain) {
+        const mustContain = expectedWidget.mustContain;
+        if (!widgetText?.includes(mustContain)) {
+          throw new Error(
+            `Widget ${i + 1} must contain "${mustContain}" but got: ${widgetText?.substring(0, 200)}`
+          );
+        }
+        console.log(`✓ Widget ${i + 1} strictly contains: ${mustContain}`);
+      }
+    }
+
+    console.log(`✓ All ${expectedWidgets.length} widgets verified in order`);
+  }
 }
 
 module.exports = {
