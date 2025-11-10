@@ -27,6 +27,8 @@ import type { ModelSettings } from '@openai/agents-core';
 import { OpenAIProvider } from '@openai/agents-openai';
 import OpenAI from 'openai';
 import type { RunConfig } from '@openai/agents-core';
+import { retrieveWeather, normalizeUnit as normalizeTemperatureUnit, WeatherLookupError } from './weather.ts';
+import { renderWeatherWidget, weatherWidgetCopyText } from './sample_widget.ts';
 
 // Constants for theme switching
 const SUPPORTED_COLOR_SCHEMES = new Set(['light', 'dark']);
@@ -147,6 +149,74 @@ const switchTheme = tool({
 });
 
 /**
+ * Get current weather and forecast for a location
+ * Matches Python get_weather implementation
+ */
+const getWeather = tool({
+  name: 'get_weather',
+  description: 'Look up the current weather and upcoming forecast for a location and render an interactive weather dashboard.',
+  parameters: {
+    type: 'object',
+    properties: {
+      location: {
+        type: 'string',
+        description: 'City name, address, or landmark to look up',
+      },
+      unit: {
+        type: 'string',
+        description: 'Temperature unit - "celsius" or "fahrenheit" (defaults to fahrenheit)',
+        enum: ['celsius', 'fahrenheit'],
+      },
+    },
+    required: ['location'],
+    additionalProperties: false,
+  },
+  strict: false,
+  execute: async ({ location, unit }: { location: string; unit?: string }, ctx: { context?: AgentContext }) => {
+    console.log('[WeatherTool] tool invoked', { location, unit });
+    try {
+      const normalizedUnit = normalizeTemperatureUnit(unit);
+      console.log('[WeatherTool] normalized unit:', normalizedUnit);
+
+      const data = await retrieveWeather(location, normalizedUnit);
+      console.log('[WeatherTool] lookup succeeded', {
+        location: data.location,
+        temperature: data.temperature,
+        unit: data.temperature_unit,
+      });
+
+      const widget = renderWeatherWidget(data);
+      const copyText = weatherWidgetCopyText(data);
+      console.log('[WeatherTool] widget built');
+
+      const agentContext = ctx.context as AgentContext;
+      if (!agentContext) {
+        console.error('[WeatherTool] No AgentContext found in RunContext');
+        throw new Error('Weather data is currently unavailable for that location.');
+      }
+
+      console.log('[WeatherTool] streaming widget');
+      await agentContext.stream_widget(widget, copyText);
+      console.log('[WeatherTool] widget streamed');
+
+      const observed = data.observation_time ? data.observation_time.toISOString() : null;
+
+      return {
+        location: data.location,
+        unit: normalizedUnit,
+        observed_at: observed,
+      };
+    } catch (error) {
+      console.error('[WeatherTool] error:', error);
+      if (error instanceof WeatherLookupError) {
+        throw new Error(error.message);
+      }
+      throw new Error('Weather data is currently unavailable for that location.');
+    }
+  },
+});
+
+/**
  * Ensure default agents exist for the user
  * Matches Python ensure_default_agents_exist implementation
  */
@@ -225,7 +295,7 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
     throw new Error(`Agent not found: ${agentId}`);
   }
 
-  const tools = [switchTheme];
+  const tools = [switchTheme, getWeather];
 
   console.log(`[agents] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
 
