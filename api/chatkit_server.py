@@ -1,35 +1,19 @@
-from typing import Any, AsyncIterator, TypedDict, Final, Literal
+from typing import Any, AsyncIterator, TypedDict
 import os
 import logging
 from fastapi import HTTPException
-from agents import Agent, Runner, RunConfig, OpenAIProvider, function_tool, RunContextWrapper, StopAtTools, ModelSettings
+from agents import Agent, Runner, RunConfig, OpenAIProvider, StopAtTools, ModelSettings
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
-from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext, ClientToolCall
+from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext
 from chatkit.server import ChatKitServer, DEFAULT_PAGE_SIZE
 from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, ClientToolCallItem, ThreadsAddClientToolOutputReq, StreamingReq, ThreadItemDoneEvent, ThreadItemAddedEvent, AssistantMessageItem
 from datetime import datetime
 from chatkit.store import Store, AttachmentStore
 from .stores import TContext
-from .weather import retrieve_weather, normalize_unit as normalize_temperature_unit, WeatherLookupError
-from .sample_widget import render_weather_widget, weather_widget_copy_text
+from .tools import switch_theme, get_weather, CLIENT_THEME_TOOL_NAME
 
 logger = logging.getLogger(__name__)
-
-# Constants for theme switching
-SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
-CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
-
-def _normalize_color_scheme(value: str) -> str:
-    """Normalize color scheme input to 'light' or 'dark'."""
-    normalized = str(value).strip().lower()
-    if normalized in SUPPORTED_COLOR_SCHEMES:
-        return normalized
-    if "dark" in normalized:
-        return "dark"
-    if "light" in normalized:
-        return "light"
-    raise ValueError("Theme must be either 'light' or 'dark'.")
 
 # Interface for agent record from database
 # Matches TypeScript AgentRecord interface
@@ -66,96 +50,6 @@ def get_agent_by_id(agent_id: str, ctx: TContext) -> AgentRecord | None:
         return None
     
     return response.data[0]
-
-@function_tool(
-    description_override="Switch the chat interface between light and dark color schemes."
-)
-async def switch_theme(
-    ctx: RunContextWrapper[AgentContext],
-    theme: str,
-) -> dict[str, str] | None:
-    """Switch the theme between light and dark mode.
-
-    This is a client tool that triggers a theme change in the frontend.
-    """
-    try:
-        requested = _normalize_color_scheme(theme)
-        ctx.context.client_tool_call = ClientToolCall(
-            name=CLIENT_THEME_TOOL_NAME,
-            arguments={"theme": requested},
-        )
-        return {"theme": requested}
-    except Exception:
-        logger.exception("Failed to switch theme")
-        return None
-
-@function_tool(
-    description_override="Look up the current weather and upcoming forecast for a location and render an interactive weather dashboard."
-)
-async def get_weather(
-    ctx: RunContextWrapper[AgentContext],
-    location: str,
-    unit: Literal["celsius", "fahrenheit"] | str | None = None,
-) -> dict[str, str | None]:
-    """Get current weather and forecast for a location.
-
-    Args:
-        location: City name, address, or landmark to look up
-        unit: Temperature unit - 'celsius' or 'fahrenheit' (defaults to fahrenheit)
-
-    Returns:
-        Dictionary with location, unit, and observation time
-    """
-    print("[WeatherTool] tool invoked", {"location": location, "unit": unit})
-    try:
-        normalized_unit = normalize_temperature_unit(unit)
-    except WeatherLookupError as exc:
-        print("[WeatherTool] invalid unit", {"error": str(exc)})
-        raise ValueError(str(exc)) from exc
-
-    try:
-        data = await retrieve_weather(location, normalized_unit)
-    except WeatherLookupError as exc:
-        print("[WeatherTool] lookup failed", {"error": str(exc)})
-        raise ValueError(str(exc)) from exc
-
-    print(
-        "[WeatherTool] lookup succeeded",
-        {
-            "location": data.location,
-            "temperature": data.temperature,
-            "unit": data.temperature_unit,
-        },
-    )
-    try:
-        widget = render_weather_widget(data)
-        copy_text = weather_widget_copy_text(data)
-        payload: Any
-        try:
-            payload = widget.model_dump()
-        except AttributeError:
-            payload = widget
-        print("[WeatherTool] widget payload", payload)
-    except Exception as exc:
-        print("[WeatherTool] widget build failed", {"error": str(exc)})
-        raise ValueError("Weather data is currently unavailable for that location.") from exc
-
-    print("[WeatherTool] streaming widget")
-    try:
-        await ctx.context.stream_widget(widget, copy_text=copy_text)
-    except Exception as exc:
-        print("[WeatherTool] widget stream failed", {"error": str(exc)})
-        raise ValueError("Weather data is currently unavailable for that location.") from exc
-
-    print("[WeatherTool] widget streamed")
-
-    observed = data.observation_time.isoformat() if data.observation_time else None
-
-    return {
-        "location": data.location,
-        "unit": normalized_unit,
-        "observed_at": observed,
-    }
 
 def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
     """Load an agent from the database by ID.
