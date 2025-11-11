@@ -154,7 +154,7 @@ This creates all necessary tables (users, traces, responses, spans, etc.).
 
 **Start the frontend:**
 ```bash
-npm run dev
+VITE_PYTHON_BACKEND_URL="http://localhost:8000" npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
@@ -172,9 +172,7 @@ npx supabase functions serve
 
 In a separate terminal:
 ```bash
-npm run dev:api
-# or
-uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+OLLAMA_API_KEY="your-ollama-api-key" OPENAI_API_KEY="your-openai-api-key" SUPABASE_ANON_KEY="your-supabase-anon-key" SUPABASE_URL="http://127.0.0.1:54321" npm run dev:api 2>&1 | tee python-backend.log
 ```
 
 The Python backend will be available at `http://127.0.0.1:8000`.
