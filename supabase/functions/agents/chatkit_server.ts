@@ -46,7 +46,7 @@ export async function getAgentById(agentId: string, ctx: TContext): Promise<Agen
       // Not found
       return null;
     }
-    logger.error('[agents] Error fetching agent:', error);
+    logger.error(`[getAgentById] Error fetching agent ${agentId}:`, error);
     return null;
   }
   
