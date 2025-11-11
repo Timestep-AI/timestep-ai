@@ -419,12 +419,6 @@ class MyChatKitServer extends ChatKitServer {
       
       // The session automatically saves items after the run completes
       // No need to manually save items - the Runner handles it
-      let eventCount = 0;
-      logger.info(`[agents] Starting to iterate streamAgentResponse...`);
-      // StreamedRunResult implements AsyncIterable directly - ReadableStream starts when we iterate
-      // CRITICAL: When agentInput is empty but result.input has merged history, we MUST iterate
-      // the stream to start the ReadableStream, which allows the stream loop to enqueue items
-      // The stream loop runs asynchronously and enqueues items to #readableController when available
       
       // Wrap streamAgentResponse to fix __fake_id__ in thread.item.added and thread.item.done events
       // CRITICAL: If items are saved with __fake_id__, they will overwrite each other due to PRIMARY KEY constraint
@@ -434,8 +428,13 @@ class MyChatKitServer extends ChatKitServer {
       async function* fixChatKitEventIds(events: AsyncIterable<ThreadStreamEvent>): AsyncIterable<ThreadStreamEvent> {
         // Track IDs we've generated for items, so thread.item.added and thread.item.done use the same ID
         const itemIdMap: Map<string, string> = new Map(); // Maps original __fake_id__ to generated ID
+        let eventCount = 0;
         
         for await (const event of events) {
+          eventCount++;
+          const eventType = event.type || 'unknown';
+          logger.info(`[agents] Event #${eventCount}: ${eventType}`);
+          
           // Fix __fake_id__ in thread.item.added events
           if (event.type === 'thread.item.added' && (event as any).item) {
             const item = (event as any).item;
@@ -515,14 +514,7 @@ class MyChatKitServer extends ChatKitServer {
       }
       
       for await (const event of fixChatKitEventIds(streamAgentResponse(agentContext, streamToIterate))) {
-        eventCount++;
-        logger.info(`[agents] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
         yield event;
-      }
-      logger.info(`[agents] Stream ended after ${eventCount} events`);
-      const isEmptyInput = Array.isArray(agentInput) ? agentInput.length === 0 : agentInput === "";
-      if (eventCount === 0 && isEmptyInput) {
-        logger.warning(`[agents] WARNING: Empty stream with empty agentInput - Runner may not be generating response from history`);
       }
     } catch (error) {
       logger.error('[agents] Error in runner.run():', error);
