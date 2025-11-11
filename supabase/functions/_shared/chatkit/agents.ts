@@ -1,4 +1,4 @@
-import type { ThreadStreamEvent, ThreadMetadata, UserMessageItem, ClientToolCallItem, WorkflowItem, Workflow, WorkflowSummary, Task, ThreadItemAddedEvent, ThreadItemUpdated, WorkflowTaskUpdated, WorkflowTaskAdded, DurationSummary, Annotation, FileSource, URLSource, ThreadItem, TaskItem, WidgetItem, EndOfTurnItem, HiddenContextItem, Attachment, UserMessageTagContent, AssistantMessageContent, AssistantMessageItem } from './types.ts';
+import type { ThreadStreamEvent, ThreadMetadata, UserMessageItem, ClientToolCallItem, WorkflowItem, Workflow, WorkflowSummary, Task, ThoughtTask, ThreadItemAddedEvent, ThreadItemUpdated, WorkflowTaskUpdated, WorkflowTaskAdded, DurationSummary, Annotation, FileSource, URLSource, ThreadItem, TaskItem, WidgetItem, EndOfTurnItem, HiddenContextItem, Attachment, UserMessageTagContent, AssistantMessageContent, AssistantMessageItem } from './types.ts';
 import type { Store, StoreItemType } from './store.ts';
 import { stream_widget } from './server.ts';
 import type { WidgetRoot, Markdown, Text } from './widgets.ts';
@@ -238,9 +238,9 @@ export class AgentContext {
 export class StreamingThoughtTracker {
   item_id: string;
   index: number;
-  task: Task;
-  
-  constructor(item_id: string, index: number, task: Task) {
+  task: ThoughtTask;
+
+  constructor(item_id: string, index: number, task: ThoughtTask) {
     this.item_id = item_id;
     this.index = index;
     this.task = task;
