@@ -464,14 +464,13 @@ export class ChatKitServer<TCtx = TContext> {
   }
 
   async _build_user_message_item(input: any, thread: ThreadMetadata, context: TCtx): Promise<UserMessageItem> {
-    const contentArray = Array.isArray(input?.content) ? input.content : [{ type: 'input_text', text: input?.content?.text || '' }];
     const attachments = await Promise.all(
       (input?.attachments || []).map((attachment_id: string) => this.store.load_attachment(attachment_id, context))
     );
     return {
       type: 'user_message',
       id: this.store.generate_item_id('message', thread, context),
-      content: contentArray,
+      content: input.content,
       thread_id: thread.id,
       attachments: attachments,
       quoted_text: input?.quoted_text || null,
