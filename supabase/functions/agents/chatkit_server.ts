@@ -238,12 +238,15 @@ class MyChatKitServer extends ChatKitServer {
         }
 
         // For regular messages, keep only role and content
-        // The Agent SDK will handle the content format correctly
-        const sanitized: any = {
-          role: item.role,
-          content: item.content,
+        // Note: TypeScript SDK uses callback output for saving, so we must preserve output_text
+        // for assistant messages (unlike Python which converts to input_text)
+        const role = item.role;
+        const content = item.content || [];
+        
+        return {
+          role: role,
+          content: content,
         };
-        return sanitized;
       }
 
       // Sanitize history items (they come from the conversation API with extra fields)
@@ -440,21 +443,25 @@ class MyChatKitServer extends ChatKitServer {
             const item = (event as any).item;
             const originalId = item.id || 'N/A';
             const itemType = item.type || 'unknown';
-            const contentLength = item.content && Array.isArray(item.content) && item.content.length > 0
-              ? (item.content[0].text || '').length
-              : 0;
-            const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
-              ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
-              : '';
-            logger.info(`[agents] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            let contentPreview = '';
+            let contentLength = 0;
+            if (item.type === 'assistant_message' && item.content && Array.isArray(item.content) && item.content.length > 0) {
+              // Get first 50 chars of content for logging
+              const firstContent = item.content[0];
+              if (firstContent && firstContent.text) {
+                contentLength = firstContent.text.length;
+                contentPreview = firstContent.text.length > 50 ? firstContent.text.substring(0, 50) + '...' : firstContent.text;
+              }
+            }
+            logger.info(`[agents] ThreadItemAddedEvent: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from a previous event)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                logger.info(`[agents] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Reusing ID for ThreadItemAddedEvent: ${originalId} -> ${item.id}`);
               } else {
-                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
+                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in ThreadItemAddedEvent (original_id=${originalId})`);
                 let itemTypeForId: StoreItemType;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
@@ -465,7 +472,7 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                logger.info(`[agents] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Fixed ID in ThreadItemAddedEvent: ${originalId} -> ${item.id}`);
               }
             } else {
               logger.info(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
@@ -477,21 +484,25 @@ class MyChatKitServer extends ChatKitServer {
             const item = (event as any).item;
             const originalId = item.id || 'N/A';
             const itemType = item.type || 'unknown';
-            const contentLength = item.content && Array.isArray(item.content) && item.content.length > 0
-              ? (item.content[0].text || '').length
-              : 0;
-            const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
-              ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
-              : '';
-            logger.info(`[agents] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            let contentPreview = '';
+            let contentLength = 0;
+            if (item.type === 'assistant_message' && item.content && Array.isArray(item.content) && item.content.length > 0) {
+              // Get first 50 chars of content for logging
+              const firstContent = item.content[0];
+              if (firstContent && firstContent.text) {
+                contentLength = firstContent.text.length;
+                contentPreview = firstContent.text.length > 50 ? firstContent.text.substring(0, 50) + '...' : firstContent.text;
+              }
+            }
+            logger.info(`[agents] ThreadItemDoneEvent: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from thread.item.added)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                logger.info(`[agents] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Reusing ID for ThreadItemDoneEvent: ${originalId} -> ${item.id}`);
               } else {
-                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
+                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in ThreadItemDoneEvent (original_id=${originalId})`);
                 let itemTypeForId: StoreItemType;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
@@ -502,7 +513,7 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                logger.info(`[agents] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Fixed ID in ThreadItemDoneEvent: ${originalId} -> ${item.id}`);
               }
             } else {
               logger.info(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
