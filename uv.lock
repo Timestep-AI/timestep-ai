@@ -1440,7 +1440,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastapi", specifier = ">=0.120.2" },
     { name = "ollama", specifier = ">=0.6.0" },
-    { name = "openai-agents", extras = ["sqlalchemy"], specifier = ">=0.4.2" },
+    { name = "openai-agents", extras = ["sqlalchemy"], specifier = ">=0.5.0" },
     { name = "openai-chatkit", specifier = ">=1.1.2" },
     { name = "supabase", specifier = ">=2.22.4" },
 ]
