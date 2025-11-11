@@ -117,7 +117,6 @@ class MyChatKitServer extends ChatKitServer {
     input: UserMessageItem | null,
     context: TContext
   ): AsyncIterable<ThreadStreamEvent> {
-    logger.info('[agents] respond() called for thread:', thread.id, 'agent:', context.agent_id);
     const agentContext = new AgentContext(thread, this.store, context);
 
     // NOTE: Removed early return for ClientToolCallItem
@@ -132,22 +131,18 @@ class MyChatKitServer extends ChatKitServer {
       throw new Error('agent_id is required in context');
     }
 
-    logger.info('[agents] About to call loadAgentFromDatabase');
     const agent = await loadAgentFromDatabase(agent_id, context);
-    logger.info('[agents] loadAgentFromDatabase returned successfully');
     
     // Create Conversations session bound to polyfill with per-request JWT
     const session = getSessionForThread(thread.id, context);
     
     // Convert input to agent format
     const agentInput = input ? await simpleToAgentInput(input) : [];
-    logger.info(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
     
     // When using session memory with list inputs, we need to provide a callback
     // that defines how to merge history items with new items.
     // The session automatically saves items after the run completes.
     const sessionInputCallback = async (historyItems: any[], newItems: any[]): Promise<any[]> => {
-      logger.info(`[session_input_callback] sessionInputCallback called with historyItems length:`, historyItems.length, `and newItems length:`, newItems.length);
       try {
         logger.info(`[session_input_callback] ===== CALLBACK INVOKED =====`);
         logger.info(`[session_input_callback] Called with ${historyItems.length} history items and ${newItems.length} new items`);
