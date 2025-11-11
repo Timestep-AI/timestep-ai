@@ -2,6 +2,7 @@
 // This file contains all widget component types for ChatKit UI
 
 import type { ActionConfig } from './actions.ts';
+import type { IconName } from './icons.ts';
 
 // ============================================================================
 // Base Types and Literals
@@ -38,18 +39,7 @@ export type ControlVariant = "solid" | "soft" | "outline" | "ghost";
 export type ControlSize = "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
 /** Button and input size variants. */
 
-export type WidgetIcon =
-  | "agent" | "analytics" | "atom" | "batch" | "bolt" | "book-open" | "book-clock"
-  | "book-closed" | "bug" | "calendar" | "chart" | "check" | "check-circle"
-  | "check-circle-filled" | "chevron-left" | "chevron-right" | "circle-question"
-  | "compass" | "confetti" | "cube" | "desktop" | "document" | "dot" | "dots-horizontal"
-  | "dots-vertical" | "empty-circle" | "external-link" | "globe" | "keys" | "lab"
-  | "images" | "info" | "lifesaver" | "lightbulb" | "mail" | "map-pin" | "maps"
-  | "mobile" | "name" | "notebook" | "notebook-pencil" | "page-blank" | "phone"
-  | "play" | "plus" | "profile" | "profile-card" | "reload" | "star" | "star-filled"
-  | "search" | "sparkle" | "sparkle-double" | "square-code" | "square-image"
-  | "square-text" | "suitcase" | "settings-slider" | "user" | "wreath" | "write"
-  | "write-alt" | "write-alt2";
+export type WidgetIcon = IconName;
 /** Icon names accepted by widgets that render icons. */
 
 export type CurveType =
