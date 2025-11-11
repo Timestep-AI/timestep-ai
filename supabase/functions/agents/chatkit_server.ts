@@ -148,6 +148,8 @@ class MyChatKitServer extends ChatKitServer {
         logger.info(`[session_input_callback] Called with ${historyItems.length} history items and ${newItems.length} new items`);
         logger.info(`[session_input_callback] History items:`, JSON.stringify(historyItems, null, 2));
         logger.info(`[session_input_callback] New items:`, JSON.stringify(newItems, null, 2));
+        logger.info(`[session_input_callback] New items length: ${newItems.length}`);
+        logger.info(`[session_input_callback] New items type: ${typeof newItems}`);
 
       /**
        * Remove fields that OpenAI Responses API doesn't accept.
