@@ -50,9 +50,31 @@ class _AsyncQueue<T> {
     });
   }
 
+  // Match Python: get_nowait() equivalent - drain items without awaiting
+  // Used by drain_and_complete() to empty queue synchronously
+  get_nowait(): T | null {
+    if (this.items.length > 0) {
+      return this.items.shift()!;
+    }
+    return null;
+  }
+
   // Check if queue is empty (for optimization)
   isEmpty(): boolean {
     return this.items.length === 0;
+  }
+
+  // Match Python: drain() method - empty queue synchronously
+  drain(): void {
+    this.items = [];
+    // Note: We don't clear waiters as they're already resolved or will be resolved
+    // when items are added. The drain is meant for cleanup when we're done.
+  }
+
+  // Put item directly into items array without checking waiters
+  // Used by _complete() to ensure sentinel goes to drain loop, not abandoned waiters
+  put_nowait(item: T): void {
+    this.items.push(item);
   }
 }
 
@@ -189,15 +211,14 @@ export class AgentContext {
     }
   }
 
-  // Matches Python's AgentContext._complete() method (line 205-206 in agents.py)
+  // Matches Python's AgentContext._complete() method (line 204-205 in agents.py)
   // Puts a sentinel in the queue to mark completion
+  // Note: We always put into items array (not waiters) to ensure drain loop gets it
+  // Abandoned waiters from merge loop will be handled by the drain loop's new get() call
   _complete(): void {
-    // IMPORTANT: We put TWO sentinels to handle the merge generator case.
-    // When the merge breaks (agent stream ends), it abandons its pending queue.get()
-    // call. That waiter is still in the queue. The first sentinel goes to that
-    // abandoned waiter (ignored), and the second goes to the drain iterator.
-    this._events.put(new _QueueCompleteSentinel());  // For abandoned waiter (if any)
-    this._events.put(new _QueueCompleteSentinel());  // For drain iterator
+    // Put sentinel directly into items array to ensure drain loop receives it
+    // This matches Python's put_nowait() behavior
+    this._events.put_nowait(new _QueueCompleteSentinel());
   }
 
   // Match Python: stream method (line 201-202)
@@ -634,6 +655,20 @@ class _AsyncQueueIterator implements AsyncIterable<_EventWrapper> {
 
     // Match Python: return _EventWrapper(item)
     return { done: false, value: new _EventWrapper(item) };
+  }
+
+  // Match Python: drain_and_complete() method (line 321-333)
+  drain_and_complete(): void {
+    // Empty the underlying queue without awaiting and mark this iterator completed.
+    // This is intended for cleanup paths where we must guarantee no awaits occur.
+    // All queued items, including any completion sentinel, are discarded.
+    while (true) {
+      const item = this.queue.get_nowait();
+      if (item === null) {
+        break;
+      }
+    }
+    this.completed = true;
   }
 }
 
