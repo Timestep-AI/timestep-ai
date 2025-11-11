@@ -57,21 +57,18 @@ export async function getAgentById(agentId: string, ctx: TContext): Promise<Agen
  * Load an agent from the database by ID
  */
 async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
-  logger.info('[agents] loadAgentFromDatabase called for agent:', agentId);
   if (!ctx.user_id) {
     throw new Error('user_id is required to load agents');
   }
 
-  logger.info('[agents] Getting agent from database...');
   const agentRecord = await getAgentById(agentId, ctx);
-  logger.info('[agents] Got agent record:', agentRecord ? 'found' : 'NOT FOUND');
   if (!agentRecord) {
     throw new Error(`Agent not found: ${agentId}`);
   }
 
   const tools = [switchTheme, getWeather];
 
-  logger.info(`[agents] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
+  logger.info(`Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
 
   const agent = new Agent({
     model: agentRecord.model,
@@ -81,7 +78,7 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
     toolUseBehavior: { stopAtToolNames: [CLIENT_THEME_TOOL_NAME] },
     modelSettings: agentRecord.model_settings as ModelSettings,
   });
-  logger.info('[agents] Agent created:', agentRecord.name);
+  logger.info(`Agent created with tools: ${tools.map((t: any) => t.name || 'unknown').join(', ')}`);
 
   return agent;
 }
