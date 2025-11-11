@@ -517,7 +517,7 @@ export class ChatKitServer<TCtx = TContext> {
       }
       const typedToolCall = tool_call as { status?: string; call_id?: string; id: string };
       if (typedToolCall.status === 'pending') {
-        logger.warn(`Client tool call ${typedToolCall.call_id} was not completed, ignoring`);
+        logger.warning(`Client tool call ${typedToolCall.call_id} was not completed, ignoring`);
         await this.store.delete_thread_item(thread.id, typedToolCall.id, context);
       }
     }
