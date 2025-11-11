@@ -615,7 +615,10 @@ export class ChatKitServer<TCtx = TContext> {
   async add_feedback(_thread_id: string, _item_ids: string[], _feedback: unknown, _context: TCtx): Promise<void> {}
 
   async *action(_thread: ThreadMetadata, _action: Action, _sender: WidgetItem | null, _context: TCtx): AsyncIterable<ThreadStreamEvent> {
-    throw new Error('The action() method must be overridden to react to actions.');
+    throw new Error(
+      'The action() method must be overridden to react to actions. ' +
+      'See https://github.com/openai/chatkit-python/blob/main/docs/widgets.md#widget-actions'
+    );
     // Unreachable, but TypeScript requires yield in async generator
     yield { type: 'error', code: ErrorCode.STREAM_ERROR, allow_retry: false };
   }
