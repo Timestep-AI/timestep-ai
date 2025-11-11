@@ -159,15 +159,12 @@ class MyChatKitServer extends ChatKitServer {
        * format so the agent knows the tool was already called and can continue.
        */
       function sanitizeItem(item: any): any | any[] | null {
-        logger.info(`[session_input_callback] sanitizeItem called with item:`, item);
         // Only process dicts/objects (not arrays)
         if (!item || typeof item !== 'object' || Array.isArray(item)) {
-          logger.info(`[session_input_callback] sanitizeItem: item is not a dict/object (or is array):`, item);
           return item;
         }
 
         const itemType = item.type;
-        logger.info(`[session_input_callback] sanitizeItem: itemType="${itemType}"`);
 
         // Check if this is a ClientToolCallItem (type='client_tool_call')
         // These need special handling - must NOT be stripped to just role/content
@@ -202,7 +199,6 @@ class MyChatKitServer extends ChatKitServer {
         // Handle function_call_result from Conversations API
         // TypeScript Agents SDK accepts function_call_result and converts it to function_call_output internally
         if (itemType === 'function_call_result') {
-          logger.info(`[session_input_callback] Preserving function_call_result item:`, item);
           // TypeScript Agents SDK expects function_call_result format (not function_call_output)
           const sanitized: any = {
             type: 'function_call_result',
@@ -216,7 +212,6 @@ class MyChatKitServer extends ChatKitServer {
 
         // If this is already a function_call from the Conversations API, keep it as-is
         if (itemType === 'function_call') {
-          logger.info(`[session_input_callback] Preserving function_call item:`, item);
           // Remove extra fields that OpenAI doesn't accept, but keep the essential ones
           const sanitized: any = {
             type: 'function_call',
@@ -232,7 +227,6 @@ class MyChatKitServer extends ChatKitServer {
         // Convert function_call_output to function_call_result format
         // TypeScript Agents SDK expects function_call_result (not function_call_output) in input
         if (itemType === 'function_call_output') {
-          logger.info(`[session_input_callback] Converting function_call_output to function_call_result:`, item);
           const sanitized: any = {
             type: 'function_call_result',
             // Support both camelCase (callId) and snake_case (call_id) from Conversations API
@@ -249,7 +243,6 @@ class MyChatKitServer extends ChatKitServer {
           role: item.role,
           content: item.content,
         };
-        logger.info(`[session_input_callback] Sanitized message item:`, sanitized);
         return sanitized;
       }
 
@@ -317,15 +310,15 @@ class MyChatKitServer extends ChatKitServer {
       });
 
       const sortedItems = sorted.map(({ item }) => item);
-      logger.info(`[session_input_callback] Returning ${sortedItems.length} merged items (sorted):`, sortedItems);
+      logger.info(`[session_input_callback] Returning ${sortedItems.length} merged items: ${JSON.stringify(sortedItems)}`);
+      logger.info(`[session_input_callback] Merged items length: ${sortedItems.length}`);
+      logger.info(`[session_input_callback] Merged items type: ${typeof sortedItems}`);
       return sortedItems;
       } catch (error) {
         logger.error(`[session_input_callback] ERROR in callback:`, error);
         throw error;
       }
     };
-    
-    logger.info(`[agents] sessionInputCallback defined, type:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
     
     // The session contains the OpenAI client configured to use the polyfill for conversation history
     // The Runner uses the multi-provider for actual model calls
@@ -389,11 +382,9 @@ class MyChatKitServer extends ChatKitServer {
       
       // sessionInputCallback goes in run() options when using array input
       // Note: Only modelProvider goes in Runner constructor; sessionInputCallback goes in run() options
-      logger.info(`[agents] Creating Runner with modelProvider in constructor RunConfig`);
       runner = new Runner({
         modelProvider: modelProvider,
       } as any);
-      logger.info(`[agents] Runner created`);
     } catch (error) {
       logger.error('[agents] Error creating Runner:', error);
       throw error;
@@ -406,28 +397,18 @@ class MyChatKitServer extends ChatKitServer {
     try {
       // TypeScript library: sessionInputCallback goes in run() options (not RunConfig per docs)
       // Required when passing array input per docs: "provide a sessionInputCallback to merge them with stored history"
-      logger.info(`[agents] About to call runner.run() with session:`, !!session, `agentInput length:`, agentInput.length);
-      logger.info(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
-      logger.info(`[agents] sessionInputCallback defined:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
+      logger.info(`[agents] About to call runner.run() with agentInput: ${JSON.stringify(agentInput)}`);
+      logger.info(`[agents] agentInput length: ${agentInput.length}`);
+      logger.info(`[agents] agentInput type: ${typeof agentInput}`);
+      logger.info(`[agents] session is: ${session}`);
+      logger.info(`[agents] sessionInputCallback is defined: ${typeof sessionInputCallback === 'function'}`);
       const result = await runner.run(agent, agentInput, {
         context: agentContext,
         stream: true,
         session: session,
         sessionInputCallback: sessionInputCallback as any, // Required for array input, not in RunConfig per TypeScript library
       } as any);
-      logger.info(`[agents] runner.run() returned, result type:`, typeof result);
-      logger.info(`[agents] result is AsyncIterable:`, result && typeof result[Symbol.asyncIterator] === 'function');
-      
-      // Log the input property of the result to see what the Runner actually received after preparation
-      if (result && typeof result === 'object' && 'input' in result) {
-        const resultInput = (result as any).input;
-        logger.info(`[agents] result.input after Runner preparation:`, {
-          length: Array.isArray(resultInput) ? resultInput.length : 'not array',
-          type: typeof resultInput,
-          isArray: Array.isArray(resultInput),
-          value: JSON.stringify(resultInput, null, 2),
-        });
-      }
+      logger.info(`[agents] runner.run() returned, result type: ${typeof result}`);
       
       // result implements AsyncIterable directly, so use result directly
       // StreamedRunResult implements AsyncIterable directly, so we iterate it directly
