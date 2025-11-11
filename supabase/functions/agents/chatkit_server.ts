@@ -1,5 +1,5 @@
 import { OpenAIConversationsSession } from '@openai/agents-openai';
-import type { Store, AttachmentStore } from '../_shared/chatkit/store.ts';
+import type { Store, AttachmentStore, StoreItemType } from '../_shared/chatkit/store.ts';
 import type { ThreadMetadata, ThreadStreamEvent, UserMessageItem } from '../_shared/chatkit/types.ts';
 import { ChatKitServer } from '../_shared/chatkit/server.ts';
 import { AgentContext, simple_to_agent_input as simpleToAgentInput, stream_agent_response as streamAgentResponse } from '../_shared/chatkit/agents.ts';
@@ -9,6 +9,7 @@ import { OpenAIProvider } from '@openai/agents-openai';
 import OpenAI from 'openai';
 import type { TContext } from '../_shared/stores.ts';
 import { switchTheme, getWeather, CLIENT_THEME_TOOL_NAME } from './tools.ts';
+import { logger } from '../_shared/chatkit/logger.ts';
 
 // Interface for agent record from database
 export interface AgentRecord {
@@ -45,7 +46,7 @@ export async function getAgentById(agentId: string, ctx: TContext): Promise<Agen
       // Not found
       return null;
     }
-    console.error('[agents] Error fetching agent:', error);
+    logger.error('[agents] Error fetching agent:', error);
     return null;
   }
   
@@ -54,24 +55,23 @@ export async function getAgentById(agentId: string, ctx: TContext): Promise<Agen
 
 /**
  * Load an agent from the database by ID
- * Matches Python implementation: queries agents table with RLS
  */
 async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Agent> {
-  console.log('[agents] loadAgentFromDatabase called for agent:', agentId);
+  logger.info('[agents] loadAgentFromDatabase called for agent:', agentId);
   if (!ctx.user_id) {
     throw new Error('user_id is required to load agents');
   }
 
-  console.log('[agents] Getting agent from database...');
+  logger.info('[agents] Getting agent from database...');
   const agentRecord = await getAgentById(agentId, ctx);
-  console.log('[agents] Got agent record:', agentRecord ? 'found' : 'NOT FOUND');
+  logger.info('[agents] Got agent record:', agentRecord ? 'found' : 'NOT FOUND');
   if (!agentRecord) {
     throw new Error(`Agent not found: ${agentId}`);
   }
 
   const tools = [switchTheme, getWeather];
 
-  console.log(`[agents] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
+  logger.info(`[agents] Loading agent ${agentId} with model ${agentRecord.model}, model_settings ${JSON.stringify(agentRecord.model_settings)}, and tools: ${tools.map((t: any) => t.name || 'unknown')}`);
 
   const agent = new Agent({
     model: agentRecord.model,
@@ -81,7 +81,7 @@ async function loadAgentFromDatabase(agentId: string, ctx: TContext): Promise<Ag
     toolUseBehavior: { stopAtToolNames: [CLIENT_THEME_TOOL_NAME] },
     modelSettings: agentRecord.model_settings as ModelSettings,
   });
-  console.log('[agents] Agent created:', agentRecord.name);
+  logger.info('[agents] Agent created:', agentRecord.name);
 
   return agent;
 }
@@ -90,7 +90,6 @@ function getSessionForThread(threadId: string, ctx: TContext): OpenAIConversatio
   /**Create or get an OpenAIConversationsSession for a given thread.
   
   Points to the openai-polyfill Conversations API using the request's JWT.
-  Matches Python version: OpenAIConversationsSession(conversation_id=thread_id, openai_client=client)
   */
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   if (!supabaseUrl) {
@@ -121,7 +120,7 @@ class MyChatKitServer extends ChatKitServer {
     input: UserMessageItem | null,
     context: TContext
   ): AsyncIterable<ThreadStreamEvent> {
-    console.log('[agents] respond() called for thread:', thread.id, 'agent:', context.agent_id);
+    logger.info('[agents] respond() called for thread:', thread.id, 'agent:', context.agent_id);
     const agentContext = new AgentContext(thread, this.store, context);
 
     // NOTE: Removed early return for ClientToolCallItem
@@ -136,27 +135,27 @@ class MyChatKitServer extends ChatKitServer {
       throw new Error('agent_id is required in context');
     }
 
-    console.log('[agents] About to call loadAgentFromDatabase');
+    logger.info('[agents] About to call loadAgentFromDatabase');
     const agent = await loadAgentFromDatabase(agent_id, context);
-    console.log('[agents] loadAgentFromDatabase returned successfully');
+    logger.info('[agents] loadAgentFromDatabase returned successfully');
     
     // Create Conversations session bound to polyfill with per-request JWT
     const session = getSessionForThread(thread.id, context);
     
     // Convert input to agent format
     const agentInput = input ? await simpleToAgentInput(input) : [];
-    console.log(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
+    logger.info(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
     
     // When using session memory with list inputs, we need to provide a callback
     // that defines how to merge history items with new items.
     // The session automatically saves items after the run completes.
     const sessionInputCallback = async (historyItems: any[], newItems: any[]): Promise<any[]> => {
-      console.log(`[session_input_callback] sessionInputCallback called with historyItems length:`, historyItems.length, `and newItems length:`, newItems.length);
+      logger.info(`[session_input_callback] sessionInputCallback called with historyItems length:`, historyItems.length, `and newItems length:`, newItems.length);
       try {
-        console.log(`[session_input_callback] ===== CALLBACK INVOKED =====`);
-        console.log(`[session_input_callback] Called with ${historyItems.length} history items and ${newItems.length} new items`);
-        console.log(`[session_input_callback] History items:`, JSON.stringify(historyItems, null, 2));
-        console.log(`[session_input_callback] New items:`, JSON.stringify(newItems, null, 2));
+        logger.info(`[session_input_callback] ===== CALLBACK INVOKED =====`);
+        logger.info(`[session_input_callback] Called with ${historyItems.length} history items and ${newItems.length} new items`);
+        logger.info(`[session_input_callback] History items:`, JSON.stringify(historyItems, null, 2));
+        logger.info(`[session_input_callback] New items:`, JSON.stringify(newItems, null, 2));
 
       /**
        * Remove fields that OpenAI Responses API doesn't accept.
@@ -168,22 +167,20 @@ class MyChatKitServer extends ChatKitServer {
        * format so the agent knows the tool was already called and can continue.
        */
       function sanitizeItem(item: any): any | any[] | null {
-        console.log(`[session_input_callback] sanitizeItem called with item:`, item);
-        // Match Python: if isinstance(item, dict): - only process dicts/objects (not arrays)
-        // Python's isinstance(item, dict) returns False for arrays, so we need to exclude arrays too
+        logger.info(`[session_input_callback] sanitizeItem called with item:`, item);
+        // Only process dicts/objects (not arrays)
         if (!item || typeof item !== 'object' || Array.isArray(item)) {
-          console.log(`[session_input_callback] sanitizeItem: item is not a dict/object (or is array):`, item);
+          logger.info(`[session_input_callback] sanitizeItem: item is not a dict/object (or is array):`, item);
           return item;
         }
 
-        // Match Python: item_type = item.get("type")
         const itemType = item.type;
-        console.log(`[session_input_callback] sanitizeItem: itemType="${itemType}"`);
+        logger.info(`[session_input_callback] sanitizeItem: itemType="${itemType}"`);
 
         // Check if this is a ClientToolCallItem (type='client_tool_call')
         // These need special handling - must NOT be stripped to just role/content
         if (itemType === 'client_tool_call') {
-          console.log(`[session_input_callback] Found client_tool_call item: status=${item.status}, name=${item.name}`);
+          logger.info(`[session_input_callback] Found client_tool_call item: status=${item.status}, name=${item.name}`);
           // Only include completed tool calls (skip pending ones)
           if (item.status === 'completed') {
             // Convert to the format the agent expects:
@@ -201,11 +198,11 @@ class MyChatKitServer extends ChatKitServer {
                 output: item.output,
               }
             ];
-            console.log(`[session_input_callback] Converted completed client_tool_call to:`, result);
+            logger.info(`[session_input_callback] Converted completed client_tool_call to:`, result);
             return result;
           } else {
             // Pending tool calls should be filtered out
-            console.log(`[session_input_callback] Filtering out pending client_tool_call`);
+            logger.info(`[session_input_callback] Filtering out pending client_tool_call`);
             return null;
           }
         }
@@ -213,7 +210,7 @@ class MyChatKitServer extends ChatKitServer {
         // Handle function_call_result from Conversations API
         // TypeScript Agents SDK accepts function_call_result and converts it to function_call_output internally
         if (itemType === 'function_call_result') {
-          console.log(`[session_input_callback] Preserving function_call_result item:`, item);
+          logger.info(`[session_input_callback] Preserving function_call_result item:`, item);
           // TypeScript Agents SDK expects function_call_result format (not function_call_output)
           const sanitized: any = {
             type: 'function_call_result',
@@ -227,7 +224,7 @@ class MyChatKitServer extends ChatKitServer {
 
         // If this is already a function_call from the Conversations API, keep it as-is
         if (itemType === 'function_call') {
-          console.log(`[session_input_callback] Preserving function_call item:`, item);
+          logger.info(`[session_input_callback] Preserving function_call item:`, item);
           // Remove extra fields that OpenAI doesn't accept, but keep the essential ones
           const sanitized: any = {
             type: 'function_call',
@@ -243,7 +240,7 @@ class MyChatKitServer extends ChatKitServer {
         // Convert function_call_output to function_call_result format
         // TypeScript Agents SDK expects function_call_result (not function_call_output) in input
         if (itemType === 'function_call_output') {
-          console.log(`[session_input_callback] Converting function_call_output to function_call_result:`, item);
+          logger.info(`[session_input_callback] Converting function_call_output to function_call_result:`, item);
           const sanitized: any = {
             type: 'function_call_result',
             // Support both camelCase (callId) and snake_case (call_id) from Conversations API
@@ -255,13 +252,12 @@ class MyChatKitServer extends ChatKitServer {
         }
 
         // For regular messages, keep only role and content
-        // Match Python: always return { role, content } - do NOT add type field
         // The Agent SDK will handle the content format correctly
         const sanitized: any = {
           role: item.role,
           content: item.content,
         };
-        console.log(`[session_input_callback] Sanitized message item:`, sanitized);
+        logger.info(`[session_input_callback] Sanitized message item:`, sanitized);
         return sanitized;
       }
 
@@ -329,17 +325,16 @@ class MyChatKitServer extends ChatKitServer {
       });
 
       const sortedItems = sorted.map(({ item }) => item);
-      console.log(`[session_input_callback] Returning ${sortedItems.length} merged items (sorted):`, sortedItems);
+      logger.info(`[session_input_callback] Returning ${sortedItems.length} merged items (sorted):`, sortedItems);
       return sortedItems;
       } catch (error) {
-        console.error(`[session_input_callback] ERROR in callback:`, error);
+        logger.error(`[session_input_callback] ERROR in callback:`, error);
         throw error;
       }
     };
     
-    console.log(`[agents] sessionInputCallback defined, type:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
+    logger.info(`[agents] sessionInputCallback defined, type:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
     
-    // Match Python: Runner.run_streamed(agent, agent_input, context=agent_context, session=session, run_config=run_config)
     // The session contains the OpenAI client configured to use the polyfill for conversation history
     // The Runner uses the multi-provider for actual model calls
     // Create Runner with multi-provider support
@@ -400,47 +395,41 @@ class MyChatKitServer extends ChatKitServer {
         openai_use_responses: false,
       });
       
-      // Match Python: RunConfig contains model_provider (not sessionInputCallback per TypeScript library docs)
       // sessionInputCallback goes in run() options when using array input
-      // Match Python: RunConfig(session_input_callback=session_input_callback, model_provider=model_provider)
       // Note: Only modelProvider goes in Runner constructor; sessionInputCallback goes in run() options
-      console.log(`[agents] Creating Runner with modelProvider in constructor RunConfig`);
+      logger.info(`[agents] Creating Runner with modelProvider in constructor RunConfig`);
       runner = new Runner({
         modelProvider: modelProvider,
       } as any);
-      console.log(`[agents] Runner created`);
+      logger.info(`[agents] Runner created`);
     } catch (error) {
-      console.error('[agents] Error creating Runner:', error);
+      logger.error('[agents] Error creating Runner:', error);
       throw error;
     }
     
-    // Match Python: Runner.run_streamed returns an AsyncIterator directly
     // In JavaScript, runner.run() with stream: true returns the stream directly
     // Use the dynamically loaded agent instead of hardcoded this.assistantAgent
     // According to docs: "When you pass an array of AgentInputItems as the run input, 
     // provide a sessionInputCallback to merge them with stored history deterministically."
-    // Match Python: RunConfig contains both session_input_callback and model_provider
-    // So both should be in runner.run() options
     try {
-      // Match Python: Runner.run_streamed takes session separately and RunConfig
       // TypeScript library: sessionInputCallback goes in run() options (not RunConfig per docs)
       // Required when passing array input per docs: "provide a sessionInputCallback to merge them with stored history"
-      console.log(`[agents] About to call runner.run() with session:`, !!session, `agentInput length:`, agentInput.length);
-      console.log(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
-      console.log(`[agents] sessionInputCallback defined:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
+      logger.info(`[agents] About to call runner.run() with session:`, !!session, `agentInput length:`, agentInput.length);
+      logger.info(`[agents] agentInput:`, JSON.stringify(agentInput, null, 2));
+      logger.info(`[agents] sessionInputCallback defined:`, typeof sessionInputCallback, `is function:`, typeof sessionInputCallback === 'function');
       const result = await runner.run(agent, agentInput, {
         context: agentContext,
         stream: true,
         session: session,
         sessionInputCallback: sessionInputCallback as any, // Required for array input, not in RunConfig per TypeScript library
       } as any);
-      console.log(`[agents] runner.run() returned, result type:`, typeof result);
-      console.log(`[agents] result is AsyncIterable:`, result && typeof result[Symbol.asyncIterator] === 'function');
+      logger.info(`[agents] runner.run() returned, result type:`, typeof result);
+      logger.info(`[agents] result is AsyncIterable:`, result && typeof result[Symbol.asyncIterator] === 'function');
       
       // Log the input property of the result to see what the Runner actually received after preparation
       if (result && typeof result === 'object' && 'input' in result) {
         const resultInput = (result as any).input;
-        console.log(`[agents] result.input after Runner preparation:`, {
+        logger.info(`[agents] result.input after Runner preparation:`, {
           length: Array.isArray(resultInput) ? resultInput.length : 'not array',
           type: typeof resultInput,
           isArray: Array.isArray(resultInput),
@@ -448,21 +437,18 @@ class MyChatKitServer extends ChatKitServer {
         });
       }
       
-      // Match Python: async for event in _merge_generators(result.stream_events(), queue_iterator):
-      // TypeScript: result implements AsyncIterable directly, so use result directly
-      // Python's stream_events() waits for _run_impl_task in finally block, ensuring background task completes
-      // TypeScript's StreamedRunResult implements AsyncIterable directly, so we iterate it directly
+      // result implements AsyncIterable directly, so use result directly
+      // StreamedRunResult implements AsyncIterable directly, so we iterate it directly
       if (!result || typeof result !== 'object' || !(Symbol.asyncIterator in result)) {
         throw new Error(`[agents] Result is not an AsyncIterable`);
       }
       const streamToIterate = result as AsyncIterable<any>;
       
-      // Match Python: The session automatically saves items after the run completes
+      // The session automatically saves items after the run completes
       // No need to manually save items - the Runner handles it
       let eventCount = 0;
-      console.log(`[agents] Starting to iterate streamAgentResponse...`);
-      // Python's stream_events() actively pulls from _event_queue and waits for _run_impl_task in finally block
-      // TypeScript's StreamedRunResult implements AsyncIterable directly - ReadableStream starts when we iterate
+      logger.info(`[agents] Starting to iterate streamAgentResponse...`);
+      // StreamedRunResult implements AsyncIterable directly - ReadableStream starts when we iterate
       // CRITICAL: When agentInput is empty but result.input has merged history, we MUST iterate
       // the stream to start the ReadableStream, which allows the stream loop to enqueue items
       // The stream loop runs asynchronously and enqueues items to #readableController when available
@@ -488,16 +474,16 @@ class MyChatKitServer extends ChatKitServer {
             const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
               ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
               : '';
-            console.log(`[agents] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            logger.info(`[agents] thread.item.added: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from a previous event)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                console.log(`[agents] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Reusing ID for thread.item.added: ${originalId} -> ${item.id}`);
               } else {
-                console.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
-                let itemTypeForId: string;
+                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.added (original_id=${originalId})`);
+                let itemTypeForId: StoreItemType;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
                 } else if (itemType === 'assistant_message' || itemType === 'user_message') {
@@ -507,10 +493,10 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                console.log(`[agents] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Fixed ID in thread.item.added: ${originalId} -> ${item.id}`);
               }
             } else {
-              console.log(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
+              logger.info(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
             }
           }
           
@@ -525,16 +511,16 @@ class MyChatKitServer extends ChatKitServer {
             const contentPreview = item.content && Array.isArray(item.content) && item.content.length > 0
               ? ((item.content[0].text || '').substring(0, 50) + ((item.content[0].text || '').length > 50 ? '...' : ''))
               : '';
-            console.log(`[agents] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
+            logger.info(`[agents] thread.item.done: type=${itemType}, id=${originalId}, content_length=${contentLength}, content_preview=${contentPreview}`);
             
             if (originalId === '__fake_id__' || !originalId || originalId === 'N/A') {
               // Check if we've already generated an ID for this item (from thread.item.added)
               if (itemIdMap.has(originalId)) {
                 item.id = itemIdMap.get(originalId)!;
-                console.log(`[agents] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Reusing ID for thread.item.done: ${originalId} -> ${item.id}`);
               } else {
-                console.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
-                let itemTypeForId: string;
+                logger.error(`[agents] CRITICAL: Fixing __fake_id__ for ${itemType} in thread.item.done (original_id=${originalId})`);
+                let itemTypeForId: StoreItemType;
                 if (itemType === 'client_tool_call') {
                   itemTypeForId = 'tool_call';
                 } else if (itemType === 'assistant_message' || itemType === 'user_message') {
@@ -544,10 +530,10 @@ class MyChatKitServer extends ChatKitServer {
                 }
                 item.id = store.generate_item_id(itemTypeForId, thread, context);
                 itemIdMap.set(originalId, item.id);
-                console.log(`[agents] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
+                logger.info(`[agents] Fixed ID in thread.item.done: ${originalId} -> ${item.id}`);
               }
             } else {
-              console.log(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
+              logger.info(`[agents] Item ${itemType} already has valid ID: ${originalId}`);
             }
           }
           
@@ -557,21 +543,20 @@ class MyChatKitServer extends ChatKitServer {
       
       for await (const event of fixChatKitEventIds(streamAgentResponse(agentContext, streamToIterate))) {
         eventCount++;
-        console.log(`[agents] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
+        logger.info(`[agents] Stream event ${eventCount}:`, JSON.stringify(event, null, 2));
         yield event;
       }
-      console.log(`[agents] Stream ended after ${eventCount} events`);
+      logger.info(`[agents] Stream ended after ${eventCount} events`);
       const isEmptyInput = Array.isArray(agentInput) ? agentInput.length === 0 : agentInput === "";
       if (eventCount === 0 && isEmptyInput) {
-        console.log(`[agents] WARNING: Empty stream with empty agentInput - Runner may not be generating response from history`);
+        logger.warning(`[agents] WARNING: Empty stream with empty agentInput - Runner may not be generating response from history`);
       }
     } catch (error) {
-      console.error('[agents] Error in runner.run():', error);
+      logger.error('[agents] Error in runner.run():', error);
       throw error;
     }
   }
 }
 
 export { MyChatKitServer, loadAgentFromDatabase, getSessionForThread };
-export type { AgentRecord };
 

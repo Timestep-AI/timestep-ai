@@ -16,7 +16,6 @@ from .tools import switch_theme, get_weather, CLIENT_THEME_TOOL_NAME
 logger = logging.getLogger(__name__)
 
 # Interface for agent record from database
-# Matches TypeScript AgentRecord interface
 class AgentRecord(TypedDict, total=False):
     id: str
     user_id: str
@@ -46,6 +45,17 @@ def get_agent_by_id(agent_id: str, ctx: TContext) -> AgentRecord | None:
         .execute()
     )
     
+    # Check for Supabase errors
+    if hasattr(response, "error") and response.error:
+        # PGRST116 is "not found" in PostgREST - equivalent to empty result
+        error_code = getattr(response.error, "code", None)
+        if error_code == "PGRST116":
+            # Not found - this is expected, return None
+            return None
+        # Other errors should be logged
+        logger.error(f"[get_agent_by_id] Error fetching agent {agent_id}: {response.error}")
+        return None
+    
     if not response.data or len(response.data) == 0:
         return None
     
@@ -54,7 +64,6 @@ def get_agent_by_id(agent_id: str, ctx: TContext) -> AgentRecord | None:
 def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext]:
     """Load an agent from the database by ID.
 
-    Matches TypeScript implementation: queries agents table with RLS.
     Returns an Agent configured with the database record's settings.
     """
     if not ctx.user_id:
@@ -174,7 +183,7 @@ class MyChatKitServer(ChatKitServer):
 
         # Load agent from database using agent_id from context
         # agent_id is required - no fallbacks
-        agent_id = context.get("agent_id")
+        agent_id = context.agent_id
         if not agent_id:
             raise HTTPException(status_code=400, detail="agent_id is required in context")
 
@@ -346,7 +355,7 @@ class MyChatKitServer(ChatKitServer):
             return merged
         
         # Create RunConfig with session_input_callback
-        # Set up multi-provider support - match TypeScript implementation
+        # Set up multi-provider support
         from .utils.multi_model_provider import MultiModelProvider, MultiModelProviderMap
         from .utils.ollama_model_provider import OllamaModelProvider
         
