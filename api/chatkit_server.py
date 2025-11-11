@@ -6,8 +6,8 @@ from agents import Agent, Runner, RunConfig, OpenAIProvider, StopAtTools, ModelS
 from agents.memory import OpenAIConversationsSession
 from openai import AsyncOpenAI
 from chatkit.agents import simple_to_agent_input, stream_agent_response, AgentContext
-from chatkit.server import ChatKitServer, DEFAULT_PAGE_SIZE
-from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, ClientToolCallItem, ThreadsAddClientToolOutputReq, StreamingReq, ThreadItemDoneEvent, ThreadItemAddedEvent, AssistantMessageItem
+from chatkit.server import ChatKitServer
+from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent, ClientToolCallItem, ThreadItemDoneEvent, ThreadItemAddedEvent, AssistantMessageItem
 from datetime import datetime
 from chatkit.store import Store, AttachmentStore
 from .stores import TContext
@@ -108,61 +108,6 @@ class MyChatKitServer(ChatKitServer):
         self, data_store: Store, attachment_store: AttachmentStore | None = None
     ):
         super().__init__(data_store, attachment_store)
-
-    async def _process_streaming_impl(
-        self, request: StreamingReq, context: TContext
-    ) -> AsyncIterator[ThreadStreamEvent]:
-        # Override to fix threads.add_client_tool_output handler
-        # The library loads only 1 item, but we need to load more to find pending tool calls
-        # if an assistant message was saved after the tool call
-        
-        if isinstance(request, ThreadsAddClientToolOutputReq):
-            thread = await self.store.load_thread(
-                request.params.thread_id, context=context
-            )
-            # Load DEFAULT_PAGE_SIZE items instead of just 1 to find pending tool calls
-            items = await self.store.load_thread_items(
-                thread.id, None, DEFAULT_PAGE_SIZE, "desc", context
-            )
-            logger.info(f"[_process_streaming_impl] Loaded {len(items.data)} items for thread {thread.id}")
-            logger.info(f"[_process_streaming_impl] Item types: {[item.type if hasattr(item, 'type') else type(item).__name__ for item in items.data]}")
-            tool_call = next(
-                (
-                    item
-                    for item in items.data
-                    if isinstance(item, ClientToolCallItem)
-                    and item.status == "pending"
-                ),
-                None,
-            )
-            if not tool_call:
-                logger.error(f"[_process_streaming_impl] No pending ClientToolCallItem found in {len(items.data)} items")
-                logger.error(f"[_process_streaming_impl] Items: {items.data}")
-                raise ValueError(
-                    f"Last thread item in {thread.id} was not a ClientToolCallItem"
-                )
-
-            tool_call.output = request.params.result
-            tool_call.status = "completed"
-
-            await self.store.save_item(thread.id, tool_call, context=context)
-
-            # Safety against dangling pending tool calls if there are
-            # multiple in a row, which should be impossible, and
-            # integrations should ultimately filter out pending tool calls
-            # when creating input response messages.
-            await self._cleanup_pending_client_tool_call(thread, context)
-
-            async for event in self._process_events(
-                thread,
-                context,
-                lambda: self.respond(thread, None, context),
-            ):
-                yield event
-        else:
-            # For all other cases, use the parent's implementation
-            async for event in super()._process_streaming_impl(request, context):
-                yield event
 
     async def respond(
         self,

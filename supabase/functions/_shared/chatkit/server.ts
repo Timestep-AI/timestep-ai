@@ -6,16 +6,11 @@ import type { WidgetComponent, Markdown, Text, WidgetRoot } from './widgets.ts';
 import type { Action } from './actions.ts';
 import { logger } from './logger.ts';
 
-// Match Python: TContext = TypeVar("TContext", default=Any) (line 251)
 type TContext = any;
 
-// Match Python: DEFAULT_PAGE_SIZE = 20 (line 74)
 export const DEFAULT_PAGE_SIZE = 20;
-
-// Match Python: DEFAULT_ERROR_MESSAGE = "An error occurred when generating a response." (line 75)
 export const DEFAULT_ERROR_MESSAGE = "An error occurred when generating a response.";
 
-// Match Python: diff_widget function (line 78-172)
 export function diff_widget(
   before: WidgetRoot,
   after: WidgetRoot
@@ -131,7 +126,6 @@ export function diff_widget(
   return deltas;
 }
 
-// Match Python: stream_widget function (line 174-222)
 export async function* stream_widget(
   thread: ThreadMetadata,
   widget: WidgetRoot | AsyncGenerator<WidgetRoot, void>,
@@ -226,24 +220,22 @@ export class ChatKitServer<TCtx = TContext> {
     const req = JSON.parse(text);
     const encoder = new TextEncoder();
     
-    // Match Python: logger.info(f"Received request op: {parsed_request.type}") (line 315)
     logger.info(`Received request op: ${req.type}`);
 
     if (this._is_streaming_req(req)) {
       const stream = this._process_streaming(req, context);
       return new StreamingResult((async function* () {
         try {
-          // Match Python: async for event in self._process_streaming_impl(request, context): b = self._serialize(event); yield b"data: " + b + b"\n\n"
           for await (const event of stream) {
-            // Serialize event with proper date handling (matches Python model_dump_json behavior)
-            // Python's datetime serializes to ISO format without timezone: "2025-11-03T18:10:07.829180"
+            // Serialize event with proper date handling
+            // Date objects serialize to ISO format without timezone: "2025-11-03T18:10:07.829180"
             // NOT with Z timezone like JavaScript's toISOString(): "2025-11-04T02:07:12.171Z"
             const serialized = JSON.stringify(event, (key, value) => {
-              // Convert Date objects to ISO strings without timezone (matching Python datetime.isoformat())
+              // Convert Date objects to ISO strings without timezone
               if (value instanceof Date) {
-                // Format as YYYY-MM-DDTHH:mm:ss.sss (no Z timezone, matching Python)
+                // Format as YYYY-MM-DDTHH:mm:ss.sss (no Z timezone)
                 const iso = value.toISOString();
-                // Remove the 'Z' timezone suffix to match Python's datetime.isoformat()
+                // Remove the 'Z' timezone suffix
                 return iso.replace('Z', '');
               }
               return value;
@@ -253,31 +245,28 @@ export class ChatKitServer<TCtx = TContext> {
             if (event.type === 'thread.item.done') {
               const item = (event as any).item;
               if (item?.type === 'client_tool_call') {
-                console.log('[ChatKitServer] Emitting client_tool_call item in thread.item.done event');
-                console.log('[ChatKitServer] Full serialized event:', serialized);
+                logger.info('[ChatKitServer] Emitting client_tool_call item in thread.item.done event');
+                logger.info('[ChatKitServer] Full serialized event:', serialized);
               }
             }
             
             yield encoder.encode(`data: ${serialized}\n\n`);
           }
         } catch (e) {
-          // Match Python: except Exception: logger.exception("Error while generating streamed response"); raise
-          // Python's logger.exception() captures the current exception context automatically
-          // In TypeScript, we pass the exception explicitly
           logger.exception("Error while generating streamed response", e as Error);
           throw e;
         }
       })());
     } else {
       const json = await this._process_non_streaming(req, context);
-      // Serialize with proper date handling (matches Python Pydantic model_dump_json behavior)
-      // Python's datetime serializes to ISO format without timezone: "2025-11-03T18:10:07.829180"
+      // Serialize with proper date handling
+      // Date objects serialize to ISO format without timezone: "2025-11-03T18:10:07.829180"
       // NOT with Z timezone like JavaScript's toISOString(): "2025-11-04T02:07:12.171Z"
       const serialized = JSON.stringify(json, (key, value) => {
-        // Convert Date objects to ISO strings without timezone (matching Python datetime.isoformat())
+        // Convert Date objects to ISO strings without timezone
         if (value instanceof Date) {
           const iso = value.toISOString();
-          // Remove the 'Z' timezone suffix to match Python's datetime.isoformat()
+          // Remove the 'Z' timezone suffix
           return iso.replace('Z', '');
         }
         return value;
@@ -290,7 +279,6 @@ export class ChatKitServer<TCtx = TContext> {
     return [
       'threads.create',
       'threads.add_user_message',
-      'threads.action',
       'threads.custom_action',
       'threads.retry_after_item',
       'threads.add_client_tool_output',
@@ -328,12 +316,10 @@ export class ChatKitServer<TCtx = TContext> {
       case 'attachments.delete': {
         const attachment_store = this._get_attachment_store();
         await attachment_store.delete_attachment(req.params.attachment_id, context);
-        // Match Python: await self.store.delete_attachment(...)
         await this.store.delete_attachment(req.params.attachment_id, context);
         return {};
       }
       case 'items.list': {
-        // Match Python: filter out HiddenContextItems (line 382-387)
         const items = await this.store.load_thread_items(
           req.params.thread_id,
           req.params.after || null,
@@ -341,7 +327,7 @@ export class ChatKitServer<TCtx = TContext> {
           req.params.order || 'asc',
           context,
         );
-        // Match Python: filter out HiddenContextItems
+        // filter out HiddenContextItems
         items.data = items.data.filter((item: ThreadItem) => item.type !== 'hidden_context_item');
         return items;
       }
@@ -352,12 +338,10 @@ export class ChatKitServer<TCtx = TContext> {
         return this._to_thread_response(thread);
       }
       case 'threads.delete': {
-        // Match Python: await self.store.delete_thread(...)
         await this.store.delete_thread(req.params.thread_id, context);
         return {};
       }
       default: {
-        // Match Python: case _: assert_never(request)
         const _exhaustive: never = req as never;
         throw new Error(`Unknown request type: ${(_exhaustive as any).type}`);
       }
@@ -367,52 +351,40 @@ export class ChatKitServer<TCtx = TContext> {
   async *_process_streaming(req: any, context: TCtx): AsyncIterable<ThreadStreamEvent> {
     switch (req.type) {
       case 'threads.create': {
-        // Match Python: thread = Thread(id=..., created_at=..., items=Page())
-        // Note: title is not set (matches Python - defaults to None/undefined)
         const thread: Thread = { 
           id: this.store.generate_thread_id(context), 
           created_at: new Date(), 
           status: { type: 'active' }, 
           metadata: {},
-          items: { data: [], has_more: false, after: null } // Match Python: items=Page()
+          items: { data: [], has_more: false, after: null }
         };
-        // Match Python: await self.store.save_thread(ThreadMetadata(**thread.model_dump()), context=context)
-        // Extract metadata fields (without items) for saving
-        // Python's model_dump() includes all fields, but ThreadMetadata() constructor only accepts its own fields
         const threadMetadata: ThreadMetadata = {
           id: thread.id,
           created_at: thread.created_at,
           status: thread.status,
           metadata: thread.metadata,
-          title: thread.title, // Will be undefined, matching Python's None default
+          title: thread.title,
         };
         await this.store.save_thread(threadMetadata, context);
-        // Match Python: yield ThreadCreatedEvent(thread=self._to_thread_response(thread))
         yield { type: 'thread.created', thread: this._to_thread_response(thread) };
-        // Match Python: user_message = await self._build_user_message_item(request.params.input, thread, context)
-        // Note: Python passes Thread object (which extends ThreadMetadata), so we pass thread (Thread) not threadMetadata
         const userMessage = await this._build_user_message_item(req.params?.input, thread, context);
-        // Match Python: async for event in self._process_new_thread_item_respond(thread, user_message, context)
         yield* this._process_new_thread_item_respond(thread, userMessage, context);
         break;
       }
       case 'threads.add_user_message': {
         const thread = await this.store.load_thread(req.params.thread_id, context);
-        // Match Python: user_message = await self._build_user_message_item(...)
         const userMessage = await this._build_user_message_item(req.params?.input, thread, context);
         yield* this._process_new_thread_item_respond(thread, userMessage, context);
         break;
       }
       case 'threads.retry_after_item': {
         const thread = await this.store.load_thread(req.params.thread_id, context);
-        // Match Python: Collect items to remove (all items after the user message)
+        // Collect items to remove (all items after the user message)
         const itemsToRemove: ThreadItem[] = [];
         let userMessageItem: UserMessageItem | null = null;
 
-        // Match Python: async for item in self._paginate_thread_items_reverse(...)
         for await (const item of this._paginate_thread_items_reverse(req.params.thread_id, context)) {
           if (item.id === req.params.item_id) {
-            // Match Python: if not isinstance(item, UserMessageItem): raise ValueError
             if (item.type !== 'user_message') {
               throw new Error(`Item ${req.params.item_id} is not a user message`);
             }
@@ -422,70 +394,62 @@ export class ChatKitServer<TCtx = TContext> {
           itemsToRemove.push(item);
         }
 
-        // Match Python: for item in items_to_remove: await self.store.delete_thread_item(...)
         if (userMessageItem) {
           for (const item of itemsToRemove) {
             await this.store.delete_thread_item(req.params.thread_id, item.id, context);
           }
-          // Match Python: lambda: self.respond(thread_metadata, user_message_item, context)
           yield* this._process_events(thread, context, () => this.respond(thread, userMessageItem!, context));
         }
         break;
       }
-      case 'threads.action':
       case 'threads.custom_action': {
         const thread = await this.store.load_thread(req.params.thread_id, context);
-        // Match Python: item: ThreadItem | None = None; if request.params.item_id: item = await self.store.load_item(...)
         let item: ThreadItem | null = null;
         if (req.params.item_id) {
-          // Match Python: item = await self.store.load_item(...)
           item = await this.store.load_item(req.params.thread_id, req.params.item_id, context);
         }
 
-        // Match Python: if item and not isinstance(item, WidgetItem): yield ErrorEvent(...); return
         if (item && item.type !== 'widget') {
-          yield { type: 'error', code: 'STREAM_ERROR', allow_retry: false } as any;
+          // shouldn't happen if the caller is using the API correctly.
+          yield { 
+            type: 'error', 
+            code: ErrorCode.STREAM_ERROR, 
+            allow_retry: false 
+          };
           break;
         }
 
-        // Match Python: lambda: self.action(thread_metadata, request.params.action, item, context)
         yield* this._process_events(thread, context, () => this.action(thread, req.params.action, item as WidgetItem | null, context));
         break;
       }
       case 'threads.add_client_tool_output': {
         const thread = await this.store.load_thread(req.params.thread_id, context);
-        // Load recent items to find the pending client_tool_call
-        // Match Python: items = await self.store.load_thread_items(thread.id, None, 1, "desc", context)
-        // BUT: We need to load more items to find the pending tool call if an assistant message was saved after it
-        // Load DEFAULT_PAGE_SIZE items to find the pending tool call
-        const items = await this.store.load_thread_items(thread.id, null, DEFAULT_PAGE_SIZE, 'desc', context);
-        // Match Python: tool_call = next((item for item in items.data if isinstance(item, ClientToolCallItem) and item.status == "pending"), None)
+        const items = await this.store.load_thread_items(thread.id, null, 1, 'desc', context);
         const toolCall = items.data.find((item: ThreadItem) => {
           const typedItem = item as { type: string; status?: string };
           return typedItem.type === 'client_tool_call' && typedItem.status === 'pending';
         });
 
-        // Match Python: if not tool_call: raise ValueError
         if (!toolCall) {
           throw new Error(`Last thread item in ${thread.id} was not a ClientToolCallItem`);
         }
 
-        // Match Python: tool_call.output = request.params.result; tool_call.status = "completed"
         const typedToolCall = toolCall as { output?: unknown; status: string };
         typedToolCall.output = req.params.result;
         typedToolCall.status = 'completed';
-        // Match Python: await self.store.save_item(thread.id, tool_call, context=context)
+
         await this.store.save_item(thread.id, toolCall, context);
 
-        // Match Python: await self._cleanup_pending_client_tool_call(thread, context)
+        // Safety against dangling pending tool calls if there are
+        // multiple in a row, which should be impossible, and
+        // integrations should ultimately filter out pending tool calls
+        // when creating input response messages.
         await this._cleanup_pending_client_tool_call(thread, context);
 
-        // Match Python: lambda: self.respond(thread, None, context)
         yield* this._process_events(thread, context, () => this.respond(thread, null, context));
         break;
       }
       default: {
-        // Match Python: case _: assert_never(request)
         const _exhaustive: never = req as never;
         throw new Error(`Unknown request type: ${(_exhaustive as any).type}`);
       }
@@ -494,16 +458,13 @@ export class ChatKitServer<TCtx = TContext> {
 
   async *_process_new_thread_item_respond(thread: ThreadMetadata, item: UserMessageItem, context: TCtx): AsyncIterable<ThreadStreamEvent> {
     await this.store.add_thread_item(thread.id, item, context);
-    // Match Python: cleanup pending client tool calls BEFORE yielding ThreadItemDoneEvent
     await this._cleanup_pending_client_tool_call(thread, context);
     yield { type: 'thread.item.done', item };
     yield* this._process_events(thread, context, () => this.respond(thread, item, context));
   }
 
-  // Match Python: _build_user_message_item method (line 669-683)
   async _build_user_message_item(input: any, thread: ThreadMetadata, context: TCtx): Promise<UserMessageItem> {
     const contentArray = Array.isArray(input?.content) ? input.content : [{ type: 'input_text', text: input?.content?.text || '' }];
-    // Match Python: attachments=[await self.store.load_attachment(attachment_id, context) for attachment_id in input.attachments]
     const attachments = await Promise.all(
       (input?.attachments || []).map((attachment_id: string) => this.store.load_attachment(attachment_id, context))
     );
@@ -533,7 +494,7 @@ export class ChatKitServer<TCtx = TContext> {
   }
 
   protected async *_paginate_thread_items_reverse(threadId: string, context: TCtx): AsyncIterable<ThreadItem> {
-    // Match Python: after = None; while True: ... DEFAULT_PAGE_SIZE (line 696-710)
+    /**Paginate through thread items in reverse order (newest first).*/
     let after: string | null = null;
     while (true) {
       const items = await this.store.load_thread_items(threadId, after, DEFAULT_PAGE_SIZE, 'desc', context);
@@ -550,17 +511,13 @@ export class ChatKitServer<TCtx = TContext> {
   }
 
   protected async _cleanup_pending_client_tool_call(thread: ThreadMetadata, context: TCtx): Promise<void> {
-    // Match Python: items = await self.store.load_thread_items(thread.id, None, DEFAULT_PAGE_SIZE, "desc", context) (line 565-570)
     const items = await this.store.load_thread_items(thread.id, null, DEFAULT_PAGE_SIZE, 'desc', context);
     for (const tool_call of items.data) {
-      // Match Python: if not isinstance(tool_call, ClientToolCallItem): continue
       if ((tool_call as any).type !== 'client_tool_call') {
         continue;
       }
       const typedToolCall = tool_call as { status?: string; call_id?: string; id: string };
-      // Match Python: if tool_call.status == "pending": logger.warning(...); await self.store.delete_thread_item(...)
       if (typedToolCall.status === 'pending') {
-        // Match Python: logger.warning(f"Client tool call {tool_call.call_id} was not completed, ignoring")
         logger.warn(`Client tool call ${typedToolCall.call_id} was not completed, ignoring`);
         await this.store.delete_thread_item(thread.id, typedToolCall.id, context);
       }
@@ -572,40 +529,30 @@ export class ChatKitServer<TCtx = TContext> {
     context: TCtx,
     stream: () => AsyncIterable<ThreadStreamEvent>,
   ): AsyncIterable<ThreadStreamEvent> {
-    // Match Python: await asyncio.sleep(0)  # allow the response to start streaming
-    // In TypeScript/Deno, we can use a microtask delay
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 0)); // allow the response to start streaming
     
-    // Match Python: last_thread = thread.model_copy(deep=True)
     let lastThread = JSON.parse(JSON.stringify(thread)) as ThreadMetadata;
 
     try {
-      // Match Python: with agents_sdk_user_agent_override(): 
-      // Note: User agent override is Python SDK specific, not needed in TypeScript
       for await (const event of stream()) {
-        // Match Python: case ThreadItemDoneEvent(): await self.store.add_thread_item(...)
         if (event.type === 'thread.item.done') {
           const item = (event as any).item;
           await this.store.add_thread_item(thread.id, item, context);
         } else if (event.type === 'thread.item.removed') {
-          // Match Python: case ThreadItemRemovedEvent(): await self.store.delete_thread_item(...)
           await this.store.delete_thread_item(thread.id, (event as any).item_id, context);
         } else if (event.type === 'thread.item.replaced') {
-          // Match Python: case ThreadItemReplacedEvent(): await self.store.save_item(...)
           await this.store.save_item(thread.id, (event as any).item, context);
         }
 
-        // Match Python: should_swallow_event = isinstance(event, ThreadItemDoneEvent) and isinstance(event.item, HiddenContextItem)
+        // special case - don't send hidden context items back to the client
         const shouldSwallowEvent = event.type === 'thread.item.done' && 
           (event as any).item?.type === 'hidden_context_item';
 
-        // Match Python: if not should_swallow_event: yield event
         if (!shouldSwallowEvent) {
           yield event;
         }
 
-        // Match Python: in case user updated the thread while streaming
-        // if thread != last_thread: ... yield ThreadUpdatedEvent
+        // in case user updated the thread while streaming
         const threadStr = JSON.stringify(thread);
         const lastThreadStr = JSON.stringify(lastThread);
         if (threadStr !== lastThreadStr) {
@@ -615,7 +562,7 @@ export class ChatKitServer<TCtx = TContext> {
         }
       }
       
-      // Match Python: in case user updated the thread while streaming (after loop)
+      // in case user updated the thread while streaming
       const threadStr = JSON.stringify(thread);
       const lastThreadStr = JSON.stringify(lastThread);
       if (threadStr !== lastThreadStr) {
@@ -624,7 +571,6 @@ export class ChatKitServer<TCtx = TContext> {
         yield { type: 'thread.updated', thread: this._to_thread_response(thread) };
       }
     } catch (e: any) {
-      // Match Python: except CustomStreamError as e:
       if (e instanceof CustomStreamError) {
         yield {
           type: 'error',
@@ -633,38 +579,33 @@ export class ChatKitServer<TCtx = TContext> {
           allow_retry: e.allow_retry,
         };
       } else if (e instanceof StreamError) {
-        // Match Python: except StreamError as e:
         yield {
           type: 'error',
           code: e.code,
           allow_retry: e.allow_retry,
         };
       } else {
-        // Match Python: except Exception as e: logger.exception(e)
         yield {
           type: 'error',
           code: ErrorCode.STREAM_ERROR,
           allow_retry: true,
         };
-        // Match Python: logger.exception(e) (line 662)
         logger.exception(e);
       }
     }
 
-    // Match Python: if thread != last_thread: (at end of stream)
     const threadStr = JSON.stringify(thread);
     const lastThreadStr = JSON.stringify(lastThread);
     if (threadStr !== lastThreadStr) {
+      // in case user updated the thread at the end of the stream
       await this.store.save_thread(thread, context);
       yield { type: 'thread.updated', thread: this._to_thread_response(thread) };
     }
   }
 
-  // Match Python: _get_attachment_store method (line 263-269)
   protected _get_attachment_store(): AttachmentStore<TCtx> {
     /**Return the configured AttachmentStore or raise if missing.*/
     if (!this.attachment_store) {
-      // Match Python: raise RuntimeError(...)
       throw new Error(
         "AttachmentStore is not configured. Provide a AttachmentStore to ChatKitServer to handle file operations."
       );
@@ -674,10 +615,10 @@ export class ChatKitServer<TCtx = TContext> {
 
   async add_feedback(_thread_id: string, _item_ids: string[], _feedback: unknown, _context: TCtx): Promise<void> {}
 
-  // Match Python: action method signature (line 299-309)
   async *action(_thread: ThreadMetadata, _action: Action, _sender: WidgetItem | null, _context: TCtx): AsyncIterable<ThreadStreamEvent> {
     throw new Error('The action() method must be overridden to react to actions.');
-    yield; // Unreachable, but satisfies ESLint require-yield
+    // Unreachable, but TypeScript requires yield in async generator
+    yield { type: 'error', code: ErrorCode.STREAM_ERROR, allow_retry: false };
   }
 
   // To be overridden by subclass
