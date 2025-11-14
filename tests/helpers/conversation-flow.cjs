@@ -25,11 +25,13 @@ const TIMEOUTS = {
 async function runConversationFlow(page, steps) {
   // Check if ChatKit is in iframe (despite directive saying it shouldn't be)
   const iframeCount = await page.locator('iframe[name="chatkit"]').count();
-  const root = iframeCount > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
+  let root = iframeCount > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
+  // Store root reference for use after backend switches
+  runConversationFlow.currentRoot = root;
 
-  const input = root.locator('input[type="text"], textarea');
-  const sendButton = root.getByRole('button', { name: /send/i });
-  const assistantTurns = root.locator('article[data-thread-turn="assistant"]');
+  let input = root.locator('input[type="text"], textarea');
+  let sendButton = root.getByRole('button', { name: /send/i });
+  let assistantTurns = root.locator('article[data-thread-turn="assistant"]');
 
   let prevCount = await assistantTurns.count();
 
@@ -42,7 +44,7 @@ async function runConversationFlow(page, steps) {
     // --- Wait for new assistant message ---
     const newIndex = await waitForNextAssistantTurn(assistantTurns, prevCount);
     prevCount = newIndex + 1;
-    const currentTurn = assistantTurns.nth(newIndex);
+    let currentTurn = assistantTurns.nth(newIndex);
 
     // --- Wait for assistant response text (if expected) ---
     // This ensures the assistant turn is complete before verifying tool calls
@@ -117,6 +119,38 @@ async function runConversationFlow(page, steps) {
     // --- Verify multiple widgets in any order (if expected) ---
     if (step.expectWidgetsUnordered) {
       await verifyMultipleWidgets(root, currentTurn, step.expectWidgetsUnordered, true);
+    }
+
+    // --- Wait for approval widget only (without approving) ---
+    if (step.expectApprovalWidgetOnly) {
+      await waitForApprovalWidget(root, currentTurn, step.expectApprovalWidgetOnly);
+    }
+
+    // --- Switch backend (if specified) ---
+    if (step.switchBackend) {
+      await switchBackend(page, step.switchBackend);
+      // After switching backend, we need to wait for the chat to reload
+      await page.waitForTimeout(3000);
+      // Re-get the root after backend switch (iframe might have reloaded)
+      const iframeCountAfter = await page.locator('iframe[name="chatkit"]').count();
+      root = iframeCountAfter > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
+      // Update root reference for subsequent steps
+      runConversationFlow.currentRoot = root;
+      // Re-get input and sendButton after backend switch
+      input = root.locator('input[type="text"], textarea');
+      sendButton = root.getByRole('button', { name: /send/i });
+      assistantTurns = root.locator('article[data-thread-turn="assistant"]');
+      // Re-get the current turn after backend switch (it might have changed)
+      // Wait a bit for the turn to be available
+      await page.waitForTimeout(1000);
+      const currentTurnCount = await assistantTurns.count();
+      if (currentTurnCount > 0) {
+        currentTurn = assistantTurns.nth(currentTurnCount - 1);
+        // Wait for the turn to be visible
+        await expect(currentTurn).toBeVisible({ timeout: 10000 });
+      } else {
+        throw new Error('No assistant turns found after backend switch');
+      }
     }
 
     // --- Handle approval widget (if expected) ---
@@ -680,6 +714,70 @@ async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAn
 
     console.log(`✓ All ${expectedWidgets.length} widgets verified in order`);
   }
+}
+
+async function waitForApprovalWidget(root, currentTurn, expectedApproval) {
+  console.log(`→ Waiting for approval widget (without approving)`);
+  
+  // Wait a moment for approval widget to render
+  await currentTurn.page().waitForTimeout(1000);
+  
+  // Find the approval widget
+  const widgetSelector = '[data-thread-item="widget"]';
+  const approvalWidget = currentTurn.locator(widgetSelector).first();
+  
+  await expect(approvalWidget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+  console.log(`✓ Approval widget is visible`);
+  
+  // Verify the approval widget contains expected text
+  if (expectedApproval.expectText) {
+    const widgetText = await approvalWidget.textContent();
+    const regex = expectedApproval.expectText;
+    if (!regex.test(widgetText || '')) {
+      throw new Error(
+        `Approval widget text did not match expected pattern. Expected: ${regex}, Got: ${widgetText?.substring(0, 200)}`
+      );
+    }
+    console.log(`✓ Approval widget text matched: ${expectedApproval.expectText}`);
+  }
+  
+  // Don't click approve - just wait for it to be visible
+  console.log(`✓ Approval widget ready (waiting for backend switch before approving)`);
+}
+
+async function switchBackend(page, backendName) {
+  console.log(`→ Switching backend to: ${backendName}`);
+  
+  // Don't wait for networkidle - it may never happen, just wait a bit for page to be ready
+  await page.waitForTimeout(500);
+  
+  // Click on the backend selector button
+  await page.locator('ion-button#backend-selector-button').click();
+  
+  // Wait for the backend popover to be visible
+  const backendPopover = page.locator('ion-popover[trigger="backend-selector-button"]');
+  await backendPopover.waitFor({ state: 'visible', timeout: 15000 });
+  
+  // Wait for the backend name to appear in the popover content
+  await backendPopover.locator(`ion-item:has-text("${backendName}")`).waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Click on the backend name in the popover
+  await backendPopover.getByText(backendName, { exact: true }).click();
+  
+  // Verify backend switch completed
+  await expect(page.locator('ion-button#backend-selector-button')).toContainText(backendName, { timeout: 5000 });
+  console.log(`✓ Backend switched to: ${backendName}`);
+  
+  // Wait for agents to load after backend switch (but don't fail if it times out)
+  await page.waitForResponse(
+    (response) => response.url().includes('/agents') && response.status() === 200,
+    { timeout: 10000 }
+  ).catch(() => {
+    console.log('⚠️ Agents API response not received, continuing anyway');
+  });
+  
+  // Wait for ChatKit iframe to reload after backend switch
+  await page.waitForTimeout(2000);
 }
 
 async function handleApprovalWidget(root, currentTurn, expectedApproval) {
