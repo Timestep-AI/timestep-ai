@@ -16,8 +16,9 @@ import {
   IonIcon,
   IonSpinner,
   IonButtons,
+  IonButton,
 } from '@ionic/react';
-import { personCircleOutline } from 'ionicons/icons';
+import { personCircleOutline, settingsOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
 import CombinedAgentSelector from '@/components/CombinedAgentSelector';
 
@@ -33,6 +34,16 @@ const Chat = () => {
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
   const [backendType, setBackendTypeState] = useState<BackendType>(getBackendType());
+
+  // Sync HTML dark class with dark mode state
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (darkMode) {
+      htmlElement.classList.add('dark');
+    } else {
+      htmlElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Agent details state
   const [agentDetails, setAgentDetails] = useState<AgentRecord | null>(null);
@@ -214,6 +225,8 @@ const Chat = () => {
   };
 
   // ChatKit configuration - use a generic agents endpoint and route dynamically
+  // Note: chatKitUrl is recalculated when backendType changes, but useChatKit
+  // maintains state. We use a key on ChatKit component to force remount.
   const chatKitUrl = getChatKitUrl(backendType);
 
   const chatKitHook = useChatKit({
@@ -385,6 +398,8 @@ const Chat = () => {
         color="primary"
         darkMode={darkMode}
         onDarkModeChange={setDarkMode}
+        backendType={backendType}
+        onBackendChange={handleBackendChange}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
       />
@@ -397,6 +412,8 @@ const Chat = () => {
         color="primary"
         darkMode={darkMode}
         onDarkModeChange={setDarkMode}
+        backendType={backendType}
+        onBackendChange={handleBackendChange}
         agentDetails={agentDetails}
         loadingAgentDetails={loadingAgentDetails}
       />
@@ -405,17 +422,21 @@ const Chat = () => {
         <IonHeader>
           <IonToolbar mode="ios">
             <IonButtons slot="start">
+              <IonButton
+                fill="clear"
+                onClick={() => leftMenuRef.current?.open()}
+              >
+                <IonIcon icon={settingsOutline} slot="icon-only" />
+              </IonButton>
               <span style={{ marginRight: '8px', marginLeft: '16px', fontSize: '16px' }}>
                 Agent:
               </span>
               <CombinedAgentSelector
-                backendType={backendType}
                 selectedAgent={selectedAgent}
                 agents={agents}
                 threads={threads}
                 selectedThreadId={currentThreadId}
                 loadingThreads={loadingThreads}
-                onBackendChange={handleBackendChange}
                 onAgentChange={handleAgentChange}
                 onThreadChange={handleThreadChange}
                 onCreateNewThread={handleCreateNewThread}
@@ -425,7 +446,7 @@ const Chat = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
-          <ChatKit control={control} className="h-full w-full" />
+          <ChatKit key={`${backendType}-${chatKitUrl}`} control={control} className="h-full w-full" />
         </IonContent>
       </IonPage>
     </>

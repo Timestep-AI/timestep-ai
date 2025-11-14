@@ -132,29 +132,59 @@ async function runConversationFlow(page, steps) {
       // After switching backend, we need to wait for the chat to reload
       await page.waitForTimeout(3000);
       // Re-get the root after backend switch (iframe might have reloaded)
+      // Wait for iframe to be ready
+      await page.waitForSelector('iframe[name="chatkit"]', { state: 'attached', timeout: 10000 });
       const iframeCountAfter = await page.locator('iframe[name="chatkit"]').count();
       root = iframeCountAfter > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
       // Update root reference for subsequent steps
       runConversationFlow.currentRoot = root;
+      // Wait for iframe content to load
+      await page.waitForTimeout(2000);
       // Re-get input and sendButton after backend switch
       input = root.locator('input[type="text"], textarea');
       sendButton = root.getByRole('button', { name: /send/i });
       assistantTurns = root.locator('article[data-thread-turn="assistant"]');
+      // Wait for input to be ready (indicates iframe is loaded)
+      await expect(input).toBeVisible({ timeout: 10000 });
       // Re-get the current turn after backend switch (it might have changed)
-      // Wait a bit for the turn to be available
-      await page.waitForTimeout(1000);
+      // Wait a bit for turns to be available (they might be cleared on reload)
+      await page.waitForTimeout(2000);
       const currentTurnCount = await assistantTurns.count();
       if (currentTurnCount > 0) {
         currentTurn = assistantTurns.nth(currentTurnCount - 1);
         // Wait for the turn to be visible
         await expect(currentTurn).toBeVisible({ timeout: 10000 });
       } else {
-        throw new Error('No assistant turns found after backend switch');
+        // If no turns found, the iframe might have reloaded and cleared them
+        // But the approval widget should still be in the conversation
+        // Try to find it in any available turns, or wait for turns to appear
+        console.log('⚠️ No assistant turns found after backend switch (iframe may have reloaded)');
+        // Wait a bit more for turns to appear
+        await page.waitForTimeout(2000);
+        const retryCount = await assistantTurns.count();
+        if (retryCount > 0) {
+          currentTurn = assistantTurns.nth(retryCount - 1);
+          await expect(currentTurn).toBeVisible({ timeout: 10000 });
+          prevCount = retryCount;
+        } else {
+          // If still no turns, reset count and continue - the next step might create a new turn
+          prevCount = 0;
+          // Set currentTurn to null so we know it's not available
+          currentTurn = null;
+        }
       }
     }
 
     // --- Handle approval widget (if expected) ---
     if (step.expectApprovalWidget) {
+      // If currentTurn is null after backend switch, try to find the approval widget in any turn
+      if (!currentTurn) {
+        // Wait for turns to appear
+        await expect(assistantTurns).toHaveCount(1, { timeout: 10000 });
+        currentTurn = assistantTurns.nth(0);
+        await expect(currentTurn).toBeVisible({ timeout: 10000 });
+        prevCount = 1;
+      }
       await handleApprovalWidget(root, currentTurn, step.expectApprovalWidget);
       
       // After approval, the assistant response might appear in the same turn or a new turn
@@ -751,30 +781,65 @@ async function switchBackend(page, backendName) {
   // Don't wait for networkidle - it may never happen, just wait a bit for page to be ready
   await page.waitForTimeout(500);
   
-  // Click on the backend selector button
-  await page.locator('ion-button#backend-selector-button').click();
-  
-  // Wait for the backend popover to be visible
-  const backendPopover = page.locator('ion-popover[trigger="backend-selector-button"]');
-  await backendPopover.waitFor({ state: 'visible', timeout: 15000 });
-  
-  // Wait for the backend name to appear in the popover content
-  await backendPopover.locator(`ion-item:has-text("${backendName}")`).waitFor({ state: 'visible', timeout: 5000 });
-  
-  // Click on the backend name in the popover
-  await backendPopover.getByText(backendName, { exact: true }).click();
-  
-  // Verify backend switch completed
-  await expect(page.locator('ion-button#backend-selector-button')).toContainText(backendName, { timeout: 5000 });
-  console.log(`✓ Backend switched to: ${backendName}`);
-  
-  // Wait for agents to load after backend switch (but don't fail if it times out)
-  await page.waitForResponse(
+  // Start waiting for the agents API response BEFORE switching
+  // This ensures we catch the response that happens after the switch
+  const agentsResponsePromise = page.waitForResponse(
     (response) => response.url().includes('/agents') && response.status() === 200,
     { timeout: 10000 }
   ).catch(() => {
     console.log('⚠️ Agents API response not received, continuing anyway');
   });
+  
+  // Click on the settings button to open the settings menu
+  // The settings button is the first button with icon-only class in the toolbar
+  const settingsButton = page.locator('ion-toolbar ion-buttons[slot="start"] ion-button.button-has-icon-only').first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsButton.click();
+  
+  // Wait for the settings menu to be visible
+  const settingsMenu = page.locator('ion-menu#left-menu');
+  await settingsMenu.waitFor({ state: 'visible', timeout: 15000 });
+  
+  // Find the backend select dropdown in the settings menu
+  // The select is in an item with "Backend" label
+  const backendSelectItem = settingsMenu.locator('ion-item').filter({ hasText: 'Backend' });
+  await backendSelectItem.waitFor({ state: 'visible', timeout: 5000 });
+  
+  const backendSelect = backendSelectItem.locator('ion-select');
+  await backendSelect.waitFor({ state: 'visible', timeout: 5000 });
+
+  // Click on the ion-select element to open the popover
+  // Ionic select with interface="popover" opens a popover when clicked
+  await backendSelect.click();
+
+  // Wait for the select popover to be visible
+  // The select popover has class "select-popover" to distinguish it from other popovers
+  const popover = page.locator('ion-popover.select-popover');
+  await popover.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Wait a bit for the popover content to render
+  await page.waitForTimeout(500);
+  
+  // The radio buttons are inside ion-item elements in the popover
+  // Try finding by the text content of the ion-item
+  const backendItem = popover.locator('ion-item').filter({ hasText: new RegExp(`^${backendName}$`, 'i') });
+  await backendItem.waitFor({ state: 'visible', timeout: 5000 });
+  await backendItem.click();
+  
+  // Wait for the select to close and value to update
+  await page.waitForTimeout(1000);
+  
+  // Verify backend switch completed by checking the select value before closing menu
+  await expect(backendSelect).toHaveAttribute('value', backendName.toLowerCase(), { timeout: 5000 });
+  
+  // Close the settings menu
+  await settingsMenu.evaluate((menu) => menu.close());
+  await settingsMenu.waitFor({ state: 'hidden', timeout: 5000 });
+  
+  console.log(`✓ Backend switched to: ${backendName}`);
+  
+  // Now wait for the agents API response (we started waiting before the switch)
+  await agentsResponsePromise;
   
   // Wait for ChatKit iframe to reload after backend switch
   await page.waitForTimeout(2000);

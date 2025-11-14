@@ -14,9 +14,12 @@ import {
   IonCard,
   IonCardContent,
   IonChip,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/react';
-import { colorPaletteOutline, informationCircleOutline, cogOutline } from 'ionicons/icons';
+import { colorPaletteOutline, informationCircleOutline, cogOutline, serverOutline } from 'ionicons/icons';
 import type { AgentRecord } from '@/types/agent';
+import type { BackendType } from '@/services/backendConfig';
 
 interface SidebarMenuProps {
   id: string;
@@ -25,13 +28,15 @@ interface SidebarMenuProps {
   color: 'primary' | 'secondary';
   darkMode?: boolean;
   onDarkModeChange?: (checked: boolean) => void;
+  backendType?: BackendType;
+  onBackendChange?: (backendType: BackendType) => void;
   agentDetails?: AgentRecord | null;
   loadingAgentDetails?: boolean;
 }
 
 const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
   (
-    { id, side, title, color, darkMode, onDarkModeChange, agentDetails, loadingAgentDetails },
+    { id, side, title, color, darkMode, onDarkModeChange, backendType, onBackendChange, agentDetails, loadingAgentDetails },
     ref
   ) => {
     return (
@@ -130,6 +135,19 @@ const SidebarMenu = forwardRef<HTMLIonMenuElement, SidebarMenuProps>(
               <IonLabel>
                 <h2>App Config</h2>
               </IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonIcon icon={serverOutline} slot="start" />
+              <IonLabel>Backend</IonLabel>
+              <IonSelect
+                value={backendType}
+                placeholder="Select backend"
+                onIonChange={(e) => onBackendChange?.(e.detail.value as BackendType)}
+                interface="popover"
+              >
+                <IonSelectOption value="typescript">TypeScript</IonSelectOption>
+                <IonSelectOption value="python">Python</IonSelectOption>
+              </IonSelect>
             </IonItem>
             <IonItem>
               <IonIcon icon={colorPaletteOutline} slot="start" />

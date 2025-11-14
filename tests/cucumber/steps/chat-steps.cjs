@@ -57,22 +57,52 @@ Given('I select the {string} backend', async (backendName) => {
   console.log(`\n========== BACKEND SELECTION ==========`);
   await page.waitForLoadState('networkidle');
 
-  // Click on the backend selector button
-  await page.locator('ion-button#backend-selector-button').click();
+  // Click on the settings button to open the settings menu
+  // The settings button is the first button with icon-only class in the toolbar
+  const settingsButton = page.locator('ion-toolbar ion-buttons[slot="start"] ion-button.button-has-icon-only').first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsButton.click();
 
-  // Wait for the backend popover to be visible
-  const backendPopover = page.locator('ion-popover[trigger="backend-selector-button"]');
-  await backendPopover.waitFor({ state: 'visible', timeout: 15000 });
+  // Wait for the settings menu to be visible
+  const settingsMenu = page.locator('ion-menu#left-menu');
+  await settingsMenu.waitFor({ state: 'visible', timeout: 15000 });
 
-  // Wait for the backend name to appear in the popover content
-  await backendPopover.locator(`ion-item:has-text("${backendName}")`).waitFor({ state: 'visible', timeout: 5000 });
+  // Find the backend select dropdown in the settings menu
+  // The select is in an item with "Backend" label
+  const backendSelectItem = settingsMenu.locator('ion-item').filter({ hasText: 'Backend' });
+  await backendSelectItem.waitFor({ state: 'visible', timeout: 5000 });
+  
+  const backendSelect = backendSelectItem.locator('ion-select');
+  await backendSelect.waitFor({ state: 'visible', timeout: 5000 });
 
-  // Click on the backend name in the popover
-  await backendPopover.getByText(backendName, { exact: true }).click();
+  // Click on the ion-select element to open the popover
+  // Ionic select with interface="popover" opens a popover when clicked
+  await backendSelect.click();
 
-  // Verify backend switch completed
-  await expect(page.locator('ion-button#backend-selector-button')).toContainText(backendName, { timeout: 5000 });
+  // Wait for the select popover to be visible
+  // The select popover has class "select-popover" to distinguish it from other popovers
+  const popover = page.locator('ion-popover.select-popover');
+  await popover.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Wait a bit for the popover content to render
+  await page.waitForTimeout(500);
+  
+  // The radio buttons are inside ion-item elements in the popover
+  // Try finding by the text content of the ion-item
+  const backendItem = popover.locator('ion-item').filter({ hasText: new RegExp(`^${backendName}$`, 'i') });
+  await backendItem.waitFor({ state: 'visible', timeout: 5000 });
+  await backendItem.click();
+
+  // Wait for the select to close and value to update
+  await page.waitForTimeout(1000);
+
+  // Verify backend switch completed by checking the select value before closing menu
+  await expect(backendSelect).toHaveAttribute('value', backendName.toLowerCase(), { timeout: 5000 });
   console.log(`✓ Verified active backend: ${backendName}`);
+
+  // Close the settings menu
+  await settingsMenu.evaluate((menu) => menu.close());
+  await settingsMenu.waitFor({ state: 'hidden', timeout: 5000 });
 
   // Wait for agents to load after backend switch
   await page.waitForResponse(

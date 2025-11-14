@@ -132,13 +132,11 @@
   }
 
   body {
-    @apply bg-background text-foreground dark;
+    @apply bg-background text-foreground;
   }
 
-  /* Apply dark theme by default */
-  html {
-    @apply dark;
-  }
+  /* Dark theme is controlled by JavaScript based on darkMode state */
+  /* The dark class is added/removed by useEffect in Chat.tsx */
 
   /* Ensure Ionic components use dark theme */
   ion-app {
@@ -161,6 +159,133 @@
   ion-toolbar {
     --background: hsl(var(--surface));
     --color: hsl(var(--foreground));
+  }
+
+  /* Light theme for Ionic menu (default) */
+  ion-menu {
+    --background: #ffffff;
+    --color: #000000;
+    color-scheme: light;
+  }
+
+  ion-menu ion-content {
+    --background: #ffffff;
+    --color: #000000;
+  }
+
+  ion-menu ion-list {
+    --background: #ffffff;
+    background: #ffffff;
+  }
+
+  ion-menu ion-item {
+    --background: transparent;
+    --color: #000000;
+    --border-color: rgba(0, 0, 0, 0.13);
+  }
+
+  ion-menu ion-label {
+    --color: #000000;
+    color: #000000;
+  }
+
+  ion-menu ion-label h2,
+  ion-menu ion-label h3 {
+    color: #000000;
+  }
+
+  ion-menu ion-label p {
+    color: #666666;
+  }
+
+  ion-menu ion-select {
+    --color: #000000;
+    color: #000000;
+  }
+
+  ion-menu ion-select .select-text,
+  ion-menu ion-select [part="text"] {
+    color: #000000 !important;
+  }
+
+  ion-menu ion-select .select-placeholder,
+  ion-menu ion-select [part="placeholder"] {
+    color: #999999 !important;
+  }
+
+  ion-menu ion-select button {
+    color: #000000 !important;
+  }
+
+  ion-menu ion-select ion-icon {
+    color: #000000;
+  }
+
+
+  /* Dark theme for Ionic menu - only when dark class is on html */
+  html.dark ion-menu {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+    color-scheme: dark;
+  }
+
+  html.dark ion-menu ion-content {
+    --background: hsl(var(--surface));
+    --color: hsl(var(--foreground));
+  }
+
+  html.dark ion-menu ion-list {
+    --background: hsl(var(--surface));
+    background: hsl(var(--surface));
+  }
+
+  html.dark ion-menu ion-item {
+    --background: transparent;
+    --color: hsl(var(--foreground));
+    --border-color: hsl(var(--border));
+  }
+
+  html.dark ion-menu ion-label {
+    --color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+  }
+
+  html.dark ion-menu ion-label h2,
+  html.dark ion-menu ion-label h3 {
+    color: hsl(var(--foreground));
+  }
+
+  html.dark ion-menu ion-label p {
+    color: hsl(var(--text-secondary));
+  }
+
+  html.dark ion-menu ion-select {
+    --color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+  }
+
+  html.dark ion-menu ion-select .select-text,
+  html.dark ion-menu ion-select [part="text"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  html.dark ion-menu ion-select .select-placeholder,
+  html.dark ion-menu ion-select [part="placeholder"] {
+    color: hsl(var(--text-secondary)) !important;
+  }
+
+  html.dark ion-menu ion-select button {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  html.dark ion-menu ion-select ion-icon {
+    color: hsl(var(--foreground));
+  }
+
+  /* Make icons more visible in dark mode */
+  html.dark ion-menu ion-item ion-icon {
+    --color: #60a5fa;
+    color: #60a5fa;
   }
 
   /* Dark theme for Ionic popovers */
@@ -206,6 +331,33 @@
 
   ion-popover ion-item:hover {
     --background: hsl(var(--surface-elevated));
+  }
+
+  /* Dark theme for select popover radio buttons */
+  ion-popover radio {
+    --color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+  }
+
+  ion-popover radio::part(container) {
+    --color: hsl(var(--foreground));
+  }
+
+  ion-popover radio::part(label) {
+    color: hsl(var(--foreground));
+  }
+
+  /* Dark theme for select popover list */
+  ion-popover ion-list {
+    --background: hsl(var(--surface));
+    background: hsl(var(--surface));
+  }
+
+  /* Ensure select popover content is readable */
+  ion-popover .popover-content {
+    --background: hsl(var(--surface));
+    background: hsl(var(--surface));
+    color: hsl(var(--foreground));
   }
 
   /* Responsive utilities */
