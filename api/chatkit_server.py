@@ -600,17 +600,73 @@ class MyChatKitServer(ChatKitServer):
             # When resuming from state, the Python agents library may emit duplicate response.output_item.done events
             # TypeScript handles this by tracking producedItems and only emitting thread.item.done once per item ID
             logger.info(f"[python-action] Passing result to stream_agent_response: {type(result)}")
-            assistant_message_yielded = False
-            assistant_messages_yielded = 0
+            # Track item IDs that have already emitted thread.item.done to prevent duplicates
+            done_item_ids: set[str] = set()
+            # Track IDs we've generated for items, so thread.item.added and thread.item.done use the same ID
+            item_id_map: dict[str, str] = {}  # Maps original __fake_id__ to generated ID
+            
             async for event in stream_agent_response(agent_context, result):
-                # Prevent duplicate assistant messages (Python agents library bug)
+                # Fix __fake_id__ in ThreadItemAddedEvent items
+                if isinstance(event, ThreadItemAddedEvent) and hasattr(event, 'item'):
+                    item = event.item
+                    original_id = item.id if hasattr(item, 'id') else 'N/A'
+                    
+                    if hasattr(item, 'id') and (item.id == '__fake_id__' or not item.id or item.id == 'N/A'):
+                        # Check if we've already generated an ID for this item (from a previous event)
+                        if original_id in item_id_map:
+                            item.id = item_id_map[original_id]
+                            logger.info(f"[python-action] Reusing ID for ThreadItemAddedEvent: {original_id} -> {item.id}")
+                        else:
+                            logger.error(f"[python-action] CRITICAL: Fixing __fake_id__ for {type(item).__name__} in ThreadItemAddedEvent (original_id={original_id})")
+                            thread_meta = ThreadMetadata(id=thread.id, created_at=datetime.now())
+                            if isinstance(item, ClientToolCallItem):
+                                item_type_for_id = "tool_call"
+                            elif isinstance(item, AssistantMessageItem):
+                                item_type_for_id = "message"
+                            elif isinstance(item, UserMessageItem):
+                                item_type_for_id = "message"
+                            else:
+                                item_type_for_id = "message"
+                            item.id = self.store.generate_item_id(item_type_for_id, thread_meta, context)
+                            item_id_map[original_id] = item.id
+                            logger.info(f"[python-action] Fixed ID in ThreadItemAddedEvent: {original_id} -> {item.id}")
+                
+                # Fix __fake_id__ in ThreadItemDoneEvent items before deduplication
                 if isinstance(event, ThreadItemDoneEvent) and hasattr(event, 'item'):
                     item = event.item
+                    original_id = item.id if hasattr(item, 'id') else 'N/A'
+                    
+                    # Fix __fake_id__ if needed
+                    if hasattr(item, 'id') and (item.id == '__fake_id__' or not item.id or item.id == 'N/A'):
+                        # Check if we've already generated an ID for this item (from thread.item.added)
+                        if original_id in item_id_map:
+                            item.id = item_id_map[original_id]
+                            logger.info(f"[python-action] Reusing ID for ThreadItemDoneEvent: {original_id} -> {item.id}")
+                        else:
+                            logger.error(f"[python-action] CRITICAL: Fixing __fake_id__ for {type(item).__name__} in ThreadItemDoneEvent (original_id={original_id})")
+                            thread_meta = ThreadMetadata(id=thread.id, created_at=datetime.now())
+                            if isinstance(item, ClientToolCallItem):
+                                item_type_for_id = "tool_call"
+                            elif isinstance(item, AssistantMessageItem):
+                                item_type_for_id = "message"
+                            elif isinstance(item, UserMessageItem):
+                                item_type_for_id = "message"
+                            else:
+                                item_type_for_id = "message"
+                            item.id = self.store.generate_item_id(item_type_for_id, thread_meta, context)
+                            item_id_map[original_id] = item.id
+                            logger.info(f"[python-action] Fixed ID in ThreadItemDoneEvent: {original_id} -> {item.id}")
+                    
+                    # Deduplicate assistant message done events AFTER fixing the ID
                     if isinstance(item, AssistantMessageItem):
-                        assistant_messages_yielded += 1
-                        if assistant_messages_yielded > 1:
-                            logger.warn(f"[python-action] Skipping duplicate assistant message #{assistant_messages_yielded}")
-                            continue
+                        final_item_id = item.id if hasattr(item, 'id') else None
+                        if final_item_id:
+                            if final_item_id in done_item_ids:
+                                logger.warn(f"[python-action] Skipping duplicate thread.item.done for assistant message with id={final_item_id} (original_id={original_id})")
+                                continue
+                            done_item_ids.add(final_item_id)
+                            logger.info(f"[python-action] Added assistant message id={final_item_id} to done_item_ids set")
+                
                 yield event
 
         # After streaming completes, new interruptions and state should be available
@@ -822,6 +878,8 @@ class MyChatKitServer(ChatKitServer):
             event_count = 0
             # Track IDs we've generated for items, so thread.item.added and thread.item.done use the same ID
             item_id_map: dict[str, str] = {}  # Maps original __fake_id__ to generated ID
+            # Track item IDs that have already emitted thread.item.done to prevent duplicates
+            done_item_ids: set[str] = set()
             
             async for event in events:
                 event_count += 1
@@ -901,6 +959,17 @@ class MyChatKitServer(ChatKitServer):
                             logger.info(f"[python-respond] Fixed ID in ThreadItemDoneEvent: {original_id} -> {item.id}")
                     else:
                         logger.info(f"[python-respond] Item {type(item).__name__} already has valid ID: {original_id}")
+                    
+                    # Deduplicate assistant message done events AFTER fixing the ID
+                    # If we've already emitted thread.item.done for this item ID, skip it
+                    final_item_id = item.id if hasattr(item, 'id') else None
+                    if isinstance(item, AssistantMessageItem) and final_item_id:
+                        if final_item_id in done_item_ids:
+                            logger.warn(f"[python-respond] Skipping duplicate thread.item.done for assistant message with id={final_item_id} (original_id={original_id})")
+                            continue
+                        done_item_ids.add(final_item_id)
+                        logger.info(f"[python-respond] Added assistant message id={final_item_id} to done_item_ids set")
+                
                 yield event
         
         # Stream events with fixed IDs
