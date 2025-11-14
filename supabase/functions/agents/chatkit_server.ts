@@ -89,14 +89,23 @@ async function getSessionForThread(thread: ThreadMetadata, ctx: TContext): Promi
 
   Points to the openai-polyfill Conversations API using the request's JWT.
   */
-  // TEMPORARY: Use real OpenAI API instead of polyfill to debug serialization issues
-  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is required (temporary for testing without polyfill)');
+  // Use polyfill endpoint instead of real OpenAI API
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) {
+    throw new Error('SUPABASE_URL environment variable is required');
   }
+  const baseUrl = `${supabaseUrl}/functions/v1/openai-polyfill`;
+  const apiKey = ctx.user_jwt;
+  if (!apiKey) {
+    throw new Error('user_jwt is required in context');
+  }
+  
   const client = new OpenAI({
-    apiKey: OPENAI_API_KEY,
-    // No baseURL - use real OpenAI API
+    apiKey: apiKey,
+    baseURL: baseUrl,
+    defaultHeaders: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
   });
 
   // Try to look up existing conversation ID from database

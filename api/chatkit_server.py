@@ -96,15 +96,24 @@ def load_agent_from_database(agent_id: str, ctx: TContext) -> Agent[AgentContext
 def get_session_for_thread(thread_id: str, ctx: TContext) -> OpenAIConversationsSession:
     """Create or get an OpenAIConversationsSession for a given thread.
 
-    Uses the real OpenAI API instead of polyfill (matching TypeScript version).
+    Points to the openai-polyfill Conversations API using the request's JWT.
     """
-    # TEMPORARY: Use real OpenAI API instead of polyfill to debug serialization issues
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if not openai_api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is required (temporary for testing without polyfill)")
+    # Use polyfill endpoint instead of real OpenAI API
+    supabase_url = os.environ.get("SUPABASE_URL")
+    if not supabase_url:
+        raise ValueError("SUPABASE_URL environment variable is required")
+    base_url = f"{supabase_url}/functions/v1/openai-polyfill"
+    api_key = ctx.user_jwt
+    if not api_key:
+        raise ValueError("user_jwt is required in context")
     
-    client = AsyncOpenAI(api_key=openai_api_key)
-    # No baseURL - use real OpenAI API
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        default_headers={
+            "Authorization": f"Bearer {api_key}",
+        }
+    )
 
     # Try to look up existing conversation ID from database
     existing_conversation_id: str | None = None
