@@ -1,6 +1,6 @@
 # Timestep AI
 
-A production-ready AI agent platform built with React, Supabase, and OpenAI's Agents SDK. This application demonstrates how to build sophisticated multi-agent systems with real-time streaming, conversation tracing, agent handoffs, and tool execution using the Model Context Protocol (MCP). The platform supports dual backend implementations (Python FastAPI and TypeScript/Deno Supabase Edge Functions) with seamless switching between them.
+A production-ready AI agent platform built with React, Supabase, and OpenAI's Agents SDK. This application demonstrates how to build sophisticated multi-agent systems with real-time streaming, human-in-the-loop workflows, agent handoffs, and tool execution. The platform supports dual backend implementations (Python FastAPI and TypeScript/Deno Supabase Edge Functions) with seamless switching between them.
 
 ## Features
 
@@ -9,11 +9,11 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
   - Weather Assistant: Specialized agent with weather tool integration
 - **Agent Handoffs**: Seamless agent-to-agent conversation transfers for complex workflows
 - **OpenAI Agents SDK Integration**: Built on OpenAI's official Agents SDK with ChatKit React components
-- **Model Context Protocol (MCP)**: Tool execution via MCP for extensible agent capabilities
+- **Function Tools**: Extensible tool system with built-in tools (weather, theme switching) and approval workflows
 - **Anonymous Authentication**: Genuine anonymous users without requiring login
 - **Conversation Management**: Full thread lifecycle management (create, list, update, delete)
 - **Real-Time Streaming**: Message streaming with event-driven architecture
-- **Conversation Tracing**: Track and visualize agent workflows, responses, and execution traces
+- **Human-in-the-Loop (HITL)**: Tool approval workflows with interruption handling and state persistence
 - **File Attachments**: Support for file uploads with vector store integration
 - **Real-time Chat**: Interactive chat interface powered by Ionic framework
 - **Dual Backend Support**: Switch between Python FastAPI and TypeScript/Deno Supabase Edge Functions backends
@@ -43,7 +43,7 @@ A production-ready AI agent platform built with React, Supabase, and OpenAI's Ag
   - Python 3.11+ (FastAPI - Python)
 - **AI Framework**: OpenAI Agents SDK (@openai/agents-openai, @openai/agents-core)
 - **Model Providers**: OpenAI, Anthropic, Hugging Face (inference endpoints & providers), Ollama (local & cloud)
-- **Protocol**: Model Context Protocol (MCP)
+- **Tools**: Function tools with OpenAI Agents SDK (MCP infrastructure available for future use)
 - **Database**: PostgreSQL with Row-Level Security (RLS)
 - **Authentication**: Supabase Auth (anonymous & authenticated users)
 
@@ -86,13 +86,7 @@ uv sync
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file from the example:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your configuration. **All environment variables are required** - the application will throw errors if they are missing:
+Create a `.env.local` file in the project root with your configuration. **All environment variables are required** - the application will throw errors if they are missing:
 
 ```env
 VITE_SUPABASE_URL=http://127.0.0.1:54321
@@ -129,7 +123,12 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 HF_TOKEN=your-huggingface-token
 OLLAMA_API_KEY=your-ollama-cloud-api-key
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
+# For local development, SUPABASE_DB_PASSWORD defaults to "postgres"
+# For cloud Supabase, SUPABASE_DB_PASSWORD is required, or use SUPABASE_DB_URL
+SUPABASE_DB_PASSWORD=postgres
+# Alternatively, use SUPABASE_DB_URL with full connection string:
+# SUPABASE_DB_URL=postgresql+asyncpg://postgres:password@host:port/database
 ```
 
 **Important**: Never commit `supabase/config.toml` to version control. It's already in `.gitignore`.
@@ -148,7 +147,7 @@ This will start a local Supabase instance. Note the `anon key` and `API URL` fro
 npx supabase db reset
 ```
 
-This creates all necessary tables (users, traces, responses, spans, etc.).
+This creates all necessary tables (users, agents, chatkit_threads, chatkit_thread_items, run_states, etc.).
 
 ### 7. Start the Development Server
 
@@ -172,7 +171,7 @@ npx supabase functions serve
 
 In a separate terminal:
 ```bash
-OLLAMA_API_KEY="your-ollama-api-key" OPENAI_API_KEY="your-openai-api-key" SUPABASE_ANON_KEY="your-supabase-anon-key" SUPABASE_URL="http://127.0.0.1:54321" npm run dev:api 2>&1 | tee python-backend.log
+OLLAMA_API_KEY="your-ollama-api-key" OPENAI_API_KEY="your-openai-api-key" SUPABASE_ANON_KEY="your-supabase-anon-key" SUPABASE_URL="http://127.0.0.1:54321" SUPABASE_DB_PASSWORD="postgres" npm run dev:api 2>&1 | tee python-backend.log
 ```
 
 The Python backend will be available at `http://127.0.0.1:8000`.
@@ -204,9 +203,14 @@ timestep-ai/
 │       └── thread.ts           # Thread type definitions
 │
 ├── api/                          # Python FastAPI backend
-│   ├── main.py                  # FastAPI application entry point
-│   ├── stores.py                # ChatKit data store implementation
-│   └── utils/                   # Utility modules
+│   ├── index.py                  # FastAPI application entry point
+│   ├── chatkit_server.py         # ChatKit server implementation
+│   ├── stores.py                 # ChatKit data store implementation
+│   ├── tools.py                  # Agent tools (get_weather, switch_theme)
+│   ├── weather.py                # Weather tool implementation
+│   ├── approval_widget.py        # Tool approval widgets
+│   ├── sample_widget.py          # Weather widget rendering
+│   └── utils/                    # Utility modules
 │       ├── multi_model_provider.py    # Multi-provider support
 │       ├── ollama_model_provider.py   # Ollama provider
 │       └── ollama_model.py            # Ollama model implementation
@@ -214,14 +218,21 @@ timestep-ai/
 ├── supabase/                     # TypeScript/Deno backend
 │   ├── functions/               # Edge Functions (Deno runtime)
 │   │   ├── _shared/             # Shared code between edge functions
-│   │   │   ├── stores.ts       # ChatKit data store implementation
-│   │   │   ├── store.ts        # Store interfaces
-│   │   │   ├── types.ts        # ChatKit type definitions
-│   │   │   ├── errors.ts       # Error types
-│   │   │   └── widgets.ts      # Widget types
+│   │   │   ├── stores.ts        # ChatKit data store implementation
+│   │   │   └── chatkit/         # Shared ChatKit implementation
+│   │   │       ├── server.ts    # ChatKit server
+│   │   │       ├── store.ts     # Store interfaces
+│   │   │       ├── types.ts     # ChatKit type definitions
+│   │   │       ├── errors.ts   # Error types
+│   │   │       ├── widgets.ts  # Widget types
+│   │   │       └── agents.ts   # Agent context
 │   │   ├── agents/              # Main agent orchestration
 │   │   │   ├── index.ts        # Request router & handler
-│   │   │   ├── chatkit/        # ChatKit implementation
+│   │   │   ├── chatkit_server.ts # ChatKit server wrapper
+│   │   │   ├── tools.ts        # Agent tools (get_weather, switch_theme)
+│   │   │   ├── weather.ts      # Weather tool implementation
+│   │   │   ├── approval_widget.ts # Tool approval widgets
+│   │   │   ├── sample_widget.ts # Weather widget rendering
 │   │   │   └── utils/          # Helper utilities
 │   │   │       ├── multi_model_provider.ts
 │   │   │       ├── ollama_model_provider.ts
@@ -289,7 +300,7 @@ Users can start chatting immediately without creating an account.
 Agents are defined with customizable configurations:
 
 - **Instructions**: Custom system prompts for agent behavior
-- **Tools**: MCP tools available to the agent (e.g., `get_weather`, `think`)
+- **Tools**: Function tools available to the agent (e.g., `get_weather`, `switch_theme`)
 - **Model Settings**: Temperature, tool choice strategy, and model selection
 - **Handoffs**: Define which agents can transfer conversations to this agent
 
@@ -300,15 +311,16 @@ Agents are defined with customizable configurations:
 
 Agents can seamlessly transfer conversations to each other via handoffs, enabling complex multi-agent workflows.
 
-### Tracing & Observability
+### Human-in-the-Loop (HITL) & State Management
 
-Every agent interaction is tracked:
+The platform supports human-in-the-loop workflows for tool approvals:
 
-- **Traces**: Top-level workflow executions
-- **Spans**: Individual steps within a trace (agent calls, tool usage, handoffs)
-- **Responses**: AI model responses with input/output tracking
+- **Tool Interruptions**: Agents can request approval before executing certain tools
+- **State Persistence**: Run states are saved to the database when interruptions occur
+- **State Resumption**: After approval/rejection, execution resumes from the saved state
+- **Approval Widgets**: Interactive UI widgets for approving or rejecting tool calls
 
-View traces at `/traces` and drill down into individual traces for detailed analysis.
+The system uses OpenAI's Conversations API for session management and state persistence.
 
 ### ChatKit Integration
 
@@ -321,14 +333,17 @@ Uses OpenAI's ChatKit React components for a polished chat experience with featu
 - **File Uploads**: Attach files to conversations with vector store integration
 - **Markdown Support**: Rich text formatting in messages
 
-### Model Context Protocol (MCP)
+### Agent Tools
 
-The app integrates MCP for extensible tool execution:
+The app includes built-in function tools for agent capabilities:
 
 - **Built-in Tools**:
-  - `get_weather`: Fetch real-time weather data for any location
-  - `think`: Internal reasoning tool for agent reflection
-- **Extensible**: Add custom tools by implementing MCP tool interface
+  - `get_weather`: Fetch real-time weather data for any location with interactive weather dashboard widget
+  - `switch_theme`: Client-side tool to switch between light and dark themes in the chat interface
+- **Tool Approval**: Tools can require human approval before execution (e.g., weather lookups for specific locations)
+- **Extensible**: Add custom tools by implementing function tools using the OpenAI Agents SDK
+
+**Note**: While MCP (Model Context Protocol) infrastructure exists in the database schema (`mcp_servers` table), the current built-in tools are implemented as function tools using the OpenAI Agents SDK.
 
 ### Multi-Model Provider Support
 
@@ -468,8 +483,10 @@ npx cap open android
 - `ANTHROPIC_API_KEY` - Anthropic API key (optional)
 - `HF_TOKEN` - Hugging Face token (optional)
 - `OLLAMA_API_KEY` - Ollama Cloud API key (optional)
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `SUPABASE_URL` - Supabase project URL (required)
+- `SUPABASE_ANON_KEY` - Supabase anonymous/public key (required)
+- `SUPABASE_DB_PASSWORD` - Database password (required for cloud Supabase, defaults to "postgres" for local)
+- `SUPABASE_DB_URL` - Full database connection string (alternative to SUPABASE_DB_PASSWORD)
 
 **Note**: 
 - TypeScript backend secrets are configured locally in `supabase/config.toml` (gitignored) and in production via Supabase dashboard secrets.
@@ -495,7 +512,7 @@ The application supports **dual backend implementations**:
 ```
 Agents Function (agents/index.ts)
     ↓
-ChatKit Server (chatkit/server.ts)
+ChatKit Server (_shared/chatkit/server.ts)
     ↓
 Data Access Layer (_shared/stores.ts)
     ↓
@@ -510,11 +527,11 @@ Database (PostgreSQL via Supabase)
 
 **Python Backend (FastAPI):**
 ```
-API Layer (main.py)
+API Layer (api/index.py)
     ↓
-ChatKit Server (chatkit.server)
+ChatKit Server (api/chatkit_server.py)
     ↓
-Data Access Layer (stores.py)
+Data Access Layer (api/stores.py)
     ↓
 Database (PostgreSQL via Supabase)
 ```
@@ -545,7 +562,7 @@ Both backends share the same database schema and provide identical API interface
    - Select model provider based on model name prefix (openai/, anthropic/, ollama/, etc.)
    - Execute agent with OpenAI Agents SDK
    - Stream events back to client
-6. **Tool Execution**: Agent calls MCP tools if needed
+6. **Tool Execution**: Agent calls function tools if needed (with optional approval workflow)
 7. **Response**: Assistant message streamed to frontend
 8. **Persistence**: Thread, messages, and run state saved to database
 
@@ -557,7 +574,9 @@ Both backends share the same database schema and provide identical API interface
 - `chatkit_threads`: Conversation threads (ChatKit format)
 - `chatkit_thread_items`: Individual messages and items in conversations (ChatKit format)
 - `profiles`: User profile information
-- `mcp_servers`: MCP server configurations
+- `run_states`: Saved agent execution states for HITL workflows
+- `thread_conversations`: Mapping between ChatKit threads and OpenAI Conversations API
+- `mcp_servers`: MCP server configurations (for future MCP tool integration)
 
 All tables use **Row-Level Security (RLS)** for data isolation by user ID.
 
@@ -603,7 +622,7 @@ Via POST to `/agents/{agentId}/chatkit`:
 - `threads.update` - Update thread metadata
 - `threads.delete` - Delete thread
 - `threads.add_user_message` - Add message to thread
-- `threads.action` - Handle tool approvals
+- `threads.action` - Handle tool approvals and widget actions
 - `items.list` - List thread messages
 
 ## Security
