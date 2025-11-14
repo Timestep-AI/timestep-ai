@@ -119,6 +119,255 @@ async function runConversationFlow(page, steps) {
       await verifyMultipleWidgets(root, currentTurn, step.expectWidgetsUnordered, true);
     }
 
+    // --- Handle approval widget (if expected) ---
+    if (step.expectApprovalWidget) {
+      await handleApprovalWidget(root, currentTurn, step.expectApprovalWidget);
+      
+      // After approval, the assistant response might appear in the same turn or a new turn
+      // First, try to wait for content in the same turn, then check for a new turn
+      let approvedTurn = currentTurn;
+      
+      // After approval, wait for the widget and assistant message to appear
+      // They might appear in the same turn or a new turn
+      // CRITICAL: We must wait for BOTH the weather widget (not approval widget) AND assistant message
+      if (step.expectAssistantAfterApproval || step.expectWidgetAfterApproval) {
+        // Wait for content to appear - check both same turn and new turn
+        let contentAppeared = false;
+        let checkTurn = currentTurn;
+        
+        // Helper function to check if BOTH widget and assistant message are present
+        const checkContentPresent = async (turn) => {
+          let widgetPresent = true; // Default to true if not expected
+          let assistantPresent = true; // Default to true if not expected
+          
+          // Check for widget if expected - must be weather widget, not approval widget
+          if (step.expectWidgetAfterApproval) {
+            const widgets = turn.locator('[data-thread-item="widget"]');
+            const widgetCount = await widgets.count();
+            
+            // Need at least one widget (could be same turn with approval widget + weather widget)
+            if (widgetCount > 0) {
+              // Find the weather widget (not the approval widget)
+              // Approval widget contains "Approval Required" or "approval"
+              // Weather widget contains the location name
+              let foundWeatherWidget = false;
+              for (let i = 0; i < widgetCount; i++) {
+                const widget = widgets.nth(i);
+                const widgetText = await widget.textContent() || '';
+                // Check if this is NOT an approval widget (approval widgets contain "Approval" or "approve")
+                const isApprovalWidget = /approval|approve|reject/i.test(widgetText);
+                // Check if this IS the expected weather widget
+                if (!isApprovalWidget && step.expectWidgetAfterApproval.expectText && 
+                    step.expectWidgetAfterApproval.expectText.test(widgetText)) {
+                  foundWeatherWidget = true;
+                  break;
+                }
+              }
+              widgetPresent = foundWeatherWidget;
+            } else {
+              widgetPresent = false;
+            }
+          }
+          
+          // Check for assistant message if expected - must be separate from widgets
+          if (step.expectAssistantAfterApproval) {
+            const allText = await turn.textContent() || '';
+            // Check if the text matches the expected pattern
+            if (!step.expectAssistantAfterApproval.test(allText)) {
+              assistantPresent = false;
+            } else if (step.expectAssistantMustNotBeOnlyWidget) {
+              // Also verify there's actual text outside widgets
+              const widgetElements = turn.locator('[data-thread-item="widget"]');
+              const widgetCount = await widgetElements.count();
+              
+              let widgetText = '';
+              for (let i = 0; i < widgetCount; i++) {
+                widgetText += await widgetElements.nth(i).textContent();
+              }
+              
+              const nonWidgetText = allText.replace(widgetText, '').trim();
+              if (!nonWidgetText || nonWidgetText.length < 10) {
+                assistantPresent = false;
+              }
+            }
+          }
+          
+          return widgetPresent && assistantPresent;
+        };
+        
+        // First, try waiting for content in the same turn
+        try {
+          await expect
+            .poll(async () => {
+              return await checkContentPresent(currentTurn);
+            }, {
+              message: 'Waiting for weather widget and assistant message to appear after approval',
+              timeout: TIMEOUTS.ASSISTANT_TURN, // Use full timeout
+            })
+            .toBeTruthy();
+          contentAppeared = true;
+          checkTurn = currentTurn;
+          console.log(`✓ Weather widget and assistant message appeared in same turn after approval`);
+        } catch (e) {
+          // Content didn't appear in same turn, wait for new turn
+          console.log(`→ Content not in same turn, waiting for new turn...`);
+        }
+        
+        // If not found in same turn, wait for new assistant turn
+        if (!contentAppeared) {
+          const nextIndex = await waitForNextAssistantTurn(assistantTurns, prevCount);
+          prevCount = nextIndex + 1;
+          checkTurn = assistantTurns.nth(nextIndex);
+          approvedTurn = checkTurn;
+          console.log(`✓ Waiting for weather widget and assistant message in new turn after approval`);
+          
+          // Now wait for content to appear in the new turn
+          await expect
+            .poll(async () => {
+              return await checkContentPresent(checkTurn);
+            }, {
+              message: 'Waiting for weather widget and assistant message to appear in new turn after approval',
+              timeout: TIMEOUTS.ASSISTANT_TURN,
+            })
+            .toBeTruthy();
+          console.log(`✓ Weather widget and assistant message appeared in new turn after approval`);
+        } else {
+          approvedTurn = checkTurn;
+        }
+      } else {
+        // No expected content, just wait for a new turn if needed
+        const nextIndex = await waitForNextAssistantTurn(assistantTurns, prevCount);
+        prevCount = nextIndex + 1;
+        approvedTurn = assistantTurns.nth(nextIndex);
+      }
+      
+      // Now verify the widget is actually visible and correct
+      // CRITICAL: Make sure we're verifying the weather widget, not the approval widget
+      if (step.expectWidgetAfterApproval) {
+        // First, find the weather widget (not approval widget)
+        const widgets = approvedTurn.locator('[data-thread-item="widget"]');
+        const widgetCount = await widgets.count();
+        
+        let weatherWidget = null;
+        for (let i = 0; i < widgetCount; i++) {
+          const widget = widgets.nth(i);
+          const widgetText = await widget.textContent() || '';
+          // Check if this is NOT an approval widget
+          const isApprovalWidget = /approval|approve|reject/i.test(widgetText);
+          // Check if this IS the expected weather widget
+          if (!isApprovalWidget && step.expectWidgetAfterApproval.expectText && 
+              step.expectWidgetAfterApproval.expectText.test(widgetText)) {
+            weatherWidget = widget;
+            break;
+          }
+        }
+        
+        if (!weatherWidget) {
+          throw new Error(
+            `Weather widget not found after approval. Expected widget with text matching: ${step.expectWidgetAfterApproval.expectText}. ` +
+            `Found ${widgetCount} widget(s), but none matched the expected pattern.`
+          );
+        }
+        
+        // Verify the weather widget is visible
+        await expect(weatherWidget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+        console.log(`✓ Weather widget is visible after approval`);
+        
+        // Verify the text matches
+        const widgetText = await weatherWidget.textContent() || '';
+        if (step.expectWidgetAfterApproval.expectText && 
+            !step.expectWidgetAfterApproval.expectText.test(widgetText)) {
+          throw new Error(
+            `Weather widget text did not match expected pattern. Expected: ${step.expectWidgetAfterApproval.expectText}, Got: ${widgetText.substring(0, 200)}`
+          );
+        }
+        console.log(`✓ Weather widget text matched: ${step.expectWidgetAfterApproval.expectText}`);
+      }
+      
+      // Verify assistant message is actually present and correct
+      if (step.expectAssistantAfterApproval) {
+        await expect
+          .poll(async () => {
+            return (await approvedTurn.textContent()) || '';
+          }, {
+            message: 'Waiting for assistant response after approval',
+            timeout: TIMEOUTS.ASSISTANT_TURN,
+          })
+          .toMatch(step.expectAssistantAfterApproval);
+        console.log(`✓ Assistant matched after approval: ${step.expectAssistantAfterApproval}`);
+        
+        if (step.expectAssistantMustNotBeOnlyWidget) {
+          const allText = await approvedTurn.textContent();
+          const widgetElements = approvedTurn.locator('[data-thread-item="widget"]');
+          const widgetCount = await widgetElements.count();
+          
+          let widgetText = '';
+          for (let i = 0; i < widgetCount; i++) {
+            widgetText += await widgetElements.nth(i).textContent();
+          }
+          
+          const nonWidgetText = allText.replace(widgetText, '').trim();
+          if (!nonWidgetText || nonWidgetText.length < 10) {
+            throw new Error(
+              `Expected assistant message with text separate from widgets after approval, but found only widget content. ` +
+              `Non-widget text: "${nonWidgetText}"`
+            );
+          }
+          console.log(`✓ Found assistant text separate from widgets after approval: ${nonWidgetText.substring(0, 100)}...`);
+        }
+      }
+      
+      // CRITICAL: After approval, wait for the assistant turn to be fully complete
+      // This ensures all streaming is done before proceeding to the next step
+      // Wait for the text content to stabilize (no more streaming)
+      // This is especially important for Python backend which may stream the assistant message after the widget
+      // We need to wait for the text to be stable for multiple consecutive checks to ensure streaming is complete
+      let previousText = '';
+      let stableCount = 0;
+      const requiredStableChecks = 3; // Require 3 consecutive stable checks (600ms total)
+      for (let i = 0; i < 10; i++) { // Check up to 10 times (2 seconds max)
+        await page.waitForTimeout(200); // Wait 200ms between checks
+        const currentText = await approvedTurn.textContent() || '';
+        if (currentText === previousText && currentText.length > 0) {
+          stableCount++;
+          if (stableCount >= requiredStableChecks) {
+            // Text has been stable for required number of checks
+            console.log(`✓ Text stabilized after ${(i + 1) * 200}ms (${stableCount} consecutive stable checks)`);
+            break;
+          }
+        } else {
+          // Text changed, reset stable count
+          stableCount = 0;
+          previousText = currentText;
+        }
+      }
+      
+      // Final check: ensure we have the expected assistant message content
+      if (step.expectAssistantAfterApproval) {
+        const finalText = await approvedTurn.textContent() || '';
+        if (!step.expectAssistantAfterApproval.test(finalText)) {
+          throw new Error(
+            `Assistant message after approval did not match expected pattern. ` +
+            `Expected: ${step.expectAssistantAfterApproval}, ` +
+            `Got: ${finalText.substring(0, 200)}...`
+          );
+        }
+      }
+      
+      // Wait for the send button to be enabled, which indicates the turn is complete
+      await expect(sendButton).toBeEnabled({ timeout: TIMEOUTS.SEND_BUTTON });
+      console.log(`✓ Send button enabled after approval, turn complete`);
+      
+      // CRITICAL: Update prevCount to ensure the next step waits for a NEW turn
+      // If the response appeared in the same turn, we need to make sure the next step
+      // waits for a new turn, not the same one
+      const currentCount = await assistantTurns.count();
+      // Always set prevCount to currentCount so the next step will wait for a new turn
+      // (waitForNextAssistantTurn checks if count > prevCount)
+      prevCount = currentCount;
+      console.log(`✓ Updated prevCount to ${prevCount} after approval`);
+    }
+
     // --- Before next user turn ---
     await expect(sendButton).toBeEnabled({ timeout: TIMEOUTS.SEND_BUTTON });
     console.log(`✓ Send button enabled, ready for next step`);
@@ -418,6 +667,78 @@ async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAn
 
     console.log(`✓ All ${expectedWidgets.length} widgets verified in order`);
   }
+}
+
+async function handleApprovalWidget(root, currentTurn, expectedApproval) {
+  console.log(`→ Handling approval widget`);
+  
+  // Wait a moment for approval widget to render
+  await currentTurn.page().waitForTimeout(1000);
+  
+  // Find the approval widget
+  const widgetSelector = '[data-thread-item="widget"]';
+  const approvalWidget = currentTurn.locator(widgetSelector).first();
+  
+  await expect(approvalWidget).toBeVisible({ timeout: TIMEOUTS.ASSISTANT_TURN });
+  console.log(`✓ Approval widget is visible`);
+  
+  // Verify the approval widget contains expected text
+  if (expectedApproval.expectText) {
+    const widgetText = await approvalWidget.textContent();
+    const regex = expectedApproval.expectText;
+    if (!regex.test(widgetText || '')) {
+      throw new Error(
+        `Approval widget text did not match expected pattern. Expected: ${regex}, Got: ${widgetText?.substring(0, 200)}`
+      );
+    }
+    console.log(`✓ Approval widget text matched: ${expectedApproval.expectText}`);
+  }
+  
+  // Find and click the confirm/approve button
+  // Card widgets use confirm/cancel fields, so the button might be labeled "Approve" or "Confirm"
+  // Try multiple selectors to find the approve/confirm button
+  let approveButton = null;
+  
+  // First try: role button with "Approve" text
+  approveButton = approvalWidget.getByRole('button', { name: /approve/i });
+  let approveButtonCount = await approveButton.count();
+  
+  if (approveButtonCount === 0) {
+    // Second try: role button with "Confirm" text (Card's confirm field)
+    approveButton = approvalWidget.getByRole('button', { name: /confirm/i });
+    approveButtonCount = await approveButton.count();
+  }
+  
+  if (approveButtonCount === 0) {
+    // Third try: any button with "Approve" text
+    approveButton = approvalWidget.locator('button').filter({ hasText: /approve/i });
+    approveButtonCount = await approveButton.count();
+  }
+  
+  if (approveButtonCount === 0) {
+    // Fourth try: any button with "Confirm" text
+    approveButton = approvalWidget.locator('button').filter({ hasText: /confirm/i });
+    approveButtonCount = await approveButton.count();
+  }
+  
+  if (approveButtonCount === 0) {
+    // Last resort: try to find the confirm button by data attributes or class
+    // Card confirm buttons might have specific attributes
+    approveButton = approvalWidget.locator('button[data-action="confirm"], button[data-confirm], button:has-text("Approve"), button:has-text("Confirm")');
+    approveButtonCount = await approveButton.count();
+  }
+  
+  if (approveButtonCount === 0) {
+    throw new Error('Approval widget found but no approve/confirm button found. Widget HTML: ' + (await approvalWidget.innerHTML()).substring(0, 500));
+  }
+  
+  console.log(`✓ Found approve/confirm button`);
+  await approveButton.first().click();
+  
+  console.log(`✓ Clicked approve button`);
+  
+  // Wait a moment for the action to be processed
+  await currentTurn.page().waitForTimeout(2000);
 }
 
 module.exports = {

@@ -79,6 +79,15 @@ export const switchTheme = tool({
 });
 
 /**
+ * Check if weather tool needs approval for Berkeley
+ * Matches Python _needs_weather_approval implementation
+ */
+async function needsWeatherApproval(_ctx: { context?: AgentContext }, params: { location?: string }, _callId: string): Promise<boolean> {
+  const location = params.location || '';
+  return location.includes('Berkeley') || location.toLowerCase().includes('berkeley');
+}
+
+/**
  * Get current weather and forecast for a location
  * Matches Python get_weather implementation
  */
@@ -102,6 +111,7 @@ export const getWeather = tool({
     additionalProperties: false,
   },
   strict: false,
+  needsApproval: needsWeatherApproval,
   execute: async ({ location, unit }: { location: string; unit?: string }, ctx: { context?: AgentContext }) => {
     console.log('[WeatherTool] tool invoked', { location, unit });
     try {
@@ -145,4 +155,3 @@ export const getWeather = tool({
     }
   },
 });
-

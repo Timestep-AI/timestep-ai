@@ -378,8 +378,33 @@ export class ChatKitDataStore implements Store<TContext> {
     throw new Error('Attachments not yet supported');
   }
 
-  async load_item(_thread_id: string, _item_id: string, _context?: TContext | null): Promise<ThreadItem> {
-    throw new Error('load_item not yet implemented');
+  async load_item(thread_id: string, item_id: string, context?: TContext | null): Promise<ThreadItem> {
+    if (!context) throw new Error('Missing request context');
+
+    const client = this._get_client(context);
+
+    try {
+      // Use listItems to find the specific item
+      // We'll fetch items and find the one with matching ID
+      const response = await client.beta.chatkit.threads.listItems(thread_id, {
+        limit: 100,
+        order: 'desc',
+      });
+
+      // Find the item with matching ID
+      const item = response.data.find((item: any) => item.id === item_id);
+      
+      if (!item) {
+        throw new Error(`Item ${item_id} not found in thread ${thread_id}`);
+      }
+
+      return this._deserialize_thread_item(item);
+    } catch (e: any) {
+      if (e?.status === 404 || e?.message?.includes('404') || e?.message?.includes('not found')) {
+        throw new Error(`Item ${item_id} not found`);
+      }
+      throw e;
+    }
   }
 
   async save_attachment(_attachment_id: string, _data: any, _context?: TContext | null): Promise<void> {

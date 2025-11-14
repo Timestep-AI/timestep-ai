@@ -32,6 +32,32 @@ const weatherFlow = [
       expectText: /Atlanta/i,
     },
   },
+  {
+    user: "and in Berkeley?",
+    // This should trigger the approval widget first
+    expectApprovalWidget: {
+      expectText: /approval|Berkeley|get_weather/i,
+    },
+    // After approval, expect the weather widget
+    expectWidgetAfterApproval: {
+      type: 'weather',
+      expectText: /Berkeley/i,
+    },
+    // After approval, expect assistant message with weather info
+    expectAssistantAfterApproval: /weather|temperature|forecast|currently|Berkeley/i,
+    expectAssistantMustNotBeOnlyWidget: true, // Ensure there's actual text, not just widget content
+  },
+  {
+    user: "and in New York?",
+    // After the approval flow, normal conversation should continue
+    // This should NOT require approval (New York is not Berkeley)
+    expectAssistant: /weather|temperature|forecast|currently|New York/i,
+    expectAssistantMustNotBeOnlyWidget: true, // Ensure there's actual text, not just widget content
+    expectWidget: {
+      type: 'weather',
+      expectText: /New York/i,
+    },
+  },
 ];
 
 module.exports = {

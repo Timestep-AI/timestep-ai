@@ -786,7 +786,7 @@ wheels = [
 [[package]]
 name = "openai-agents"
 version = "0.5.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/mjschock/openai-agents-python.git#2bc0ce0b31160ede975ce6a64175649135c429d4" }
 dependencies = [
     { name = "griffe" },
     { name = "mcp" },
@@ -795,10 +795,6 @@ dependencies = [
     { name = "requests" },
     { name = "types-requests" },
     { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/00/b3/c25c3b3084c113ffbd161c37ed7c02e0cc1296eb2f2d582d85c461f60c7a/openai_agents-0.5.0.tar.gz", hash = "sha256:776dde4025442164e3e860ff5b239b5c0ebc30f9445b0d75295c385a8ca1f696", size = 1958702, upload-time = "2025-11-05T05:28:37.456Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/f5/c43a84a64aa3328c628cc19365dc514ce02abf31e31c861ad489d6d3075b/openai_agents-0.5.0-py3-none-any.whl", hash = "sha256:5ef062273815de197315ec760f571625d0f2766ceb83ab189ba6cdd9b26a10e9", size = 223272, upload-time = "2025-11-05T05:28:35.64Z" },
 ]
 
 [package.optional-dependencies]
@@ -1440,7 +1436,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastapi", specifier = ">=0.120.2" },
     { name = "ollama", specifier = ">=0.6.0" },
-    { name = "openai-agents", extras = ["sqlalchemy"], specifier = ">=0.5.0" },
+    { name = "openai-agents", extras = ["sqlalchemy"], git = "https://github.com/mjschock/openai-agents-python.git" },
     { name = "openai-chatkit", specifier = ">=1.1.2" },
     { name = "supabase", specifier = ">=2.22.4" },
 ]

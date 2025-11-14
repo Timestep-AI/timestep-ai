@@ -44,8 +44,14 @@ async def switch_theme(
         logger.exception("Failed to switch theme")
         return None
 
+async def _needs_weather_approval(_ctx: RunContextWrapper[AgentContext], params: dict[str, Any], _call_id: str) -> bool:
+    """Check if weather tool needs approval for Berkeley."""
+    location = params.get("location", "")
+    return "Berkeley" in location or "berkeley" in location.lower()
+
 @function_tool(
-    description_override="Look up the current weather and upcoming forecast for a location and render an interactive weather dashboard."
+    description_override="Look up the current weather and upcoming forecast for a location and render an interactive weather dashboard.",
+    needs_approval=_needs_weather_approval,
 )
 async def get_weather(
     ctx: RunContextWrapper[AgentContext],

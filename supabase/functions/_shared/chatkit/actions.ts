@@ -22,18 +22,20 @@ export class Action<TType extends string = string, TPayload = any> {
     this.payload = payload;
   }
 
+  // Note: In Python, Action.create() is a classmethod that infers type from the Action class
+  // For generic actions, use ActionConfig directly instead
+  // This method signature matches Python but requires a typed Action subclass to work properly
   static create<TPayload>(
-    type: string,
     payload: TPayload,
     handler: Handler = DEFAULT_HANDLER,
     loadingBehavior: LoadingBehavior = DEFAULT_LOADING_BEHAVIOR
   ): ActionConfig {
-    return {
-      type,
-      payload,
-      handler,
-      loadingBehavior,
-    };
+    // In Python, the type is inferred from the Action class's Literal type parameter
+    // In TypeScript, we can't easily do this, so this method should only be used
+    // with typed Action subclasses. For generic actions, use ActionConfig directly.
+    throw new Error(
+      "Action.create() should not be called on generic Action. Use ActionConfig directly or create a typed Action subclass."
+    );
   }
 }
 

@@ -232,6 +232,17 @@ export class AgentContext {
   get events(): _AsyncQueue<ThreadStreamEvent | _QueueCompleteSentinel> {
     return this._events;
   }
+
+  // toJSON() method for serialization (used by RunContext.toJSON() -> RunState.toJSON())
+  // RunContext.toJSON() returns { context: this.context, ... }, so AgentContext needs to be serializable
+  // The context will be reconstructed when loading the state, so we only need minimal data
+  toJSON(): Record<string, any> {
+    return {
+      thread_id: this.thread.id,
+      // Don't serialize thread, store, or request_context as they contain non-serializable objects
+      // These will be reconstructed when loading the state
+    };
+  }
 }
 
 // Match Python: StreamingThoughtTracker class (line 336-339)

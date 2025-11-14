@@ -12,3 +12,6 @@ dependencies = [
     "asyncpg>=0.29.0",
     "ollama>=0.6.0",
 ]
+
+[tool.uv.sources]
+openai-agents = { git = "https://github.com/mjschock/openai-agents-python.git" }

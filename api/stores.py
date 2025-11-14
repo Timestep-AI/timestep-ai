@@ -479,8 +479,56 @@ class ChatKitDataStore(Store):
     def load_attachment(self, attachment_id: str, context: TContext | None = None) -> bytes:
         raise NotImplementedError("Attachments not yet supported")
 
-    def load_item(self, thread_id: str, item_id: str, context: TContext | None = None) -> ThreadItem:
-        raise NotImplementedError("load_item not yet implemented")
+    async def load_item(self, thread_id: str, item_id: str, context: TContext | None = None) -> ThreadItem:
+        """Load a specific thread item by ID.
+        
+        Uses listItems to find the specific item with matching ID.
+        """
+        if context is None:
+            raise HTTPException(status_code=400, detail="Missing request context")
+        if not context.user_id:
+            raise HTTPException(status_code=400, detail="Missing user_id")
+        
+        try:
+            client = self._get_client(context)
+            
+            # Use listItems to find the specific item
+            # We'll fetch items and find the one with matching ID
+            response = await client.beta.chatkit.threads.list_items(
+                thread_id,
+                limit=100,  # Fetch a reasonable number of items to find the one
+                order="desc",
+            )
+            
+            # Find the item with matching ID
+            item = None
+            for candidate in response.data:
+                if candidate.id == item_id:
+                    item = candidate
+                    break
+            
+            if not item:
+                raise HTTPException(status_code=404, detail=f"Item {item_id} not found in thread {thread_id}")
+            
+            # Convert Pydantic model to dict if needed
+            if hasattr(item, 'model_dump'):
+                item_dict = item.model_dump(mode='json')
+            elif hasattr(item, 'dict'):
+                item_dict = item.dict()
+            elif isinstance(item, dict):
+                item_dict = item
+            else:
+                # Try to convert to dict using __dict__
+                item_dict = dict(item) if hasattr(item, '__dict__') else item
+            
+            return self._deserialize_thread_item(item_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
+            logger.exception(f"[load_item] Error loading item {item_id} from thread {thread_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to load thread item: {str(e)}")
 
     def save_attachment(self, attachment_id: str, data: bytes, context: TContext | None = None) -> None:
         raise NotImplementedError("Attachments not yet supported")
