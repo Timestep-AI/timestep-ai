@@ -785,8 +785,8 @@ wheels = [
 
 [[package]]
 name = "openai-agents"
-version = "0.5.0"
-source = { git = "https://github.com/mjschock/openai-agents-python.git#2bc0ce0b31160ede975ce6a64175649135c429d4" }
+version = "0.5.1"
+source = { git = "https://github.com/mjschock/openai-agents-python.git?rev=1947718cbdcf06d8a8719ba3703acdd31dd7154a#1947718cbdcf06d8a8719ba3703acdd31dd7154a" }
 dependencies = [
     { name = "griffe" },
     { name = "mcp" },
@@ -1436,7 +1436,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastapi", specifier = ">=0.120.2" },
     { name = "ollama", specifier = ">=0.6.0" },
-    { name = "openai-agents", extras = ["sqlalchemy"], git = "https://github.com/mjschock/openai-agents-python.git" },
+    { name = "openai-agents", extras = ["sqlalchemy"], git = "https://github.com/mjschock/openai-agents-python.git?rev=1947718cbdcf06d8a8719ba3703acdd31dd7154a" },
     { name = "openai-chatkit", specifier = ">=1.1.2" },
     { name = "supabase", specifier = ">=2.22.4" },
 ]

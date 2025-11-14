@@ -14,4 +14,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-openai-agents = { git = "https://github.com/mjschock/openai-agents-python.git" }
+openai-agents = { git = "https://github.com/mjschock/openai-agents-python.git", rev = "1947718cbdcf06d8a8719ba3703acdd31dd7154a" }
