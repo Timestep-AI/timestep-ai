@@ -129,8 +129,6 @@ async function runConversationFlow(page, steps) {
     // --- Switch backend (if specified) ---
     if (step.switchBackend) {
       await switchBackend(page, step.switchBackend);
-      // After switching backend, we need to wait for the chat to reload
-      await page.waitForTimeout(3000);
       // Re-get the root after backend switch (iframe might have reloaded)
       // Wait for iframe to be ready
       await page.waitForSelector('iframe[name="chatkit"]', { state: 'attached', timeout: 10000 });
@@ -138,8 +136,6 @@ async function runConversationFlow(page, steps) {
       root = iframeCountAfter > 0 ? page.frameLocator('iframe[name="chatkit"]') : page;
       // Update root reference for subsequent steps
       runConversationFlow.currentRoot = root;
-      // Wait for iframe content to load
-      await page.waitForTimeout(2000);
       // Re-get input and sendButton after backend switch
       input = root.locator('input[type="text"], textarea');
       sendButton = root.getByRole('button', { name: /send/i });
@@ -147,31 +143,31 @@ async function runConversationFlow(page, steps) {
       // Wait for input to be ready (indicates iframe is loaded)
       await expect(input).toBeVisible({ timeout: 10000 });
       // Re-get the current turn after backend switch (it might have changed)
-      // Wait a bit for turns to be available (they might be cleared on reload)
-      await page.waitForTimeout(2000);
+      // After iframe reload, turns may take a moment to render
+      // Wait for turns to appear (they should be there from the conversation history)
+      // First check if we have any turns, and if not, wait for at least one to appear
+      const initialTurnCount = await assistantTurns.count();
+      if (initialTurnCount === 0) {
+        // If no turns found initially, wait for them to appear after iframe reload
+        // This is expected - the iframe reloads and conversation history needs to render
+        await expect.poll(async () => await assistantTurns.count(), {
+          timeout: 10000,
+          message: 'Waiting for assistant turns to appear after backend switch (iframe reload)'
+        }).toBeGreaterThan(0);
+      }
+      
       const currentTurnCount = await assistantTurns.count();
       if (currentTurnCount > 0) {
         currentTurn = assistantTurns.nth(currentTurnCount - 1);
         // Wait for the turn to be visible
         await expect(currentTurn).toBeVisible({ timeout: 10000 });
+        prevCount = currentTurnCount;
       } else {
-        // If no turns found, the iframe might have reloaded and cleared them
-        // But the approval widget should still be in the conversation
-        // Try to find it in any available turns, or wait for turns to appear
-        console.log('⚠️ No assistant turns found after backend switch (iframe may have reloaded)');
-        // Wait a bit more for turns to appear
-        await page.waitForTimeout(2000);
-        const retryCount = await assistantTurns.count();
-        if (retryCount > 0) {
-          currentTurn = assistantTurns.nth(retryCount - 1);
-          await expect(currentTurn).toBeVisible({ timeout: 10000 });
-          prevCount = retryCount;
-        } else {
-          // If still no turns, reset count and continue - the next step might create a new turn
-          prevCount = 0;
-          // Set currentTurn to null so we know it's not available
-          currentTurn = null;
-        }
+        // If still no turns after waiting, reset count and continue
+        // The next step might create a new turn
+        prevCount = 0;
+        // Set currentTurn to null so we know it's not available
+        currentTurn = null;
       }
     }
 
@@ -388,9 +384,12 @@ async function runConversationFlow(page, steps) {
       // We need to wait for the assistant message text (excluding widgets) to be stable for multiple consecutive checks
       let previousAssistantText = '';
       let stableCount = 0;
-      const requiredStableChecks = 3; // Require 3 consecutive stable checks (600ms total)
-      for (let i = 0; i < 10; i++) { // Check up to 10 times (2 seconds max)
-        await page.waitForTimeout(200); // Wait 200ms between checks
+      const requiredStableChecks = 3; // Require 3 consecutive stable checks
+      const pollInterval = 200; // Check every 200ms
+      const maxChecks = 10; // Check up to 10 times (2 seconds max)
+      for (let i = 0; i < maxChecks; i++) {
+        // Use a small delay between checks for polling stability
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
         
         // Extract only the assistant message text, excluding widget text
         const allText = await approvedTurn.textContent() || '';
@@ -466,8 +465,7 @@ async function waitForNextAssistantTurn(assistantTurns, prevCount) {
 async function verifyToolCall(root, page, expectedToolCall) {
   console.log(`→ Verifying tool call: ${expectedToolCall.name} with params:`, expectedToolCall);
   
-  // Wait for the tool call to be saved
-  await page.waitForTimeout(2000);
+  // Wait for the tool call to be saved - we'll poll the API below, no need for arbitrary timeout
   
   // Get auth token from Supabase session in localStorage
   const authToken = await page.evaluate(() => {
@@ -554,8 +552,9 @@ async function verifyToolCall(root, page, expectedToolCall) {
 async function verifyWidget(root, currentTurn, expectedWidget) {
   console.log(`→ Verifying widget: ${expectedWidget.type}`);
 
-  // Wait a moment for widget to render
-  await currentTurn.page().waitForTimeout(1000);
+  // Wait for widget to be visible instead of arbitrary timeout
+  const widgetSelector = '[data-thread-item="widget"]';
+  await expect(currentTurn.locator(widgetSelector).first()).toBeVisible({ timeout: 10000 });
 
   // Get the HTML structure for debugging
   const turnHTML = await currentTurn.innerHTML();
@@ -621,9 +620,6 @@ async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAn
   const orderMsg = allowAnyOrder ? ' (any order)' : ' (strict order)';
   console.log(`→ Verifying ${expectedWidgets.length} widgets${orderMsg}`);
 
-  // Wait a moment for widgets to render
-  await currentTurn.page().waitForTimeout(1000);
-
   // Get the HTML structure for debugging
   const turnHTML = await currentTurn.innerHTML();
   console.log(`→ Turn HTML length: ${turnHTML.length} chars`);
@@ -631,6 +627,10 @@ async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAn
   // The actual selector used by ChatKit is [data-thread-item="widget"]
   const widgetSelector = '[data-thread-item="widget"]';
   const widgets = currentTurn.locator(widgetSelector);
+  
+  // Wait for widgets to be visible instead of arbitrary timeout
+  await expect(widgets.first()).toBeVisible({ timeout: 10000 });
+  
   const widgetCount = await widgets.count();
 
   console.log(`→ Found ${widgetCount} widget(s) with selector: ${widgetSelector}`);
@@ -749,10 +749,7 @@ async function verifyMultipleWidgets(root, currentTurn, expectedWidgets, allowAn
 async function waitForApprovalWidget(root, currentTurn, expectedApproval) {
   console.log(`→ Waiting for approval widget (without approving)`);
   
-  // Wait a moment for approval widget to render
-  await currentTurn.page().waitForTimeout(1000);
-  
-  // Find the approval widget
+  // Find the approval widget and wait for it to be visible
   const widgetSelector = '[data-thread-item="widget"]';
   const approvalWidget = currentTurn.locator(widgetSelector).first();
   
@@ -778,8 +775,9 @@ async function waitForApprovalWidget(root, currentTurn, expectedApproval) {
 async function switchBackend(page, backendName) {
   console.log(`→ Switching backend to: ${backendName}`);
   
-  // Don't wait for networkidle - it may never happen, just wait a bit for page to be ready
-  await page.waitForTimeout(500);
+  // Wait for page to be ready - wait for the settings button to be available
+  const settingsButton = page.locator('ion-toolbar ion-buttons[slot="start"] ion-button.button-has-icon-only').first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   
   // Start waiting for the agents API response BEFORE switching
   // This ensures we catch the response that happens after the switch
@@ -791,9 +789,6 @@ async function switchBackend(page, backendName) {
   });
   
   // Click on the settings button to open the settings menu
-  // The settings button is the first button with icon-only class in the toolbar
-  const settingsButton = page.locator('ion-toolbar ion-buttons[slot="start"] ion-button.button-has-icon-only').first();
-  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   
   // Wait for the settings menu to be visible
@@ -817,19 +812,12 @@ async function switchBackend(page, backendName) {
   const popover = page.locator('ion-popover.select-popover');
   await popover.waitFor({ state: 'visible', timeout: 5000 });
   
-  // Wait a bit for the popover content to render
-  await page.waitForTimeout(500);
-  
-  // The radio buttons are inside ion-item elements in the popover
-  // Try finding by the text content of the ion-item
+  // Wait for the backend item to be visible in the popover (instead of arbitrary timeout)
   const backendItem = popover.locator('ion-item').filter({ hasText: new RegExp(`^${backendName}$`, 'i') });
   await backendItem.waitFor({ state: 'visible', timeout: 5000 });
   await backendItem.click();
   
-  // Wait for the select to close and value to update
-  await page.waitForTimeout(1000);
-  
-  // Verify backend switch completed by checking the select value before closing menu
+  // Wait for the select value to update (instead of arbitrary timeout)
   await expect(backendSelect).toHaveAttribute('value', backendName.toLowerCase(), { timeout: 5000 });
   
   // Close the settings menu
@@ -841,17 +829,14 @@ async function switchBackend(page, backendName) {
   // Now wait for the agents API response (we started waiting before the switch)
   await agentsResponsePromise;
   
-  // Wait for ChatKit iframe to reload after backend switch
-  await page.waitForTimeout(2000);
+  // Wait for ChatKit iframe to reload - wait for iframe to be attached and ready
+  await page.waitForSelector('iframe[name="chatkit"]', { state: 'attached', timeout: 10000 });
 }
 
 async function handleApprovalWidget(root, currentTurn, expectedApproval) {
   console.log(`→ Handling approval widget`);
   
-  // Wait a moment for approval widget to render
-  await currentTurn.page().waitForTimeout(1000);
-  
-  // Find the approval widget
+  // Find the approval widget and wait for it to be visible
   const widgetSelector = '[data-thread-item="widget"]';
   const approvalWidget = currentTurn.locator(widgetSelector).first();
   
@@ -913,8 +898,18 @@ async function handleApprovalWidget(root, currentTurn, expectedApproval) {
   
   console.log(`✓ Clicked approve button`);
   
-  // Wait a moment for the action to be processed
-  await currentTurn.page().waitForTimeout(2000);
+  // Wait for the approval to be processed - wait for content to appear in current turn
+  // Approval should result in updated content in the current turn (the widget gets replaced with results)
+  await expect
+    .poll(async () => {
+      const turnText = await currentTurn.textContent() || '';
+      // Approval processed means the turn has more content than just the approval widget
+      return turnText.length;
+    }, {
+      timeout: 10000,
+      message: 'Waiting for approval to be processed'
+    })
+    .toBeGreaterThan(100);
 }
 
 module.exports = {
