@@ -319,26 +319,39 @@ async function runConversationFlow(page, steps) {
       
       // CRITICAL: After approval, wait for the assistant turn to be fully complete
       // This ensures all streaming is done before proceeding to the next step
-      // Wait for the text content to stabilize (no more streaming)
+      // Wait for the assistant message text content to stabilize (no more streaming)
       // This is especially important for Python backend which may stream the assistant message after the widget
-      // We need to wait for the text to be stable for multiple consecutive checks to ensure streaming is complete
-      let previousText = '';
+      // We need to wait for the assistant message text (excluding widgets) to be stable for multiple consecutive checks
+      let previousAssistantText = '';
       let stableCount = 0;
       const requiredStableChecks = 3; // Require 3 consecutive stable checks (600ms total)
       for (let i = 0; i < 10; i++) { // Check up to 10 times (2 seconds max)
         await page.waitForTimeout(200); // Wait 200ms between checks
-        const currentText = await approvedTurn.textContent() || '';
-        if (currentText === previousText && currentText.length > 0) {
+        
+        // Extract only the assistant message text, excluding widget text
+        const allText = await approvedTurn.textContent() || '';
+        const widgetElements = approvedTurn.locator('[data-thread-item="widget"]');
+        const widgetCount = await widgetElements.count();
+        
+        let widgetText = '';
+        for (let j = 0; j < widgetCount; j++) {
+          widgetText += await widgetElements.nth(j).textContent() || '';
+        }
+        
+        // Get only the assistant message text (non-widget text)
+        const currentAssistantText = allText.replace(widgetText, '').trim();
+        
+        if (currentAssistantText === previousAssistantText && currentAssistantText.length > 0) {
           stableCount++;
           if (stableCount >= requiredStableChecks) {
-            // Text has been stable for required number of checks
+            // Assistant message text has been stable for required number of checks
             console.log(`✓ Text stabilized after ${(i + 1) * 200}ms (${stableCount} consecutive stable checks)`);
             break;
           }
         } else {
           // Text changed, reset stable count
           stableCount = 0;
-          previousText = currentText;
+          previousAssistantText = currentAssistantText;
         }
       }
       
