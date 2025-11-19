@@ -19,7 +19,13 @@ import {
 } from '@ionic/react';
 import { personCircleOutline } from 'ionicons/icons';
 import SidebarMenu from '@/components/SidebarMenu';
-import { DraggableResizableContainer } from '@/components/DraggableResizableContainer';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import { ConversationsList } from '@/components/ConversationsList';
+import { ThreadItemsList } from '@/components/ThreadItemsList';
 
 const Chat = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -347,14 +353,26 @@ const Chat = () => {
             <div slot="end" style={{ fontWeight: 600, marginRight: '16px' }}>Timestep AI</div>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen className="relative">
-          <DraggableResizableContainer
-            initialWidth={800}
-            initialHeight={600}
-            gridSize={20}
-          >
-            <ChatKit control={control} className="h-full w-full" />
-          </DraggableResizableContainer>
+        <IonContent fullscreen className="ion-no-padding">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <ConversationsList />
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            <ResizablePanel defaultSize={60} minSize={40}>
+              <div className="h-full w-full">
+                <ChatKit control={control} className="h-full w-full" />
+              </div>
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <ThreadItemsList threadId={currentThreadId ?? undefined} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </IonContent>
       </IonPage>
     </>
