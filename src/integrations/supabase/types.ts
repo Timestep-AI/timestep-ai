@@ -53,6 +53,139 @@ export type Database = {
         }
         Relationships: []
       }
+      chatkit_thread_items: {
+        Row: {
+          created_at: number
+          data: Json
+          id: string
+          item_index: number
+          object: string
+          thread_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at: number
+          data: Json
+          id: string
+          item_index: number
+          object?: string
+          thread_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: number
+          data?: Json
+          id?: string
+          item_index?: number
+          object?: string
+          thread_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatkit_thread_items_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chatkit_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatkit_threads: {
+        Row: {
+          created_at: number
+          id: string
+          metadata: Json | null
+          object: string
+          status: Json
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at: number
+          id: string
+          metadata?: Json | null
+          object?: string
+          status?: Json
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: number
+          id?: string
+          metadata?: Json | null
+          object?: string
+          status?: Json
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversation_items: {
+        Row: {
+          content: Json
+          conversation_id: string
+          created_at: number
+          id: string
+          role: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          conversation_id: string
+          created_at: number
+          id: string
+          role?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          conversation_id?: string
+          created_at?: number
+          id?: string
+          role?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_items_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: number
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at: number
+          id: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: number
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           bytes: number
@@ -455,66 +588,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
-      get_next_message_index: {
+      get_next_chatkit_item_index: {
         Args: { p_thread_id: string }
         Returns: number
       }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
-      }
+      get_next_message_index: { Args: { p_thread_id: string }; Returns: number }
       search_files_by_embedding: {
         Args: {
           match_count?: number
@@ -547,42 +625,6 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
       }
     }
     Enums: {
