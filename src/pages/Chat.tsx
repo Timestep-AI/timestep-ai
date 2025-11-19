@@ -353,26 +353,28 @@ const Chat = () => {
             <div slot="end" style={{ fontWeight: 600, marginRight: '16px' }}>Timestep AI</div>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen className="ion-no-padding">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-              <ConversationsList />
-            </ResizablePanel>
-            
-            <ResizableHandle withHandle />
-            
-            <ResizablePanel defaultSize={60} minSize={40}>
-              <div className="h-full w-full">
-                <ChatKit control={control} className="h-full w-full" />
-              </div>
-            </ResizablePanel>
-            
-            <ResizableHandle withHandle />
-            
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-              <ThreadItemsList threadId={currentThreadId ?? undefined} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+        <IonContent fullscreen className="ion-no-padding" style={{ height: '100%' }}>
+          <div className="h-full w-full">
+            <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+                <ConversationsList />
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={60} minSize={40}>
+                <div className="h-full w-full">
+                  <ChatKit control={control} className="h-full w-full" />
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+                <ThreadItemsList threadId={currentThreadId ?? undefined} />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
         </IonContent>
       </IonPage>
     </>
